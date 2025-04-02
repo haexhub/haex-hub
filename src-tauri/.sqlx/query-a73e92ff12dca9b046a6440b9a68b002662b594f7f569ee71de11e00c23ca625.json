@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT id, extension_id, resource, operation, path \n         FROM haex_extensions_permissions \n         WHERE extension_id = ? AND resource = ? AND operation = ?\n         ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "extension_id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "resource",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "operation",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "path",
+        "ordinal": 4,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "a73e92ff12dca9b046a6440b9a68b002662b594f7f569ee71de11e00c23ca625"
+}
