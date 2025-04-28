@@ -40,13 +40,10 @@
     const originalFetch = window.__TAURI__.http.fetch;
     window.__TAURI__.http.fetch = async function (options) {
       // Prüfe, ob die Ressource blockiert werden soll
-      const shouldBlock = await window.__TAURI__.invoke(
-        'block_resource_request',
-        {
-          url: options.url,
-          resourceType: 'tauri-fetch',
-        }
-      );
+      const shouldBlock = await invoke('block_resource_request', {
+        url: options.url,
+        resourceType: 'tauri-fetch',
+      });
 
       if (shouldBlock) {
         throw new Error(`Ressourcenanfrage blockiert: ${options.url}`);

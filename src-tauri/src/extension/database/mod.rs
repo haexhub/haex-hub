@@ -1,7 +1,7 @@
 mod permissions;
 use crate::database;
 use crate::database::DbConnection;
-//use crate::models::ExtensionState;
+use crate::models::ExtensionState;
 use tauri::{AppHandle, State};
 
 // Extension-bezogene Funktionen mit extension_-Präfix
@@ -17,8 +17,8 @@ pub fn extension_load(
     app.state::<ExtensionState>()
         .add_extension(manifest_path.clone(), manifest.clone());
     Ok(manifest)
-} */
-
+}
+ */
 /// Führt SQL-Leseoperationen mit Berechtigungsprüfung aus
 #[tauri::command]
 pub async fn extension_sql_select(

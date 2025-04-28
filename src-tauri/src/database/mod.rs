@@ -1,7 +1,7 @@
 // database/mod.rs
 pub mod core;
 
-use rusqlite::Connection;
+use rusqlite::{Connection, OpenFlags};
 use std::path::Path;
 use std::sync::Mutex;
 use tauri::{path::BaseDirectory, AppHandle, Manager, State};
@@ -58,7 +58,60 @@ pub fn create_encrypted_database(
         }
     }
 
-    // Kopieren der Ressourcen-Datenbank zum Zielpfad
+    // Neue Datenbank erstellen
+    let conn = Connection::open_with_flags(
+        &path,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE,
+    )
+    .map_err(|e| format!("Fehler beim Erstellen der Datenbank: {}", e.to_string()))?;
+
+    // Datenbank mit dem angegebenen Passwort verschlüsseln
+    conn.pragma_update(None, "key", &key)
+        .map_err(|e| format!("Fehler beim Verschlüsseln der Datenbank: {}", e.to_string()))?;
+
+    println!("Datenbank verschlüsselt mit key {}", &key);
+    // Überprüfen, ob die Datenbank korrekt verschlüsselt wurde
+    let validation_result: Result<i32, _> = conn.query_row("SELECT 1", [], |row| row.get(0));
+    if let Err(e) = validation_result {
+        return Err(format!(
+            "Fehler beim Testen der verschlüsselten Datenbank: {}",
+            e.to_string()
+        ));
+    }
+
+    // 2. VERSUCHEN, EINE SQLCIPHER-SPEZIFISCHE OPERATION AUSZUFÜHREN
+    println!("Prüfe SQLCipher-Aktivität mit 'PRAGMA cipher_version;'...");
+    match conn.query_row("PRAGMA cipher_version;", [], |row| {
+        let version: String = row.get(0)?;
+        Ok(version)
+    }) {
+        Ok(version) => {
+            println!("SQLCipher ist aktiv! Version: {}", version);
+
+            // Fahre mit normalen Operationen fort
+            println!("Erstelle Tabelle 'benutzer'...");
+            conn.execute(
+                "CREATE TABLE benutzer (id INTEGER PRIMARY KEY, name TEXT NOT NULL)",
+                [],
+            )
+            .map_err(|e| format!("Fehler beim Verschlüsseln der Datenbank: {}", e.to_string()))?;
+            println!("Füge Benutzer 'Bob' hinzu...");
+            conn.execute("INSERT INTO benutzer (name) VALUES ('Bob')", [])
+                .map_err(|e| {
+                    format!("Fehler beim Verschlüsseln der Datenbank: {}", e.to_string())
+                })?;
+            println!("Benutzer hinzugefügt.");
+        }
+        Err(e) => {
+            eprintln!("FEHLER: SQLCipher scheint NICHT aktiv zu sein!");
+            eprintln!("Der Befehl 'PRAGMA cipher_version;' schlug fehl: {}", e);
+            eprintln!("Die Datenbank wurde wahrscheinlich NICHT verschlüsselt.");
+            // Optional: Hier die Verbindung schließen oder weitere Aktionen unterlassen
+            // return Err(e); // Beende das Programm mit dem Fehler
+        }
+    }
+
+    /* // Kopieren der Ressourcen-Datenbank zum Zielpfad
     core::copy_file(&resource_path, &path)?;
 
     // Öffnen der kopierten Datenbank ohne Verschlüsselung
@@ -90,16 +143,17 @@ pub fn create_encrypted_database(
             e.to_string()
         ));
     }
+    */
     // Aktualisieren der Datenbankverbindung im State
     let mut db = state
         .0
         .lock()
         .map_err(|e| format!("Mutex-Fehler: {}", e.to_string()))?;
-    *db = Some(encrypted_conn);
+    *db = Some(conn);
 
     Ok(format!(
-        "Verschlüsselte CRDT-Datenbank erstellt unter: {} (kopiert aus Ressource)",
-        path
+        "Verschlüsselte CRDT-Datenbank erstellt unter: {} and password",
+        key
     ))
 }
 

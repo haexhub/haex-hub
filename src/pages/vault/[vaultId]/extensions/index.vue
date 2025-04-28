@@ -1,9 +1,9 @@
 <template>
-  <div>ad extension</div>
+    <div>add extension</div>
 </template>
 
 <script setup lang="ts">
 definePageMeta({
-  name: 'extensionAdd',
+    name: "haexExtensionAdd",
 });
 </script>

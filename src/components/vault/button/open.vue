@@ -7,7 +7,7 @@
         @click="onLoadDatabase"
       >
         <Icon name="mdi:folder-open-outline" />
-        {{ t('database.open') }}
+        {{ t("database.open") }}
       </button>
     </template>
 
@@ -21,31 +21,24 @@
     />
 
     <template #buttons>
-      <UiButton
-        class="btn-error"
-        @click="onClose"
-      >
-        {{ t('abort') }}
+      <UiButton class="btn-error" @click="onClose">
+        {{ t("abort") }}
       </UiButton>
 
-      <UiButton
-        type="submit"
-        class="btn-primary"
-        @click="onOpenDatabase"
-      >
-        {{ t('open') }}
+      <UiButton type="submit" class="btn-primary" @click="onOpenDatabase">
+        {{ t("open") }}
       </UiButton>
     </template>
   </UiDialog>
 </template>
 
 <script setup lang="ts">
-import { open } from '@tauri-apps/plugin-dialog';
-import { vaultDatabaseSchema } from './schema';
+import { open } from "@tauri-apps/plugin-dialog";
+import { vaultDatabaseSchema } from "./schema";
 
 const { t } = useI18n();
 
-const isOpen = defineModel('isOpen', { type: Boolean });
+const isOpen = defineModel("isOpen", { type: Boolean });
 
 const props = defineProps({
   path: String,
@@ -57,19 +50,19 @@ const database = reactive<{
   name: string;
   password: string;
   path: string | null;
-  type: 'password' | 'text';
+  type: "password" | "text";
 }>({
-  name: '',
-  password: '',
-  path: '',
-  type: 'password',
+  name: "",
+  password: "",
+  path: "",
+  type: "password",
 });
 
 const initDatabase = () => {
-  database.name = '';
-  database.password = '';
-  database.path = '';
-  database.type = 'password';
+  database.name = "";
+  database.password = "";
+  database.path = "";
+  database.type = "password";
 };
 
 initDatabase();
@@ -78,7 +71,7 @@ const { add } = useSnackbar();
 
 const handleError = (error: unknown) => {
   isOpen.value = false;
-  add({ type: 'error', text: JSON.stringify(error) });
+  add({ type: "error", text: JSON.stringify(error) });
   //console.error(error);
 };
 
@@ -92,8 +85,8 @@ const onLoadDatabase = async () => {
       directory: false,
       filters: [
         {
-          name: 'HaexVault',
-          extensions: ['db'],
+          name: "HaexVault",
+          extensions: ["db"],
         },
       ],
     });
@@ -112,16 +105,14 @@ const onOpenDatabase = async () => {
     check.value = true;
     const path = database.path || props.path;
     const pathCheck = vaultDatabaseSchema.path.safeParse(path);
-    const passwordCheck = vaultDatabaseSchema.password.safeParse(
-      database.password
-    );
+    const passwordCheck = vaultDatabaseSchema.password.safeParse(database.password);
 
     if (!pathCheck.success || !passwordCheck.success || !path) {
-      add({ type: 'error', text: 'params falsch' });
+      add({ type: "error", text: "params falsch" });
       return;
     }
 
-    //console.log('try to open', path);
+    console.log("try to open", path);
 
     const vaultId = await openAsync({
       path,
@@ -129,23 +120,23 @@ const onOpenDatabase = async () => {
     });
 
     if (!vaultId) {
-      add({ type: 'error', text: 'Vault konnte nicht geöffnet werden' });
+      add({ type: "error", text: "Vault konnte nicht geöffnet werden" });
       return;
     }
 
     onClose();
 
-    /* await navigateTo(
+    await navigateTo(
       localePath({
-        name: 'vaultGroup',
+        name: "vaultOverview",
         params: {
           vaultId,
         },
         query: {
-          showSidebar: 'true',
+          showSidebar: "true",
         },
       })
-    ); */
+    );
   } catch (error) {
     console.log(error);
     handleError(error);

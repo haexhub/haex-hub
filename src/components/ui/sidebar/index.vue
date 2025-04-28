@@ -3,45 +3,22 @@
     class="flex shrink-0 transition-[width] ease-in duration-300 z-30 h-full overflow-hidden fixed sm:relative left-0 shadow border-r border-base-300"
   >
     <div class="sm:flex flex-col w-14 bg-base-200 shrink-0 h-full hidden">
-      <img
-        src="/logo.svg"
-        class="bg-primary p-3 size-16"
-      />
+      <img src="/logo.svg" class="bg-primary p-3 size-16" />
 
       <div class="flex flex-col justify-between h-full overflow-y-scroll z-10">
         <div class="flex flex-col space-y-2 text-base-content/90">
           <template v-for="item in menu.top">
-            <UiSidebarLink
-              v-if="item.to"
-              :to="item.to ?? ''"
-              :icon="item.icon"
-              :label="$t(item.label)"
-            />
+            <UiSidebarLink v-if="item.to" v-bind="item" />
 
-            <UiSidebarButton
-              v-else
-              :icon="item.icon"
-              :label="$t(item.label)"
-              @click="item.click"
-            />
+            <UiSidebarButton v-else :icon="item.icon" :label="$t(item.label)" @click="item.click" />
           </template>
         </div>
 
         <div class="flex flex-col space-y-2 text-base-content/90">
           <template v-for="item in menu.bottom">
-            <UiSidebarLink
-              v-if="item.to"
-              :to="item.to ?? ''"
-              :icon="item.icon"
-              :label="$t(item.label)"
-            />
+            <UiSidebarLink v-if="item.to" v-bind="item" />
 
-            <UiSidebarButton
-              v-else
-              :icon="item.icon"
-              :label="$t(item.label)"
-              @click="item.click"
-            />
+            <UiSidebarButton v-else :icon="item.icon" :label="$t(item.label)" @click="item.click" />
           </template>
           <!-- <UiSidebarLink
             v-for="item in menu.bottom"

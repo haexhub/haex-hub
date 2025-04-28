@@ -1,6 +1,6 @@
 // models.rs
 use serde::{Deserialize, Serialize};
-//use std::sync::Mutex;
+use std::sync::Mutex;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ExtensionManifest {
@@ -23,7 +23,7 @@ pub struct DatabasePermissions {
     pub create: Option<Vec<String>>,
 }
 
-/* #[derive(Default)]
+#[derive(Default)]
 pub struct ExtensionState {
     pub extensions: Mutex<std::collections::HashMap<String, ExtensionManifest>>,
 }
@@ -38,7 +38,7 @@ impl ExtensionState {
         let extensions = self.extensions.lock().unwrap();
         extensions.values().find(|p| p.name == addon_id).cloned()
     }
-} */
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DbExtensionPermission {

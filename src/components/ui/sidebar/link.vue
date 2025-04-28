@@ -1,50 +1,37 @@
 <template>
   <li
     @click="triggerNavigate"
-    class="hover:text-primary"
+    class="hover:text-primary rounded"
+    :class="{ ['bg-base-300']: isActive }"
   >
-    <UiTooltip
-      :tooltip="tooltip ?? name"
-      direction="right-end"
-    >
+    <UiTooltip :tooltip="tooltip ?? name" direction="right-start">
       <NuxtLinkLocale
-        :class="{ ['bg-base-300']: isActive }"
-        :to="{
-          name: type === 'browser' ? 'haexBrowser' : 'haexExtension',
-          params: type === 'browser' ? {} : { extensionId: id },
-        }"
+        :to
         class="flex items-center justify-center cursor-pointer tooltip-toogle"
         ref="link"
       >
-        <Icon
-          :name="icon"
-          class="shrink-0 size-6"
-        />
+        <Icon :name="icon" class="shrink-0 size-6" />
       </NuxtLinkLocale>
     </UiTooltip>
   </li>
 </template>
 
 <script setup lang="ts">
-import { type ISidebarItem } from '#imports';
+import { type ISidebarItem } from "#imports";
 
 const props = defineProps<ISidebarItem>();
 
 const router = useRouter();
 
 const isActive = computed(() => {
-  if (props.type === 'browser') {
-    return router.currentRoute.value.name === 'haexBrowser';
-  } else if (props.type === 'extension') {
-    return (
-      router.currentRoute.value.name === 'haexExtension' &&
-      getSingleRouteParam(router.currentRoute.value.params.extensionId) ===
-        props.id
-    );
+  if (props.to?.name === "haexExtension") {
+    return getSingleRouteParam(router.currentRoute.value.params.extensionId) === props.id;
+  } else {
+    return props.to?.name === router.currentRoute.value.meta.name;
   }
 });
 
-const link = useTemplateRef('link');
+const link = useTemplateRef("link");
 
 const triggerNavigate = () => link.value?.$el.click();
 

@@ -1,0 +1,10 @@
+# .prettierrc.toml
+
+useTabs = false
+tabWidth = 2
+printWidth = 100
+endOfLine = "lf"
+
+# Not supported yet
+# trailingComma = "es5"
+# embeddedLanguageFormatting = "auto"
