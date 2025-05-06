@@ -74,7 +74,9 @@ install:
 
 - port 3003 needs to be open/free or you need to adjust it in `nuxt.config.ts` AND `src-tauri/tauri.conf.json`
 
-- `git clone https://github.com/haexhub/haex-vault.git`
-- `cd haex-vault`
-- `pnpm i`
-- `pnpm tauri dev`
+```
+git clone https://github.com/haexhub/haex-vault.git
+cd haex-vault
+pnpm i
+pnpm tauri dev
+```
