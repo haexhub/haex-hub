@@ -1,9 +1,11 @@
 mod permissions;
+
 use crate::database;
 use crate::database::DbConnection;
 use crate::models::ExtensionState;
+use serde_json::Value as JsonValue;
+use std::collections::HashMap;
 use tauri::{AppHandle, State};
-
 // Extension-bezogene Funktionen mit extension_-Präfix
 /// Lädt eine Extension aus einer Manifest-Datei
 /* #[tauri::command]
@@ -25,11 +27,11 @@ pub async fn extension_sql_select(
     app: AppHandle,
     extension_id: String,
     sql: String,
-    params: Vec<String>,
+    params: Vec<JsonValue>,
     state: State<'_, DbConnection>,
-) -> Result<Vec<Vec<String>>, String> {
+) -> Result<Vec<Vec<JsonValue>>, String> {
     permissions::check_read_permission(&app, &extension_id, &sql).await?;
-    database::core::select(&sql, &params, &state).await
+    database::core::select(sql, params, &state).await
 }
 
 /// Führt SQL-Schreiboperationen mit Berechtigungsprüfung aus
@@ -38,9 +40,9 @@ pub async fn extension_sql_execute(
     app: AppHandle,
     extension_id: String,
     sql: String,
-    params: Vec<String>,
+    params: Vec<JsonValue>,
     state: State<'_, DbConnection>,
-) -> Result<String, String> {
+) -> Result<usize, String> {
     permissions::check_write_permission(&app, &extension_id, &sql).await?;
-    database::core::execute(&sql, &params, &state).await
+    database::core::execute(sql, params, &state).await
 }

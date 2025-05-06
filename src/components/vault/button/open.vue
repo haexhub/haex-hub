@@ -71,7 +71,8 @@ const { add } = useSnackbar();
 
 const handleError = (error: unknown) => {
   isOpen.value = false;
-  add({ type: "error", text: JSON.stringify(error) });
+  console.log("handleError", error, typeof error);
+  add({ type: "error", text: "Passwort falsch" });
   //console.error(error);
 };
 
@@ -100,6 +101,7 @@ const onLoadDatabase = async () => {
 };
 
 const localePath = useLocalePath();
+
 const onOpenDatabase = async () => {
   try {
     check.value = true;
@@ -120,7 +122,10 @@ const onOpenDatabase = async () => {
     });
 
     if (!vaultId) {
-      add({ type: "error", text: "Vault konnte nicht geöffnet werden" });
+      add({
+        type: "error",
+        text: "Vault konnte nicht geöffnet werden. \n Vermutlich ist das Passwort falsch",
+      });
       return;
     }
 

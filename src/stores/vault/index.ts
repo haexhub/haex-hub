@@ -57,85 +57,83 @@ export const useVaultStore = defineStore("vaultStore", () => {
   );
 
   const openAsync = async ({ path = "", password }: { path: string; password: string }) => {
-    const sqlitePath = path?.startsWith("sqlite:") ? path : `sqlite:${path}`;
+    try {
+      console.log("try to open db", path, password);
 
-    console.log("try to open db", path, password);
-
-    const result = await invoke<string>("open_encrypted_database", {
-      path,
-      key: password,
-    });
-
-    console.log("open vault from store", result);
-    if (!(await testDatabaseReadAsync())) throw new Error("Passwort falsch");
-    //const db = await Database.load(sqlitePath);
-
-    const vaultId = await getVaultIdAsync(path);
-    const seperator = platform() === "windows" ? "\\" : "/";
-    const fileName = path.split(seperator).pop();
-    console.log("opened db fileName", fileName, vaultId);
-
-    openVaults.value = {
-      ...openVaults.value,
-      [vaultId]: {
-        //database: db,
+      const result = await invoke<string>("open_encrypted_database", {
         path,
-        password,
-        name: fileName ?? path,
-        drizzle: drizzle<typeof schema>(
-          async (sql, params, method) => {
-            let rows: any = [];
-            let results = [];
+        key: password,
+      });
 
-            // If the query is a SELECT, use the select method
-            if (isSelectQuery(sql)) {
-              rows = await invoke("db_select", { sql, params }).catch((e) => {
-                console.error("SQL Error:", e);
-                return [];
-              });
-            } else {
-              // Otherwise, use the execute method
-              rows = await invoke("db_execute", { sql, params }).catch((e) => {
-                console.error("SQL Error:", e);
-                return [];
-              });
-              return { rows: [] };
-            }
+      console.log("open vault from store", result);
+      //const db = await Database.load(sqlitePath);
 
-            rows = rows.map((row: any) => {
-              return Object.values(row);
-            });
+      const vaultId = await getVaultIdAsync(path);
+      const seperator = platform() === "windows" ? "\\" : "/";
+      const fileName = path.split(seperator).pop();
+      console.log("opened db fileName", fileName, vaultId);
 
-            // If the method is "all", return all rows
-            results = method === "all" ? rows : rows[0];
+      openVaults.value = {
+        ...openVaults.value,
+        [vaultId]: {
+          //database: db,
+          path,
+          password,
+          name: fileName ?? path,
+          drizzle: drizzle<typeof schema>(
+            async (sql, params: unknown[], method) => {
+              let rows: any = [];
+              let results = [];
 
-            return { rows: results };
-          },
-          // Pass the schema to the drizzle instance
-          { schema: schema, logger: true }
-        ),
-      },
-    };
+              // If the query is a SELECT, use the select method
+              if (isSelectQuery(sql)) {
+                console.log("sql_select", sql, params);
+                rows = await invoke("sql_select", { sql, params }).catch((e) => {
+                  console.error("SQL select Error:", e, sql, params);
+                  return [];
+                });
+                console.log("select", rows);
+              } else {
+                // Otherwise, use the execute method
+                rows = await invoke("sql_execute", { sql, params }).catch((e) => {
+                  console.error("SQL execute Error:", e, sql, params);
+                  return [];
+                });
+                return { rows: [] };
+              }
 
-    const { addVaultAsync } = useLastVaultStore();
-    await addVaultAsync({ path });
+              /* rows = rows.map((row: any) => {
+                return Object.values(row);
+              }); */
 
-    return vaultId;
-  };
+              console.log("select after map", rows);
+              // If the method is "all", return all rows
+              results = method === "all" ? rows : rows[0];
 
-  const createTable = () => {
-    console.log("ddd", schema.testTable.getSQL().queryChunks);
+              return { rows: results };
+            },
+            // Pass the schema to the drizzle instance
+            { schema: schema, logger: true }
+          ),
+        },
+      };
 
-    schema.testTable.getSQL().queryChunks.forEach((chunk) => {
-      const res = currentVault.value?.drizzle.run(chunk);
-      console.log("create table", res);
-    });
+      //if (!(await testDatabaseReadAsync())) throw new Error("Passwort falsch");
+
+      const { addVaultAsync } = useLastVaultStore();
+      await addVaultAsync({ path });
+
+      return vaultId;
+    } catch (error) {
+      console.error("Error openAsync ", error);
+      return false;
+      //if (error === "file is not a database") throw new Error("Passwort falsch");
+    }
   };
 
   const testDatabaseReadAsync = async () => {
     try {
-      currentVault.value?.drizzle.select({ count: count() }).from(schema.haexExtensions);
-      return true;
+      return currentVault.value?.drizzle.select({ count: count() }).from(schema.haexExtensions);
     } catch (error) {
       return false;
     }
@@ -186,7 +184,6 @@ export const useVaultStore = defineStore("vaultStore", () => {
     openVaults,
     refreshDatabaseAsync,
     read_only,
-    createTable,
   };
 });
 

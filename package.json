@@ -16,6 +16,7 @@
   "dependencies": {
     "@libsql/client": "^0.15.4",
     "@nuxt/icon": "1.11.0",
+    "@nuxt/image": "1.10.0",
     "@nuxtjs/i18n": "^9.5.3",
     "@pinia/nuxt": "^0.10.1",
     "@tauri-apps/api": "^2.5.0",

@@ -1,9 +1,5 @@
 <template>
-  <slot
-    name="trigger"
-    :id
-  >
-  </slot>
+  <slot name="trigger" :id> </slot>
 
   <div
     :id
@@ -17,10 +13,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <slot name="title">
-            <h3
-              v-if="title"
-              class="modal-title text-base sm:text-lg"
-            >
+            <h3 v-if="title" class="modal-title text-base sm:text-lg">
               {{ title }}
             </h3>
           </slot>
@@ -32,10 +25,7 @@
             @click="open = false"
             tabindex="1"
           >
-            <Icon
-              name="mdi:close"
-              size="18"
-            />
+            <Icon name="mdi:close" size="18" />
           </button>
         </div>
         <div class="modal-body text-sm sm:text-base py-1">
@@ -50,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { HSOverlay } from 'flyonui/flyonui';
+import { HSOverlay } from "flyonui/flyonui";
 
 export interface IDom {
   class?: String;
@@ -63,38 +53,39 @@ defineProps({
   trigger: {
     type: Object as PropType<IDom>,
     default: () => ({
-      class: '',
-      text: '',
+      class: "",
+      text: "",
     }),
   },
 
   title: {
     type: String,
-    default: '',
+    default: "",
   },
 
   description: {
     type: Object as PropType<IDom>,
     default: () => ({
-      class: '',
-      text: '',
+      class: "",
+      text: "",
     }),
     required: false,
   },
 });
 
-const open = defineModel<boolean>('open', { default: false });
+const open = defineModel<boolean>("open", { default: false });
 
 const { t } = useI18n();
-const modalRef = useTemplateRef('modalRef');
+const modalRef = useTemplateRef("modalRef");
 const modal = ref<HSOverlay>();
 
 watch(open, async () => {
+  console.log("open modal", open.value);
   if (open.value) {
-    //console.log('open modal', modal.value?.open);
     await modal.value?.open();
   } else {
-    await modal.value?.close(true);
+    const res = await modal.value?.close(true);
+    console.log("close dialog", res);
   }
 });
 
@@ -102,8 +93,8 @@ onMounted(() => {
   if (!modalRef.value) return;
   modal.value = new HSOverlay(modalRef.value, { isClosePrev: true });
 
-  modal.value.on('close', () => {
-    console.log('close it from event', open.value);
+  modal.value.on("close", () => {
+    console.log("close it from event", open.value);
     open.value = false;
   });
 });

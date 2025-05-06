@@ -1,30 +1,30 @@
 // database/mod.rs
 pub mod core;
 
-use rusqlite::{Connection, OpenFlags};
+use rusqlite::Connection;
+use serde_json::Value as JsonValue;
 use std::path::Path;
 use std::sync::Mutex;
 use tauri::{path::BaseDirectory, AppHandle, Manager, State};
-
 pub struct DbConnection(pub Mutex<Option<Connection>>);
 
 // Öffentliche Funktionen für direkten Datenbankzugriff
 #[tauri::command]
 pub async fn sql_select(
     sql: String,
-    params: Vec<String>,
+    params: Vec<JsonValue>,
     state: State<'_, DbConnection>,
-) -> Result<Vec<Vec<String>>, String> {
-    core::select(&sql, &params, &state).await
+) -> Result<Vec<Vec<JsonValue>>, String> {
+    core::select(sql, params, &state).await
 }
 
 #[tauri::command]
 pub async fn sql_execute(
     sql: String,
-    params: Vec<String>,
+    params: Vec<JsonValue>,
     state: State<'_, DbConnection>,
-) -> Result<String, String> {
-    core::execute(&sql, &params, &state).await
+) -> Result<usize, String> {
+    core::execute(sql, params, &state).await
 }
 
 /// Erstellt eine verschlüsselte Datenbank
@@ -58,7 +58,62 @@ pub fn create_encrypted_database(
         }
     }
 
-    // Neue Datenbank erstellen
+    //core::copy_file(&resource_path, &path)?;
+
+    println!(
+        "Öffne unverschlüsselte Datenbank: {}",
+        resource_path.as_path().display()
+    );
+
+    let conn = Connection::open(&resource_path).map_err(|e| {
+        format!(
+            "Fehler beim Öffnen der kopierten Datenbank: {}",
+            e.to_string()
+        )
+    })?;
+
+    //let conn = Connection::open(&resource_path)?;
+
+    println!("Hänge neue, verschlüsselte Datenbank an unter '{}'", &path);
+    // ATTACH DATABASE 'Dateiname' AS Alias KEY 'Passwort';
+    conn.execute("ATTACH DATABASE ?1 AS encrypted KEY ?2;", [&path, &key])
+        .map_err(|e| format!("Fehler bei ATTACH DATABASE: {}", e.to_string()))?;
+
+    println!(
+        "Exportiere Daten von 'main' nach 'encrypted' mit password {} ...",
+        &key
+    );
+
+    match conn.query_row("SELECT sqlcipher_export('encrypted');", [], |_row| Ok(())) {
+        Ok(_) => {
+            println!(">>> sqlcipher_export erfolgreich ausgeführt (Rückgabewert ignoriert).");
+        }
+        Err(e) => {
+            eprintln!("!!! FEHLER während sqlcipher_export: {}", e);
+            conn.execute("DETACH DATABASE encrypted;", []).ok(); // Versuche zu detachen
+            return Err(e.to_string()); // Gib den Fehler zurück
+        }
+    }
+    // sqlcipher_export('Alias') kopiert Schema und Daten von 'main' zur Alias-DB
+    /* conn.execute("SELECT sqlcipher_export('encrypted');", [])
+    .map_err(|e| {
+        format!(
+            "Fehler bei SELECT sqlcipher_export('encrypted'): {}",
+            e.to_string()
+        )
+    })?; */
+
+    println!("Löse die verschlüsselte Datenbank vom Handle...");
+    conn.execute("DETACH DATABASE encrypted;", [])
+        .map_err(|e| format!("Fehler bei DETACH DATABASE: {}", e.to_string()))?;
+
+    println!("Datenbank erfolgreich nach '{}' verschlüsselt.", &path);
+    println!(
+        "Die Originaldatei '{}' ist unverändert.",
+        resource_path.as_path().display()
+    );
+
+    /* // Neue Datenbank erstellen
     let conn = Connection::open_with_flags(
         &path,
         OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE,
@@ -77,7 +132,7 @@ pub fn create_encrypted_database(
             "Fehler beim Testen der verschlüsselten Datenbank: {}",
             e.to_string()
         ));
-    }
+    } */
 
     // 2. VERSUCHEN, EINE SQLCIPHER-SPEZIFISCHE OPERATION AUSZUFÜHREN
     println!("Prüfe SQLCipher-Aktivität mit 'PRAGMA cipher_version;'...");
@@ -88,7 +143,7 @@ pub fn create_encrypted_database(
         Ok(version) => {
             println!("SQLCipher ist aktiv! Version: {}", version);
 
-            // Fahre mit normalen Operationen fort
+            /* // Fahre mit normalen Operationen fort
             println!("Erstelle Tabelle 'benutzer'...");
             conn.execute(
                 "CREATE TABLE benutzer (id INTEGER PRIMARY KEY, name TEXT NOT NULL)",
@@ -100,7 +155,7 @@ pub fn create_encrypted_database(
                 .map_err(|e| {
                     format!("Fehler beim Verschlüsseln der Datenbank: {}", e.to_string())
                 })?;
-            println!("Benutzer hinzugefügt.");
+            println!("Benutzer hinzugefügt."); */
         }
         Err(e) => {
             eprintln!("FEHLER: SQLCipher scheint NICHT aktiv zu sein!");

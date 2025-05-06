@@ -8,6 +8,13 @@
       "when": 1742903332283,
       "tag": "0000_zippy_scourge",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1746281577722,
+      "tag": "0001_wealthy_thaddeus_ross",
+      "breakpoints": true
     }
   ]
 }

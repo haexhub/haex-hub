@@ -10,6 +10,7 @@ export default defineNuxtConfig({
     "@vueuse/nuxt",
     "@nuxt/icon",
     "nuxt-snackbar",
+    "@nuxt/image",
   ],
 
   imports: {

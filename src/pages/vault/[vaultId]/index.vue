@@ -1,9 +1,15 @@
 <template>
-    <div class="h-screen bg-blue-200"></div>
+  <div class="bg-blue-200 h-full">aaaaa</div>
 </template>
 
 <script setup lang="ts">
 definePageMeta({
-    name: "vaultOverview",
+  name: "vaultOverview",
+});
+
+const extensionStore = useExtensionsStore();
+
+onMounted(async () => {
+  await extensionStore.loadExtensionsAsync();
 });
 </script>

@@ -1,51 +1,47 @@
 import {
-    integer,
-    sqliteTable,
-    text,
-    type AnySQLiteColumn,
-    unique,
-    numeric,
+  integer,
+  numeric,
+  sqliteTable,
+  text,
+  type AnySQLiteColumn,
+  unique,
 } from "drizzle-orm/sqlite-core";
 
-export function generateCreateStatements() {
-    const tables = [haexSettings, haexExtensions, testTable, haexExtensionsPermissions];
-}
-
 export const haexSettings = sqliteTable("haex_settings", {
-    id: text().primaryKey(),
-    key: text(),
-    value_text: text(),
-    value_json: text({ mode: "json" }),
-    value_number: numeric(),
+  id: text().primaryKey(),
+  key: text(),
+  value_text: text(),
+  value_json: text({ mode: "json" }),
+  value_number: numeric(),
 });
 
 export const haexExtensions = sqliteTable("haex_extensions", {
-    id: text().primaryKey(),
-    author: text(),
-    enabled: integer(),
-    name: text(),
-    url: text(),
-    version: text(),
+  id: text().primaryKey(),
+  author: text(),
+  enabled: integer({ mode: "boolean" }),
+  icon: text(),
+  name: text(),
+  url: text(),
+  version: text(),
 });
 
 export const testTable = sqliteTable("testTable", {
-    id: text().primaryKey(),
-    author: text(),
-    test: text(),
+  id: text().primaryKey(),
+  author: text(),
+  test: text(),
 });
 
 export const haexExtensionsPermissions = sqliteTable(
-    "haex_extensions_permissions",
-    {
-        id: text().primaryKey(),
-        extensionId: text("extension_id").references((): AnySQLiteColumn => haexExtensions.id),
-        resource: text({ enum: ["fs", "http", "database"] }),
-        operation: text({ enum: ["read", "write", "create"] }),
-        path: text(),
-    },
-    (table) => [unique().on(table.extensionId, table.resource, table.operation, table.path)]
+  "haex_extensions_permissions",
+  {
+    id: text().primaryKey(),
+    extensionId: text("extension_id").references((): AnySQLiteColumn => haexExtensions.id),
+    resource: text({ enum: ["fs", "http", "database"] }),
+    operation: text({ enum: ["read", "write", "create"] }),
+    path: text(),
+  },
+  (table) => [unique().on(table.extensionId, table.resource, table.operation, table.path)]
 );
-console.log("table", haexExtensionsPermissions.getSQL());
 
 export type InsertHaexSettings = typeof haexSettings.$inferInsert;
 export type SelectHaexSettings = typeof haexSettings.$inferSelect;

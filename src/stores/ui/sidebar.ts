@@ -2,31 +2,33 @@ import { getSingleRouteParam } from "~/composables/helper";
 import type { RouteLocationRaw, RouteLocationAsRelativeGeneric } from "vue-router";
 
 export interface ISidebarItem {
-    name: string;
-    icon: string;
-    tooltip?: string;
-    id: string;
-    to?: RouteLocationAsRelativeGeneric;
+  name: string;
+  icon: string;
+  tooltip?: string;
+  id: string;
+  to?: RouteLocationAsRelativeGeneric;
 }
 
 export const useSidebarStore = defineStore("sidebarStore", () => {
-    const menu = ref<ISidebarItem[]>([
-        {
-            id: "haex-browser",
-            name: "Haex Browser",
-            icon: "solar:global-outline",
-            to: { name: "haexBrowser" },
-        },
+  const isVisible = ref(true);
 
-        {
-            id: "haex-extensions-add",
-            name: "Haex Extensions",
-            icon: "gg:extension",
-            to: { name: "haexExtensionAdd" },
-        },
-    ]);
+  const menu = ref<ISidebarItem[]>([
+    {
+      id: "haex-browser",
+      name: "Haex Browser",
+      icon: "solar:global-outline",
+      to: { name: "haexBrowser" },
+    },
 
-    /* const loadAsync = async (id: string) => {
+    {
+      id: "haex-extensions-add",
+      name: "Haex Extensions",
+      icon: "gg:extension",
+      to: { name: "extensionOverview" },
+    },
+  ]);
+
+  /* const loadAsync = async (id: string) => {
     extensions.value.some(async (extension) => {
       if (extension.id === id) {
         await navigateTo(
@@ -37,8 +39,9 @@ export const useSidebarStore = defineStore("sidebarStore", () => {
     });
   }; */
 
-    return {
-        menu,
-        //loadAsync,
-    };
+  return {
+    menu,
+    isVisible,
+    //loadAsync,
+  };
 });
