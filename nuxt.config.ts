@@ -1,4 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import tailwindcss from "@tailwindcss/vite";
+
 export default defineNuxtConfig({
   compatibilityDate: "2024-11-01",
 
@@ -54,7 +56,17 @@ export default defineNuxtConfig({
     },
   },
 
+  /* tailwindcss: {
+    cssPath: [`assets/css/main.css`, { injectPosition: "first" }],
+    config: {},
+    viewer: true,
+    exposeConfig: false,
+  },
+ */
+  css: ["~/assets/css/main.css"],
+
   devtools: { enabled: true },
+
   srcDir: "./src",
   // Enable SSG
   ssr: false,
@@ -71,6 +83,8 @@ export default defineNuxtConfig({
       // Tauri requires a consistent port
       strictPort: true,
     },
+
+    plugins: [tailwindcss()],
 
     /* plugins: [wasm(), topLevelAwait()],
     worker: {

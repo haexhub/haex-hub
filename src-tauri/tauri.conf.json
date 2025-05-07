@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "space.haex.hub",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "pnpm generate && pnpm dev",
     "devUrl": "http://localhost:3003",
     "beforeBuildCommand": "pnpm generate",
     "frontendDist": "../dist"

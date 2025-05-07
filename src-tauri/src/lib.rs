@@ -9,7 +9,7 @@ use std::sync::Mutex;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let protocol_name = "haex-extension";
+    //let protocol_name = "haex-extension";
 
     tauri::Builder::default()
         /* .register_uri_scheme_protocol(protocol_name, move |app_handle, request| {
