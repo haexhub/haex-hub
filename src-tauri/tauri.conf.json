@@ -7,7 +7,7 @@
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:3003",
     "beforeBuildCommand": "pnpm generate",
-    "frontendDist": "../dist"
+    "frontendDist": "../.output/public"
   },
   "app": {
     "windows": [
@@ -18,7 +18,14 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost",
+      "csp": {
+        "default-src": ["'self'", "haex-extensions"],
+        "script-src": ["'self'", "haex-extensions"],
+        "style-src": ["'self'", "haex-extensions"],
+        "connect-src": ["'self'", "haex-extensions"],
+        "img-src": ["'self'", "haex-extensions", "data:"],
+        "font-src": ["'self'", "haex-extensions", "data:"]
+      },
       "assetProtocol": {
         "enable": true,
         "scope": ["$RESOURCE/extensions/**"]

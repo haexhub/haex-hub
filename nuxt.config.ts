@@ -1,3 +1,5 @@
+import tailwindcss from "@tailwindcss/vite";
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: "2024-11-01",
@@ -5,22 +7,21 @@ export default defineNuxtConfig({
   modules: [
     "nuxt-zod-i18n",
     "@nuxtjs/i18n",
-    "@nuxtjs/tailwindcss",
     "@pinia/nuxt",
     "@vueuse/nuxt",
     "@nuxt/icon",
     "nuxt-snackbar",
-    "@nuxt/image",
+    "nuxt-svgo-loader",
   ],
 
   imports: {
-    dirs: ["composables/**", "stores/**", "components/**", "pages/**"],
+    dirs: ["composables/**", "stores/**", "components/**", "pages/**", "types/**"],
   },
 
   i18n: {
     strategy: "prefix_and_default",
     defaultLocale: "de",
-    vueI18n: "../src/i18n/i18n.config.ts",
+    vueI18n: "~/i18n/i18n.config.ts",
 
     locales: [
       { code: "de", language: "de-DE", isCatchallLocale: true },
@@ -54,13 +55,18 @@ export default defineNuxtConfig({
     },
   },
 
+  css: ["~/assets/css/main.css"],
+
   devtools: { enabled: true },
+
   srcDir: "./src",
   // Enable SSG
   ssr: false,
   // Enables the development server to be discoverable by other devices when running on iOS physical devices
   devServer: { host: process.env.TAURI_DEV_HOST || "localhost", port: 3003 },
+
   vite: {
+    plugins: [tailwindcss()],
     // Better support for Tauri CLI output
     clearScreen: false,
     // Enable environment variables
@@ -71,11 +77,5 @@ export default defineNuxtConfig({
       // Tauri requires a consistent port
       strictPort: true,
     },
-
-    /* plugins: [wasm(), topLevelAwait()],
-    worker: {
-      format: 'es',
-      plugins: () => [wasm(), topLevelAwait()],
-    }, */
   },
 });

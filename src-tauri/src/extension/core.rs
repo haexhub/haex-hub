@@ -1,11 +1,69 @@
 use mime;
+use serde::Deserialize;
+use std::fmt;
 use std::fs;
 use std::path::PathBuf;
-use std::str::FromStr;
+
 use tauri::{
-    http::{Request, Response, Uri},
-    AppHandle, Error as TauriError, Manager, Runtime,
+    http::{Request, Response},
+    AppHandle, Error as TauriError, Manager, Runtime, UriSchemeContext,
 };
+
+#[derive(Deserialize, Debug)]
+struct ExtensionInfo {
+    id: String,
+    version: String,
+}
+
+#[derive(Debug)]
+enum DataProcessingError {
+    HexDecoding(hex::FromHexError),
+    Utf8Conversion(std::string::FromUtf8Error),
+    JsonParsing(serde_json::Error),
+}
+
+// Implementierung von Display für benutzerfreundliche Fehlermeldungen
+impl fmt::Display for DataProcessingError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DataProcessingError::HexDecoding(e) => write!(f, "Hex-Dekodierungsfehler: {}", e),
+            DataProcessingError::Utf8Conversion(e) => {
+                write!(f, "UTF-8-Konvertierungsfehler: {}", e)
+            }
+            DataProcessingError::JsonParsing(e) => write!(f, "JSON-Parsing-Fehler: {}", e),
+        }
+    }
+}
+
+// Implementierung von std::error::Error (optional, aber gute Praxis für bibliotheksähnlichen Code)
+impl std::error::Error for DataProcessingError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            DataProcessingError::HexDecoding(e) => Some(e),
+            DataProcessingError::Utf8Conversion(e) => Some(e),
+            DataProcessingError::JsonParsing(e) => Some(e),
+        }
+    }
+}
+
+// Implementierung von From-Traits für einfache Verwendung des '?'-Operators
+impl From<hex::FromHexError> for DataProcessingError {
+    fn from(err: hex::FromHexError) -> Self {
+        DataProcessingError::HexDecoding(err)
+    }
+}
+
+impl From<std::string::FromUtf8Error> for DataProcessingError {
+    fn from(err: std::string::FromUtf8Error) -> Self {
+        DataProcessingError::Utf8Conversion(err)
+    }
+}
+
+impl From<serde_json::Error> for DataProcessingError {
+    fn from(err: serde_json::Error) -> Self {
+        DataProcessingError::JsonParsing(err)
+    }
+}
 
 pub fn copy_directory(source: String, destination: String) -> Result<(), String> {
     println!(
@@ -46,6 +104,7 @@ pub fn copy_directory(source: String, destination: String) -> Result<(), String>
 pub fn resolve_secure_extension_asset_path<R: Runtime>(
     app_handle: &AppHandle<R>,
     extension_id: &str,
+    extension_version: &str,
     requested_asset_path: &str,
 ) -> Result<PathBuf, String> {
     // 1. Validiere die Extension ID
@@ -57,6 +116,17 @@ pub fn resolve_secure_extension_asset_path<R: Runtime>(
         return Err(format!("Ungültige Extension ID: {}", extension_id));
     }
 
+    if extension_version.is_empty()
+        || !extension_version
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '.')
+    {
+        return Err(format!(
+            "Ungültige Extension Version: {}",
+            extension_version
+        ));
+    }
+
     // 2. Bestimme das Basisverzeichnis für alle Erweiterungen (Resource Directory)
     let base_extensions_dir = app_handle
         .path()
@@ -66,7 +136,8 @@ pub fn resolve_secure_extension_asset_path<R: Runtime>(
         .join("extensions");
 
     // 3. Verzeichnis für die spezifische Erweiterung
-    let specific_extension_dir = base_extensions_dir.join(extension_id);
+    let specific_extension_dir =
+        base_extensions_dir.join(format!("{}/{}", extension_id, extension_version));
 
     // 4. Bereinige den angeforderten Asset-Pfad
     let clean_relative_path = requested_asset_path
@@ -112,70 +183,106 @@ pub fn resolve_secure_extension_asset_path<R: Runtime>(
     }
 }
 
-pub fn handle_extension_protocol<R: Runtime>(
-    app_handle: &AppHandle<R>,
+pub fn extension_protocol_handler<R: Runtime>(
+    context: &UriSchemeContext<'_, R>,
     request: &Request<Vec<u8>>,
 ) -> Result<Response<Vec<u8>>, Box<dyn std::error::Error>> {
-    let uri_ref = request.uri(); // uri_ref ist &Uri
+    let uri_ref = request.uri();
     println!("Protokoll Handler für: {}", uri_ref);
 
-    let uri_string = uri_ref.to_string(); // Konvertiere zu String
-    let parsed_uri = Uri::from_str(&uri_string)?; // Parse aus &str
-
-    let extension_id = parsed_uri
+    let host = uri_ref
         .host()
         .ok_or("Kein Host (Extension ID) in URI gefunden")?
         .to_string();
 
-    let requested_asset_path = parsed_uri.path();
+    let path_str = uri_ref.path();
+    let segments_iter = path_str.split('/').filter(|s| !s.is_empty());
+    let resource_segments: Vec<&str> = segments_iter.collect();
+    let raw_asset_path = resource_segments.join("/");
 
-    let asset_path_to_load = if requested_asset_path == "/" || requested_asset_path.is_empty() {
-        "index.html"
-    } else {
-        requested_asset_path
-    };
+    match process_hex_encoded_json(&host) {
+        Ok(info) => {
+            println!("Daten erfolgreich verarbeitet:");
+            println!("  ID: {}", info.id);
+            println!("  Version: {}", info.version);
+            let absolute_secure_path = resolve_secure_extension_asset_path(
+                context.app_handle(),
+                &info.id,
+                &info.version,
+                &raw_asset_path,
+            )?;
 
-    // Sicheren Dateisystempfad auflösen (nutzt jetzt AppHandle)
-    let absolute_secure_path =
-        resolve_secure_extension_asset_path(app_handle, &extension_id, asset_path_to_load)?;
+            println!("absolute_secure_path: {}", absolute_secure_path.display());
 
-    // Datei lesen und Response erstellen (Code wie vorher)
-    match fs::read(&absolute_secure_path) {
-        Ok(content) => {
-            let mime_type = mime_guess::from_path(&absolute_secure_path)
-                .first_or(mime::APPLICATION_OCTET_STREAM)
-                .to_string();
-            println!(
-                "Liefere {} ({}) für Extension '{}'",
-                absolute_secure_path.display(),
-                mime_type,
-                extension_id
-            );
-            // *** KORREKTUR: Verwende Response::builder() ***
-            Response::builder()
-                .status(200)
-                .header("Content-Type", mime_type) // Setze Header über .header()
-                .body(content) // body() gibt Result<Response<Vec<u8>>, Error> zurück
-                .map_err(|e| e.into()) // Wandle http::Error in Box<dyn Error> um
+            if absolute_secure_path.exists() && absolute_secure_path.is_file() {
+                match fs::read(&absolute_secure_path) {
+                    Ok(content) => {
+                        let mime_type = mime_guess::from_path(&absolute_secure_path)
+                            .first_or(mime::APPLICATION_OCTET_STREAM)
+                            .to_string();
+                        println!(
+                            "Liefere {} ({}) ",
+                            absolute_secure_path.display(),
+                            mime_type
+                        );
+                        Response::builder()
+                            .status(200)
+                            .header("Content-Type", mime_type)
+                            .body(content)
+                            .map_err(|e| e.into())
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "Fehler beim Lesen der Datei {}: {}",
+                            absolute_secure_path.display(),
+                            e
+                        );
+                        let status_code = if e.kind() == std::io::ErrorKind::NotFound {
+                            404
+                        } else if e.kind() == std::io::ErrorKind::PermissionDenied {
+                            403
+                        } else {
+                            500
+                        };
+
+                        Response::builder()
+                            .status(status_code)
+                            .body(Vec::new()) // Leerer Body für Fehler
+                            .map_err(|e| e.into()) // Wandle http::Error in Box<dyn Error> um
+                    }
+                }
+            } else {
+                // Datei nicht gefunden oder es ist keine Datei
+                eprintln!(
+                    "Asset nicht gefunden oder ist kein File: {}",
+                    absolute_secure_path.display()
+                );
+                Response::builder()
+                    .status(404) // HTTP 404 Not Found
+                    .body(Vec::new())
+                    .map_err(|e| e.into())
+            }
         }
         Err(e) => {
-            eprintln!(
-                "Fehler beim Lesen der Datei {}: {}",
-                absolute_secure_path.display(),
-                e
-            );
-            let status_code = if e.kind() == std::io::ErrorKind::NotFound {
-                404
-            } else if e.kind() == std::io::ErrorKind::PermissionDenied {
-                403
-            } else {
-                500
-            };
-            // *** KORREKTUR: Verwende Response::builder() auch für Fehler ***
+            eprintln!("Fehler bei der Datenverarbeitung: {}", e);
+
             Response::builder()
-                .status(status_code)
+                .status("500")
                 .body(Vec::new()) // Leerer Body für Fehler
-                .map_err(|e| e.into()) // Wandle http::Error in Box<dyn Error> um
+                .map_err(|e| e.into())
         }
     }
+}
+
+fn process_hex_encoded_json(hex_input: &str) -> Result<ExtensionInfo, DataProcessingError> {
+    // Schritt 1: Hex-String zu Bytes dekodieren
+    let bytes = hex::decode(hex_input)?; // Konvertiert hex::FromHexError automatisch
+
+    // Schritt 2: Bytes zu UTF-8-String konvertieren
+    let json_string = String::from_utf8(bytes)?; // Konvertiert FromUtf8Error automatisch
+
+    // Schritt 3: JSON-String zu Struktur parsen
+    let extension_info: ExtensionInfo = serde_json::from_str(&json_string)?; // Konvertiert serde_json::Error automatisch
+
+    Ok(extension_info)
 }

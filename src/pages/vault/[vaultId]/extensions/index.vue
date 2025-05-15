@@ -1,15 +1,38 @@
 <template>
-  <div class="flex flex-col">
-    <h1>{{ t("title") }}</h1>
-    <UiButton @click="loadExtensionManifestAsync">
-      {{ t("extension.add") }}
+  <div class="flex flex-col p-1 relative">
+    <UiButton
+      class="fixed top-20 right-4 btn-square btn-primary"
+      @click="loadExtensionManifestAsync"
+    >
+      <Icon name="mdi:plus" size="1.5em" />
     </UiButton>
+    <h1>{{ t("title") }}</h1>
+
+    <div class="flex">
+      <HaexExtensionCard
+        v-for="extension in extensionStore.availableExtensions"
+        v-bind="extension"
+        @remove="onShowRemoveDialog(extension)"
+      >
+      </HaexExtensionCard>
+    </div>
+    <!-- <UiButton @click="loadExtensionManifestAsync">
+      {{ t("extension.add") }}
+    </UiButton> -->
 
     <HaexExtensionManifestConfirm
-      :manifest="extension.manifest!"
+      :manifest="extension.manifest"
       v-model:open="showConfirmation"
       @confirm="addExtensionAsync"
     />
+
+    {{ showRemoveDialog }}
+    <HaexExtensionDialogRemove
+      v-model:open="showRemoveDialog"
+      :extension="extensionToBeRemoved"
+      @confirm="removeExtensionAsync"
+    >
+    </HaexExtensionDialogRemove>
   </div>
 </template>
 
@@ -17,6 +40,7 @@
 import { join } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
+import type { IHaexHubExtension, IHaexHubExtensionManifest } from "~/types/haexhub";
 
 definePageMeta({
   name: "extensionOverview",
@@ -35,6 +59,8 @@ const extension = reactive<{
   path: "",
 });
 
+onMounted(() => console.log("extension overview"));
+
 const loadExtensionManifestAsync = async () => {
   try {
     extension.path = await open({ directory: true, recursive: true });
@@ -50,7 +76,8 @@ const loadExtensionManifestAsync = async () => {
     extension.manifest = manifestFile;
     showConfirmation.value = true;
   } catch (error) {
-    console.error("Fehler beim Laden des Moduls:", error);
+    console.error("Fehler loadExtensionManifestAsync:", error);
+    add({ type: "error", text: JSON.stringify(error) });
   }
 };
 
@@ -67,26 +94,64 @@ const addExtensionAsync = async () => {
       text: t("extension.success.text"),
     });
   } catch (error) {
-    console.error("Fehler beim Laden des Moduls:", error);
+    console.error("Fehler addExtensionAsync:", error);
     add({ type: "error", text: JSON.stringify(error) });
+  }
+};
+
+const showRemoveDialog = ref(false);
+const extensionToBeRemoved = ref<IHaexHubExtension>();
+
+const onShowRemoveDialog = (extension: IHaexHubExtension) => {
+  extensionToBeRemoved.value = extension;
+  showRemoveDialog.value = true;
+};
+
+const removeExtensionAsync = async () => {
+  if (!extensionToBeRemoved.value?.id || !extensionToBeRemoved.value?.version) {
+    add({ type: "error", text: "Erweiterung kann nicht gelöscht werden" });
+    return;
+  }
+
+  try {
+    await extensionStore.removeExtensionAsync(
+      extensionToBeRemoved.value.id,
+      extensionToBeRemoved.value.version
+    );
+    await extensionStore.loadExtensionsAsync();
+    add({
+      type: "success",
+      title: t("extension.remove.success.title", {
+        extensionName: extensionToBeRemoved.value.name,
+      }),
+      text: t("extension.remove.success.text", { extensionName: extensionToBeRemoved.value.name }),
+    });
+  } catch (error) {
+    add({
+      type: "error",
+      title: t("extension.remove.error.title"),
+      text: t("extension.remove.error.text", { error: JSON.stringify(error) }),
+    });
   }
 };
 </script>
 
-<i18n lang="json">
-{
-  "de": {
-    "title": "Erweiterung installieren",
-    "extension": {
-      "add": "Erweiterung hinzufügen",
-      "success": {
-        "title": "{extension} hinzugefügt",
-        "text": "Die Erweiterung wurde erfolgreich hinzugefügt"
-      }
-    }
-  },
-  "en": {
-    "title": "Install extension"
-  }
-}
+<i18n lang="yaml">
+de:
+  title: "Erweiterung installieren"
+  extension:
+    remove:
+      success:
+        text: "Erweiterung {extensionName} wurde erfolgreich entfernt"
+        title: "{extensionName} entfernt"
+      error:
+        text: "Erweiterung {extensionName} konnte nicht entfernt werden. \n {error}"
+        title: "Fehler beim Entfernen von {extensionName}"
+
+    add: "Erweiterung hinzufügen"
+    success:
+      title: "{extension} hinzugefügt"
+      text: "Die Erweiterung wurde erfolgreich hinzugefügt"
+en:
+  title: "Install extension"
 </i18n>

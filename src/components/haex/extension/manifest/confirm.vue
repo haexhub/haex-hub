@@ -54,10 +54,12 @@
 </template>
 
 <script setup lang="ts">
+import type { IHaexHubExtensionManifest } from "~/types/haexhub";
+
 const { t } = useI18n();
 
 const open = defineModel<boolean>("open", { default: false });
-defineProps<{ manifest?: IHaexHubExtensionManifest }>();
+defineProps<{ manifest?: IHaexHubExtensionManifest | null }>();
 
 const emit = defineEmits(["deny", "confirm"]);
 

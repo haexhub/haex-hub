@@ -1,5 +1,3 @@
-import { H3Error } from "h3";
-
 export const bytesToBase64DataUrlAsync = async (
   bytes: Uint8Array,
   type = "application/octet-stream"
@@ -82,9 +80,36 @@ export const isRouteActive = (to: RouteLocationRawI18n, exact: boolean = false) 
     return exact
       ? found?.name === useRouter().currentRoute.value.name
       : found?.name === useRouter().currentRoute.value.name ||
-          found?.children.some((child) => child.name === useRouter().currentRoute.value.name);
+      found?.children.some((child) => child.name === useRouter().currentRoute.value.name);
   });
 
 export const isKey = <T extends object>(x: T, k: PropertyKey): k is keyof T => {
   return k in x;
+};
+
+export const filterAsync = async <T>(
+  arr: T[],
+  predicate: (value: T, index: number, array: T[]) => Promise<boolean>
+) => {
+  // 1. Mappe jedes Element auf ein Promise, das zu true/false auflöst
+  const results = await Promise.all(arr.map(predicate));
+
+  // 2. Filtere das ursprüngliche Array basierend auf den Ergebnissen
+  return arr.filter((_value, index) => results[index]);
+};
+
+export const stringToHex = (str: string) =>
+  str
+    .split("")
+    .map((char) => char.charCodeAt(0).toString(16).padStart(2, "0"))
+    .join(""); // Join array into a single string
+
+export const hexToString = (hex: string) => {
+  if (!hex) return "";
+  const parsedValue = hex
+    .match(/.{1,2}/g) // Split hex into pairs
+    ?.map((byte) => String.fromCharCode(parseInt(byte, 16))) // Convert hex to char
+    .join(""); // Join array into a single string
+
+  return parsedValue ? parsedValue : "";
 };

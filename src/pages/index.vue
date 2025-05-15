@@ -1,6 +1,6 @@
 <template>
   <div class="items-center justify-center min-h-full flex w-full">
-    <div class="flex flex-col justify-center items-center gap-4 max-w-3xl">
+    <div class="flex flex-col justify-center items-center gap-5 max-w-3xl">
       <img src="/logo.svg" class="bg-primary p-3 size-16 rounded-full" alt="HaexVault Logo" />
 
       <span class="flex flex-wrap font-bold text-pretty text-xl gap-2 justify-center">
@@ -10,7 +10,7 @@
         <UiTextGradient>Haex Hub</UiTextGradient>
       </span>
 
-      <div class="flex flex-col md:flex-row gap-4 w-full">
+      <div class="flex flex-col md:flex-row gap-4 w-full h-24 md:h-auto">
         <VaultButtonCreate />
 
         <VaultButtonOpen v-model:isOpen="passwordPromptOpen" :path="vaultPath" />
@@ -52,7 +52,7 @@
             :key="vault.path"
           >
             <button
-              class="link link-accent flex items-center no-underline justify-between text-nowrap text-xs md:text-base shrink w-full py-2 px-4"
+              class="link link-accent flex items-center no-underline justify-between text-nowrap text-sm md:text-base shrink w-full py-2 px-4"
               @click="
                 passwordPromptOpen = true;
                 vaultPath = vault.path;

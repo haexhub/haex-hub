@@ -4,18 +4,15 @@ import { drizzle, SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 import * as schema from "@/../src-tauri/database/schemas/vault";
 
 import { invoke } from "@tauri-apps/api/core";
-import { count } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { platform } from "@tauri-apps/plugin-os";
 
 interface IVault {
-  //database: Database;
-  path: string;
-  password: string;
   name: string;
   drizzle: SqliteRemoteDatabase<typeof schema>;
 }
 interface IOpenVaults {
-  [vaultPath: string]: IVault;
+  [vaultId: string]: IVault;
 }
 
 export const useVaultStore = defineStore("vaultStore", () => {
@@ -58,27 +55,20 @@ export const useVaultStore = defineStore("vaultStore", () => {
 
   const openAsync = async ({ path = "", password }: { path: string; password: string }) => {
     try {
-      console.log("try to open db", path, password);
-
       const result = await invoke<string>("open_encrypted_database", {
         path,
         key: password,
       });
 
-      console.log("open vault from store", result);
-      //const db = await Database.load(sqlitePath);
+      if (result !== "success") throw new Error(result);
 
       const vaultId = await getVaultIdAsync(path);
       const seperator = platform() === "windows" ? "\\" : "/";
       const fileName = path.split(seperator).pop();
-      console.log("opened db fileName", fileName, vaultId);
 
       openVaults.value = {
         ...openVaults.value,
         [vaultId]: {
-          //database: db,
-          path,
-          password,
           name: fileName ?? path,
           drizzle: drizzle<typeof schema>(
             async (sql, params: unknown[], method) => {
@@ -102,23 +92,14 @@ export const useVaultStore = defineStore("vaultStore", () => {
                 return { rows: [] };
               }
 
-              /* rows = rows.map((row: any) => {
-                return Object.values(row);
-              }); */
-
-              console.log("select after map", rows);
-              // If the method is "all", return all rows
               results = method === "all" ? rows : rows[0];
 
               return { rows: results };
             },
-            // Pass the schema to the drizzle instance
             { schema: schema, logger: true }
           ),
         },
       };
-
-      //if (!(await testDatabaseReadAsync())) throw new Error("Passwort falsch");
 
       const { addVaultAsync } = useLastVaultStore();
       await addVaultAsync({ path });
@@ -126,15 +107,6 @@ export const useVaultStore = defineStore("vaultStore", () => {
       return vaultId;
     } catch (error) {
       console.error("Error openAsync ", error);
-      return false;
-      //if (error === "file is not a database") throw new Error("Passwort falsch");
-    }
-  };
-
-  const testDatabaseReadAsync = async () => {
-    try {
-      return currentVault.value?.drizzle.select({ count: count() }).from(schema.haexExtensions);
-    } catch (error) {
       return false;
     }
   };
@@ -198,7 +170,7 @@ const getVaultIdAsync = async (path: string) => {
   return hashHex;
 };
 
-function isSelectQuery(sql: string): boolean {
+const isSelectQuery = (sql: string) => {
   const selectRegex = /^\s*SELECT\b/i;
   return selectRegex.test(sql);
-}
+};

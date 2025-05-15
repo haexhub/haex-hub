@@ -102,6 +102,7 @@ const onLoadDatabase = async () => {
 
 const localePath = useLocalePath();
 
+const { currentVault, currentVaultId } = storeToRefs(useVaultStore());
 const onOpenDatabase = async () => {
   try {
     check.value = true;
@@ -110,7 +111,10 @@ const onOpenDatabase = async () => {
     const passwordCheck = vaultDatabaseSchema.password.safeParse(database.password);
 
     if (!pathCheck.success || !passwordCheck.success || !path) {
-      add({ type: "error", text: "params falsch" });
+      add({
+        type: "error",
+        text: `Params falsch. Path: ${pathCheck.error} | Password: ${passwordCheck.error}`,
+      });
       return;
     }
 
@@ -131,14 +135,13 @@ const onOpenDatabase = async () => {
 
     onClose();
 
+    currentVaultId.value = vaultId;
+    console.log("vault before navigation", currentVault.value, currentVaultId.value, vaultId);
     await navigateTo(
       localePath({
         name: "vaultOverview",
         params: {
           vaultId,
-        },
-        query: {
-          showSidebar: "true",
         },
       })
     );

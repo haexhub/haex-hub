@@ -1,46 +1,31 @@
-import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { join, resourceDir } from "@tauri-apps/api/path";
-import { readTextFile, readDir } from "@tauri-apps/plugin-fs";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { exists, readDir, readTextFile, remove } from "@tauri-apps/plugin-fs";
+import { and, eq } from "drizzle-orm";
+import type {
+  IHaexHubExtension,
+  IHaexHubExtensionLink,
+  IHaexHubExtensionManifest,
+} from "~/types/haexhub";
 import { haexExtensions } from "~~/src-tauri/database/schemas/vault";
-import { eq } from "drizzle-orm";
 
 const manifestFileName = "manifest.json";
 const logoFileName = "logo.svg";
 
-export interface IHaexHubExtensionLink {
-  name: string;
-  icon: string;
-  tooltip?: string;
-  id: string;
-  version: string;
-  manifest?: IHaexHubExtensionManifest;
-}
-
-export interface IHaexHubExtensionManifest {
-  name: string;
-  id: string;
-  entry: string;
-  author: string;
-  url: string;
-  version: string;
-  icon: string;
-  permissions: {
-    database?: {
-      read?: string[];
-      write?: string[];
-      create?: string[];
-    };
-    http?: string[];
-    filesystem?: {
-      read?: string[];
-      write?: string[];
-    };
-  };
-}
-
 export const useExtensionsStore = defineStore("extensionsStore", () => {
   const availableExtensions = ref<IHaexHubExtensionLink[]>([]);
+
+  const extensionLinks = computed<ISidebarItem[]>(() =>
+    availableExtensions.value
+      .filter((extension) => extension.enabled && extension.installed)
+      .map((extension) => ({
+        icon: extension.icon ?? "",
+        id: extension.id,
+        name: extension.name ?? "",
+        tooltip: extension.name ?? "",
+        to: { name: "haexExtension", params: { extensionId: extension.id } },
+      }))
+  );
 
   const currentRoute = useRouter().currentRoute;
 
@@ -79,6 +64,16 @@ export const useExtensionsStore = defineStore("extensionsStore", () => {
       return true;
     } catch (error) {
       throw new Error(`Keine Leseberechtigung für Ordner ${extensionDirectory}`);
+    }
+  };
+
+  const isExtensionInstalledAsync = async (extension: Partial<IHaexHubExtension>) => {
+    try {
+      const extensionPath = await getExtensionPathAsync(extension.id, `${extension.version}`);
+      console.log(`extension ${extension.id} is installed ${await exists(extensionPath)}`);
+      return await exists(extensionPath);
+    } catch (error) {
+      return false;
     }
   };
 
@@ -130,8 +125,10 @@ export const useExtensionsStore = defineStore("extensionsStore", () => {
     return true;
   };
 
-  const readManifestFileAsync = async (extensionId: string, version: string | number) => {
+  const readManifestFileAsync = async (extensionId: string, version: string) => {
     try {
+      if (!(await isExtensionInstalledAsync({ id: extensionId, version }))) return null;
+
       const extensionPath = await getExtensionPathAsync(extensionId, `${version}`);
       const manifestPath = await join(extensionPath, manifestFileName);
       const manifest = (await JSON.parse(
@@ -139,7 +136,7 @@ export const useExtensionsStore = defineStore("extensionsStore", () => {
       )) as IHaexHubExtensionManifest;
 
       /*
-      TODO implement await checkManifets(manifest);
+      TODO implement check, that manifest has valid data
       */
       return manifest;
     } catch (error) {
@@ -287,77 +284,83 @@ export const useExtensionsStore = defineStore("extensionsStore", () => {
 
   const extensionEntry = computedAsync(
     async () => {
-      console.log("extensionEntry start", currentExtension.value);
-      const regex = /((href|src)=["'])([^"']+)(["'])/g;
-      if (!currentExtension.value?.id || !currentExtension.value.version) {
-        console.log("extension id or entry missing", currentExtension.value);
-        return "no mani: " + currentExtension.value;
-      }
-      //return "wadahadedzdz";
+      try {
+        console.log("extensionEntry start", currentExtension.value);
+        const regex = /((href|src)=["'])([^"']+)(["'])/g;
 
-      const extensionPath = await getExtensionPathAsync(
-        currentExtension.value?.id,
-        currentExtension.value?.version
-      ); //await join(await resourceDir(), currentExtension.value.. extensionDir, entryFileName);
-
-      console.log("extensionEntry extensionPath", extensionPath);
-      const manifest = await readManifestFileAsync(
-        currentExtension.value.id,
-        currentExtension.value.version
-      );
-
-      if (!manifest) return "no manifest readable";
-
-      const entryPath = await join(extensionPath, manifest.entry);
-
-      return `asset://localhost/${entryPath}`;
-      let entryHtml = await readTextFile(entryPath);
-
-      console.log("entryHtml", entryHtml);
-      const replacements = [];
-      let match;
-      while ((match = regex.exec(entryHtml)) !== null) {
-        const [fullMatch, prefix, attr, resource, suffix] = match;
-        if (!resource.startsWith("http")) {
-          replacements.push({ match: fullMatch, resource, prefix, suffix });
+        if (!currentExtension.value?.id || !currentExtension.value.version) {
+          console.log("extension id or entry missing", currentExtension.value);
+          return "no mani: " + currentExtension.value;
         }
-      }
 
-      for (const { match, resource, prefix, suffix } of replacements) {
-        const fileContent = await readTextFile(await join(extensionPath, resource));
-        const blob = new Blob([fileContent], { type: getMimeType(resource) });
-        const blobUrl = URL.createObjectURL(blob);
-        console.log("blob", resource, blobUrl);
-        entryHtml = entryHtml.replace(match, `${prefix}${blobUrl}${suffix}`);
-      }
+        const extensionPath = await getExtensionPathAsync(
+          currentExtension.value?.id,
+          currentExtension.value?.version
+        ); //await join(await resourceDir(), currentExtension.value.. extensionDir, entryFileName);
 
-      console.log("entryHtml", entryHtml);
+        console.log("extensionEntry extensionPath", extensionPath);
+        const manifest = await readManifestFileAsync(
+          currentExtension.value.id,
+          currentExtension.value.version
+        );
 
-      const blob = new Blob([entryHtml], { type: "text/html" });
-      const iframeSrc = URL.createObjectURL(blob);
+        if (!manifest) return "no manifest readable";
 
-      console.log("iframeSrc", iframeSrc);
+        const entryPath = await join(extensionPath, manifest.entry);
 
-      /* const path = convertFileSrc(extensionDir, manifest.entry);
+        const hexName = stringToHex(
+          JSON.stringify({
+            id: currentExtension.value.id,
+            version: currentExtension.value.version,
+          })
+        );
+
+        return `haex-extension://${hexName}/index.html`;
+        return convertFileSrc(entryPath); //`asset://localhost/${entryPath}`;
+        let entryHtml = await readTextFile(entryPath);
+
+        console.log("entryHtml", entryHtml);
+        const replacements = [];
+        let match;
+        while ((match = regex.exec(entryHtml)) !== null) {
+          const [fullMatch, prefix, attr, resource, suffix] = match;
+          if (!resource.startsWith("http")) {
+            replacements.push({ match: fullMatch, resource, prefix, suffix });
+          }
+        }
+
+        for (const { match, resource, prefix, suffix } of replacements) {
+          const srcFile = convertFileSrc(await join(extensionPath, resource));
+          entryHtml = entryHtml.replace(match, `${prefix}${srcFile}${suffix}`);
+        }
+
+        console.log("entryHtml", entryHtml);
+
+        const blob = new Blob([entryHtml], { type: "text/html" });
+        const iframeSrc = URL.createObjectURL(blob);
+
+        console.log("iframeSrc", iframeSrc);
+
+        /* const path = convertFileSrc(extensionDir, manifest.entry);
     console.log("final path", path); */
-      //manifest.entry = iframeSrc;
-      return iframeSrc;
-      /* await join(
+        //manifest.entry = iframeSrc;
+        return iframeSrc;
+        /* await join(
         path, //`file:/${extensionDirectory}`,
         manifest.entry
       ); */
-      // Modul-Datei laden
-      //const modulePathFull = await join(basePath, manifest.main);
-      /* const manifest: PluginManifest = await invoke('load_plugin', {
+        // Modul-Datei laden
+        //const modulePathFull = await join(basePath, manifest.main);
+        /* const manifest: PluginManifest = await invoke('load_plugin', {
         manifestPath,
       }); */
-      /* const iframe = document.createElement('iframe');
+        /* const iframe = document.createElement('iframe');
       iframe.src = manifest.entry;
       iframe.setAttribute('sandbox', 'allow-scripts');
       iframe.style.width = '100%';
       iframe.style.height = '100%';
       iframe.style.border = 'none'; */
-      /* const addonApi = {
+        /* const addonApi = {
         db_execute: async (sql: string, params: string[] = []) => {
           return invoke('db_execute', {
             addonId: manifest.name,
@@ -373,24 +376,27 @@ export const useExtensionsStore = defineStore("extensionsStore", () => {
           });
         },
       }; */
-      /* iframe.onload = () => {
+        /* iframe.onload = () => {
         iframe.contentWindow?.postMessage(
           { type: 'init', payload: addonApi },
           '*'
-        );
-      };
-
-      window.addEventListener('message', (event) => {
-        if (event.source === iframe.contentWindow) {
-          const { type } = event.data;
-          if (type === 'ready') {
-            console.log(`Plugin ${manifest.name} ist bereit`);
-          }
-        }
-      }); */
-      /* plugins.value.push({ name: manifest.name, entry: manifest.entry });
-
-        console.log(`Plugin ${manifest.name} geladen.`); */
+          );
+          };
+          
+          window.addEventListener('message', (event) => {
+            if (event.source === iframe.contentWindow) {
+              const { type } = event.data;
+              if (type === 'ready') {
+                console.log(`Plugin ${manifest.name} ist bereit`);
+                }
+                }
+                }); */
+        /* plugins.value.push({ name: manifest.name, entry: manifest.entry });
+                
+                console.log(`Plugin ${manifest.name} geladen.`); */
+      } catch (error) {
+        console.error("ERROR extensionEntry", error);
+      }
     },
     null,
     { lazy: true }
@@ -399,28 +405,36 @@ export const useExtensionsStore = defineStore("extensionsStore", () => {
   const loadExtensionsAsync = async () => {
     const { currentVault } = storeToRefs(useVaultStore());
 
-    /* const query = db
-      .select()
-      .from(haexExtensions)
-      //.where(sql`${haexExtensions.enabled} = "1"`);
-      .where(eq(haexExtensions.enabled, true)); */
-    const extensions = await currentVault.value?.drizzle
-      .select()
-      .from(haexExtensions)
-      .where(eq(haexExtensions.enabled, true));
+    const extensions = (await currentVault.value?.drizzle.select().from(haexExtensions)) ?? [];
 
-    //const manifest =   readTextFile(manifestFileName)
-    //const { sql, params } = query.toSQL();
-    //const extensions = await invoke<any>("sql_select", { sql, params });
-    console.log("loadExtensionsAsync ", extensions);
+    //if (!extensions?.length) return false;
+
+    const installedExtensions = await filterAsync(extensions, isExtensionInstalledAsync);
+    console.log("loadExtensionsAsync installedExtensions", installedExtensions);
+
     availableExtensions.value =
-      extensions?.map((extension) => ({
+      extensions.map((extension) => ({
         id: extension.id,
         name: extension.name ?? "",
         icon: extension.icon ?? "",
-        tooltip: extension.name ?? "",
+        author: extension.author ?? "",
         version: extension.version ?? "",
+        enabled: extension.enabled ? true : false,
+        installed: installedExtensions.includes(extension),
       })) ?? [];
+
+    console.log("loadExtensionsAsync", availableExtensions.value);
+    return true;
+  };
+
+  const removeExtensionAsync = async (id: string, version: string) => {
+    try {
+      console.log("remove extension", id, version);
+      await removeExtensionFromVaultAsync(id, version);
+      await removeExtensionFilesAsync(id, version);
+    } catch (error) {
+      throw new Error(JSON.stringify(error));
+    }
   };
 
   return {
@@ -428,10 +442,13 @@ export const useExtensionsStore = defineStore("extensionsStore", () => {
     checkManifest,
     currentExtension,
     extensionEntry,
+    extensionLinks,
     installAsync,
     isActive,
     loadExtensionsAsync,
     readManifestFileAsync,
+    removeExtensionAsync,
+    getExtensionPathAsync,
   };
 });
 
@@ -440,3 +457,36 @@ const getMimeType = (file: string) => {
   if (file.endsWith(".js")) return "text/javascript";
   return "text/plain";
 };
+
+const removeExtensionFromVaultAsync = async (id: string | null, version: string | null) => {
+  if (!id) throw new Error("Erweiterung kann nicht gelöscht werden. Es keine ID angegeben");
+
+  if (!version)
+    throw new Error("Erweiterung kann nicht gelöscht werden. Es wurde keine Version angegeben");
+
+  const { currentVault } = useVaultStore();
+  const removedExtensions = await currentVault?.drizzle
+    .delete(haexExtensions)
+    .where(and(eq(haexExtensions.id, id), eq(haexExtensions.version, version)));
+  return removedExtensions;
+};
+
+const removeExtensionFilesAsync = async (id: string | null, version: string | null) => {
+  try {
+    const { getExtensionPathAsync } = useExtensionsStore();
+    if (!id) throw new Error("Erweiterung kann nicht gelöscht werden. Es keine ID angegeben");
+
+    if (!version)
+      throw new Error("Erweiterung kann nicht gelöscht werden. Es wurde keine Version angegeben");
+
+    const extensionDirectory = await getExtensionPathAsync(id, version);
+    await remove(extensionDirectory, {
+      recursive: true,
+    });
+  } catch (error) {
+    console.error("ERROR removeExtensionFilesAsync", error);
+    throw new Error(JSON.stringify(error));
+  }
+};
+
+const replaceUrlWithAssetProtocolAsync = () => { };

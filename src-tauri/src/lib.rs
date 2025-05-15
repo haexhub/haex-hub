@@ -12,30 +12,37 @@ pub fn run() {
     let protocol_name = "haex-extension";
 
     tauri::Builder::default()
-        /* .register_uri_scheme_protocol(protocol_name, move |app_handle, request| {
-            // Extrahiere den Request aus dem Kontext
-            //let request = context.request();
-            // Rufe die Handler-Logik auf
-            match extension::core::handle_extension_protocol(0, &request) {
-                Ok(response) => response, // Gib die erfolgreiche Response zurück
+        .register_uri_scheme_protocol(protocol_name, move |context, request| {
+            match extension::core::extension_protocol_handler(&context, &request) {
+                Ok(response) => response, // Wenn der Handler Ok ist, gib die Response direkt zurück
                 Err(e) => {
-                    // Logge den Fehler
-                    eprintln!("Fehler im Protokoll-Handler für '{}': {}", request.uri(), e);
-                    // Gib eine generische 500er Fehler-Response zurück
-                    Response::builder()
-                    .status(500)
-                    .mimetype("text/plain") // Einfacher Text für die Fehlermeldung
-                    .body(format!("Internal Server Error: {}", e).into_bytes()) // Body als Vec<u8>
-                    .unwrap() // .body() kann hier nicht fehlschlagen
+                    // Wenn der Handler einen Fehler zurückgibt, logge ihn und erstelle eine Fehler-Response
+                    eprintln!(
+                        "Fehler im Custom Protocol Handler für URI '{}': {}",
+                        request.uri(),
+                        e
+                    );
+                    // Erstelle eine HTTP 500 Fehler-Response
+                    // Du kannst hier auch spezifischere Fehler-Responses bauen, falls gewünscht.
+                    tauri::http::Response::builder()
+                        .status(500)
+                        .header("Content-Type", "text/plain") // Optional, aber gut für Klarheit
+                        .body(Vec::from(format!(
+                            "Interner Serverfehler im Protokollhandler: {}",
+                            e
+                        )))
+                        .unwrap_or_else(|build_err| {
+                            // Fallback, falls selbst das Erstellen der Fehler-Response fehlschlägt
+                            eprintln!("Konnte Fehler-Response nicht erstellen: {}", build_err);
+                            tauri::http::Response::builder()
+                                .status(500)
+                                .body(Vec::new())
+                                .expect("Konnte minimale Fallback-Response nicht erstellen")
+                        })
                 }
             }
-        }) */
-        /* .setup(move |app| {
-            // Der .setup Hook ist jetzt nur noch für andere Initialisierungen da
-            // Der AppHandle ist hier nicht mehr nötig für die Protokoll-Registrierung
-            println!("App Setup abgeschlossen.");
-            Ok(())
-        }) */
+            //extension::core::extension_protocol_handler(&context, &request)
+        })
         .plugin(tauri_plugin_http::init())
         .manage(DbConnection(Mutex::new(None)))
         .manage(ExtensionState::default())
@@ -57,3 +64,29 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+/* fn extension_protocol_handler(
+    app_handle: &tauri::AppHandle, // Beachten Sie die Signaturänderung in neueren Tauri-Versionen
+    request: &tauri::http::Request<Vec<u8>>,
+) -> Result<tauri::http::Response<Vec<u8>>, Box<dyn std::error::Error + Send + Sync>> {
+    let uri_str = request.uri().to_string();
+let parsed_url = match Url::parse(&uri_str) {
+    Ok(url) => url,
+    Err(e) => {
+        eprintln!("Fehler beim Parsen der URL '{}': {}", uri_str, e);
+        return Ok(tauri::http::ResponseBuilder::new().status(400).body(Vec::from("Ungültige URL"))?);
+    }
+};
+
+let plugin_id = parsed_url.host_str().ok_or_else(|| "Fehlende Plugin-ID in der URL".to_string())?;
+let path_segments: Vec<&str> = parsed_url.path_segments().ok_or_else(|| "URL hat keinen Pfad".to_string())?.collect();
+
+if path_segments.len() < 2 {
+    eprintln!("Unvollständiger Pfad in URL: {}", uri_str);
+    return Ok(tauri::http::Response::new().status(400).body(Vec::from("Unvollständiger Pfad"))?);
+}
+
+let version = path_segments;
+let file_path = path_segments[1..].join("/");
+    Ok(tauri::http::Response::builder()::new().status(404).body(Vec::new())?)
+} */

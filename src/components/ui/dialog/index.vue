@@ -50,26 +50,9 @@ export interface IDom {
 const id = useId();
 
 defineProps({
-  trigger: {
-    type: Object as PropType<IDom>,
-    default: () => ({
-      class: "",
-      text: "",
-    }),
-  },
-
   title: {
     type: String,
     default: "",
-  },
-
-  description: {
-    type: Object as PropType<IDom>,
-    default: () => ({
-      class: "",
-      text: "",
-    }),
-    required: false,
   },
 });
 
@@ -84,8 +67,8 @@ watch(open, async () => {
   if (open.value) {
     await modal.value?.open();
   } else {
-    const res = await modal.value?.close(true);
-    console.log("close dialog", res);
+    await modal.value?.close(true);
+    console.log("close dialog");
   }
 });
 

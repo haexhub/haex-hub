@@ -1,6 +1,8 @@
 <template>
-  {{ iframeSrc }}
-  <div class="w-full h-full">
+  <div class="w-full h-full overflow-scroll bg-red-300">
+    <div>
+      {{ iframeSrc }}
+    </div>
     <iframe
       v-if="iframeSrc"
       class="w-full h-full"
@@ -10,7 +12,7 @@
       sandbox="allow-scripts allow-same-origin"
     >
     </iframe>
-    <p v-else>{{ t("loading") }}</p>
+    <!--  <p v-else>{{ t("loading") }}</p> -->
   </div>
 </template>
 
@@ -28,11 +30,11 @@ const extensionStore = useExtensionsStore();
 watch(iframeSrc, () => console.log("iframeSrc", iframeSrc.value), { immediate: true });
 
 onMounted(async () => {
-  const minfest = await extensionStore.readManifestFileAsync(
+  /* const minfest = await extensionStore.readManifestFileAsync(
     currentExtension.value!.id,
     currentExtension.value!.version
   );
-  console.log("manifest", minfest, extensionStore.extensionEntry);
+  console.log("manifest", minfest, extensionStore.extensionEntry); */
 });
 </script>
 

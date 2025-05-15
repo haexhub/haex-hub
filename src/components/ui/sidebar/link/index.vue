@@ -8,9 +8,10 @@
       <NuxtLinkLocale
         :to
         class="flex items-center justify-center cursor-pointer tooltip-toogle"
-        ref="link"
+        ref="linkRef"
       >
-        <Icon :name="icon" class="shrink-0 size-6" />
+        <div v-if="iconType === 'svg'" v-html="icon" class="shrink-0 size-5" />
+        <Icon v-else :name="icon" size="1.5em" />
       </NuxtLinkLocale>
     </UiTooltip>
   </li>
@@ -23,6 +24,7 @@ const props = defineProps<ISidebarItem>();
 
 const router = useRouter();
 
+console.log("to", props.to);
 const isActive = computed(() => {
   if (props.to?.name === "haexExtension") {
     return getSingleRouteParam(router.currentRoute.value.params.extensionId) === props.id;
@@ -31,9 +33,9 @@ const isActive = computed(() => {
   }
 });
 
-const link = useTemplateRef("link");
+const linkRef = useTemplateRef("linkRef");
 
-const triggerNavigate = () => link.value?.$el.click();
+const triggerNavigate = () => linkRef.value?.$el.click();
 
 /* computed(() => {
   const found = useRouter()

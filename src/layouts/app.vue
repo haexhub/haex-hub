@@ -3,17 +3,22 @@
     <nav
       class="navbar bg-base-100 rounded-b max-sm:shadow border-b border-base-content/25 sm:z-20 relative px-2"
     >
-      <button
-        type="button"
-        class="btn btn-text btn-square me-2 z-50"
-        aria-haspopup="dialog"
-        aria-expanded="false"
-        aria-controls="sidebar"
-        @click="toogleSidebar"
-        ref="sidebarToogleRef"
-      >
-        <Icon name="mage:dash-menu" size="28" />
-      </button>
+      <UiTooltip :tooltip="isVisible ? t('sidebar.close') : t('sidebar.show')">
+        <button
+          type="button"
+          class="btn btn-text btn-square me-2 z-50"
+          aria-haspopup="dialog"
+          aria-expanded="false"
+          aria-controls="sidebar"
+          @click="toogleSidebar"
+          ref="sidebarToogleRef"
+        >
+          <Icon
+            :name="isVisible ? 'tabler:layout-sidebar' : 'tabler:layout-sidebar-filled'"
+            size="28"
+          />
+        </button>
+      </UiTooltip>
 
       <div class="flex flex-1 items-center">
         <NuxtLinkLocale
@@ -156,35 +161,28 @@
     <div class="flex h-full">
       <aside
         id="sidebar"
-        class="sm:shadow-none drawer max-w-14 transition-all"
-        :class="[!isVisible ? 'w-0' : 'w-14']"
+        class="sm:shadow-none transition-all h-full overflow-hidden border-r border-base-300"
+        :class="[!isVisible ? 'w-0' : 'w-16']"
         role="dialog"
         tabindex="-1"
       >
-        <div class="drawer-body px-0">
-          <ul class="menu p-0">
+        <div class="drawer-body h-full">
+          <ul class="menu p-0 h-full rounded-none">
             <UiSidebarLink v-bind="item" v-for="item in menu" :key="item.id" />
-            <UiSidebarLinkExtension
-              v-bind="item"
-              v-for="item in availableExtensions"
+            <UiSidebarLink
+              v-for="item in extensionLinks"
               :key="item.id"
+              v-bind="item"
+              icon-type="svg"
             />
           </ul>
         </div>
       </aside>
 
-      <div class="overflow-hidden transition-all relative w-full">
-        <div
-          class="h-full overflow-scroll transition-all pl-0"
-          :class="[isVisible ? 'sm:pl-14 ' : ' pl-0']"
-        >
-          <slot />
-        </div>
-      </div>
+      <main class="w-full">
+        <NuxtPage :transition="{ name: 'fade' }" />
+      </main>
     </div>
-    <!--  <main class="sm:pl-14">
-      <NuxtPage />
-    </main> -->
   </div>
 </template>
 
@@ -194,18 +192,19 @@ import { NuxtLinkLocale } from "#components";
 const { t } = useI18n();
 const { menu, isVisible } = storeToRefs(useSidebarStore());
 const sidebarToogleRef = useTemplateRef("sidebarToogleRef");
-onClickOutside(sidebarToogleRef, () => {
+
+/* onClickOutside(sidebarToogleRef, () => {
   if (currentScreenSize.value === "xs") {
     isVisible.value = false;
   }
-});
+}); */
 const { notifications } = storeToRefs(useNotificationStore());
 
 const { isActive } = useExtensionsStore();
 const { closeAsync } = useVaultStore();
 const { currentScreenSize } = storeToRefs(useUiStore());
 const onExtensionSelectAsync = async (id: string) => {};
-const { availableExtensions } = storeToRefs(useExtensionsStore());
+const { extensionLinks } = storeToRefs(useExtensionsStore());
 const toogleSidebar = () => {
   isVisible.value = !isVisible.value;
 };
@@ -223,10 +222,16 @@ de:
     view_all: Alle ansehen
   vault:
     close: Vault schließen
+  sidebar:
+    close: Sidebar schließen
+    show: Sidebar anzeigen
 en:
   notifications:
     label: Notifications
     view_all: View all
   vault:
     close: Close vault
+  sidebar:
+    close: close sidebar
+    show: show sidebar
 </i18n>

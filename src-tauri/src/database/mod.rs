@@ -227,5 +227,5 @@ pub fn open_encrypted_database(
     let mut db = state.0.lock().map_err(|e| e.to_string())?;
     *db = Some(conn);
 
-    Ok(format!("Verschlüsselte CRDT-Datenbank geöffnet: {}", path))
+    Ok(format!("success"))
 }

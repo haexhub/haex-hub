@@ -1,5 +1,4 @@
-import { getSingleRouteParam } from "~/composables/helper";
-import type { RouteLocationRaw, RouteLocationAsRelativeGeneric } from "vue-router";
+import type { RouteLocationAsRelativeGeneric } from "vue-router";
 
 export interface ISidebarItem {
   name: string;
@@ -7,6 +6,7 @@ export interface ISidebarItem {
   tooltip?: string;
   id: string;
   to?: RouteLocationAsRelativeGeneric;
+  iconType?: "icon" | "svg";
 }
 
 export const useSidebarStore = defineStore("sidebarStore", () => {

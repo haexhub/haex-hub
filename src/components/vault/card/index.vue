@@ -3,14 +3,19 @@
     <slot name="image" />
 
     <div class="card-header">
-      <h5 class="card-title" v-if="$slots.title">
-        <slot name="title" />
-      </h5>
+      <div v-if="$slots.title || title">
+        <Icon :name="icon" />
+        <h5 v-if="title" class="card-title mb-0">
+          {{ title }}
+        </h5>
+        <slot v-else name="title" />
+      </div>
+      <div class="text-base-content/50">Your journey starts here</div>
     </div>
 
     <div class="card-body">
       <slot />
-
+      aaaaaaaaa
       <div class="card-actions" v-if="$slots.action">
         <slot name="action" />
       </div>
@@ -35,6 +40,8 @@
 
 <script setup lang="ts">
 const emit = defineEmits(["close", "submit"]);
+
+defineProps<{ title?: string; icon?: string }>();
 
 const { escape, enter } = useMagicKeys();
 
