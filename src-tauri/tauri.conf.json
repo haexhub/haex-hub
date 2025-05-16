@@ -19,12 +19,13 @@
     ],
     "security": {
       "csp": {
-        "default-src": ["'self'", "haex-extensions"],
-        "script-src": ["'self'", "haex-extensions"],
-        "style-src": ["'self'", "haex-extensions"],
-        "connect-src": ["'self'", "haex-extensions"],
-        "img-src": ["'self'", "haex-extensions", "data:"],
-        "font-src": ["'self'", "haex-extensions", "data:"]
+        "default-src": ["'self'", "haex-extension: data: blob: asset:"],
+        "script-src": ["'self'", "haex-extension:"],
+        "style-src": ["'self'", "haex-extension:"],
+        "connect-src": ["'self'", "haex-extension:"],
+        "img-src": ["'self'", "haex-extension:", "data:"],
+        "font-src": ["'self'", "haex-extension:", "data:"],
+        "media-src": "'self' haex-extension: data: blob: asset:"
       },
       "assetProtocol": {
         "enable": true,
@@ -44,6 +45,20 @@
     ],
     "resources": {
       "database/vault.db": "resources/vault.db"
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false,
+        "files": {}
+      },
+      "deb": {
+        "files": {}
+      },
+      "rpm": {
+        "epoch": 0,
+        "files": {},
+        "release": "1"
+      }
     }
   }
 }

@@ -1,5 +1,5 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import { join, resourceDir } from "@tauri-apps/api/path";
+import { appDataDir, join } from "@tauri-apps/api/path";
 import { exists, readDir, readTextFile, remove } from "@tauri-apps/plugin-fs";
 import { and, eq } from "drizzle-orm";
 import type {
@@ -49,7 +49,7 @@ export const useExtensionsStore = defineStore("extensionsStore", () => {
 
   const getExtensionPathAsync = async (extensionId?: string, version?: string) => {
     if (!extensionId || !version) return "";
-    return await join(await resourceDir(), "extensions", extensionId, version);
+    return await join(await appDataDir(), "extensions", extensionId, version);
   };
 
   const checkSourceExtensionDirectoryAsync = async (extensionDirectory: string) => {
@@ -315,7 +315,7 @@ export const useExtensionsStore = defineStore("extensionsStore", () => {
           })
         );
 
-        return `haex-extension://${hexName}/index.html`;
+        return `haex-extension://${hexName}`;
         return convertFileSrc(entryPath); //`asset://localhost/${entryPath}`;
         let entryHtml = await readTextFile(entryPath);
 

@@ -130,7 +130,7 @@ pub fn resolve_secure_extension_asset_path<R: Runtime>(
     // 2. Bestimme das Basisverzeichnis für alle Erweiterungen (Resource Directory)
     let base_extensions_dir = app_handle
         .path()
-        .resource_dir() // Korrekt für Ressourcen
+        .app_data_dir() // Korrekt für Ressourcen
         // Wenn du stattdessen App Local Data willst: .app_local_data_dir()
         .map_err(|e: TauriError| format!("Basis-Verzeichnis nicht gefunden: {}", e))?
         .join("extensions");
@@ -220,6 +220,7 @@ pub fn extension_protocol_handler<R: Runtime>(
                         let mime_type = mime_guess::from_path(&absolute_secure_path)
                             .first_or(mime::APPLICATION_OCTET_STREAM)
                             .to_string();
+                        let content_length = content.len();
                         println!(
                             "Liefere {} ({}) ",
                             absolute_secure_path.display(),
@@ -228,6 +229,9 @@ pub fn extension_protocol_handler<R: Runtime>(
                         Response::builder()
                             .status(200)
                             .header("Content-Type", mime_type)
+                            .header("Content-Length", content_length.to_string()) // <-- HIER HINZUGEFÜGT
+                            // Optional, aber gut für Streaming-Fähigkeit:
+                            .header("Accept-Ranges", "bytes")
                             .body(content)
                             .map_err(|e| e.into())
                     }

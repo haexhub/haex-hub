@@ -18,6 +18,18 @@ export default defineNuxtConfig({
     dirs: ["composables/**", "stores/**", "components/**", "pages/**", "types/**"],
   },
 
+  icon: {
+    provider: 'server',
+    mode: "svg",
+    clientBundle: {
+      icons: ["solar:global-outline", "gg:extension"],
+      scan: true,
+      includeCustomCollections: true,
+    },
+    serverBundle: { collections: ["mdi", "line-md", "solar", "gg"] }
+    //collections: ["mdi", "line-md"]
+  },
+
   i18n: {
     strategy: "prefix_and_default",
     defaultLocale: "de",
