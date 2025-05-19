@@ -1,7 +1,7 @@
 
 import * as schema from "@/../src-tauri/database/schemas/vault";
 import { invoke } from "@tauri-apps/api/core";
-import { hostname, platform, type, version } from "@tauri-apps/plugin-os";
+import { platform } from "@tauri-apps/plugin-os";
 import { eq } from "drizzle-orm";
 import { drizzle, SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 
@@ -45,16 +45,9 @@ export const useVaultStore = defineStore("vaultStore", () => {
 
   const openVaults = ref<IOpenVaults>({});
 
-  const currentVault = computed(() => openVaults.value?.[currentVaultId.value ?? ""])  //ref<IVault>();
+  const currentVault = computed(() => openVaults.value?.[currentVaultId.value ?? ""])
 
-  /* watch(
-    currentVaultId,
-    () => {
-      currentVault.value = openVaults.value?.[currentVaultId.value ?? ""];
-    }
-  ); */
 
-  const hostKey = computedAsync(async () => "".concat(type(), version(), await hostname() ?? ""))
 
   const openAsync = async ({ path = "", password }: { path: string; password: string }) => {
     try {
@@ -213,6 +206,7 @@ export const useVaultStore = defineStore("vaultStore", () => {
   }
 
   const updateVaultNameAsync = async (newVaultName?: string | null) => {
+    console.log("set new vaultName", newVaultName)
     return currentVault.value?.drizzle.update(schema.haexSettings).set({ value: newVaultName ?? defaultVaultName.value }).where(eq(schema.haexSettings.key, "vaultName"))
   }
 
@@ -222,7 +216,6 @@ export const useVaultStore = defineStore("vaultStore", () => {
     currentVault,
     currentVaultId,
     currentVaultName,
-    hostKey,
     openAsync,
     openVaults,
     read_only,

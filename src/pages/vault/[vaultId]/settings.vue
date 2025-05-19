@@ -8,9 +8,9 @@
     <div class="p-2">{{ t('design') }}</div>
     <div><UiDropdownTheme @select="onSelectThemeAsync" /></div>
 
-    <div class="p-2">{{ t('vaultName') }}</div>
+    <div class="p-2">{{ t('vaultName.label') }}</div>
     <div>
-      <UiInput v-model="currentVaultName" :placeholder="t('vaultName')">
+      <UiInput v-model="currentVaultName" :placeholder="t('vaultName.label')">
         <template #append>
           <UiTooltip :tooltip="t('save')">
             <UiButton class="btn-primary" @click="onSetVaultNameAsync">
@@ -38,27 +38,31 @@ const { currentVault, currentVaultName } = storeToRefs(useVaultStore())
 const { updateVaultNameAsync } = useVaultStore()
 
 const onSelectLocaleAsync = async (locale: Locale) => {
-  console.log('onSelectLocaleAsync', locale)
-  const update = await currentVault.value?.drizzle
+  await currentVault.value?.drizzle
     .update(haexSettings)
     .set({ key: 'locale', value: locale })
     .where(eq(haexSettings.key, 'locale'))
   await setLocale(locale)
-  console.log('update locale', update)
 }
 
 const { currentTheme } = storeToRefs(useUiStore())
 
 const onSelectThemeAsync = async (theme: ITheme) => {
-  const update = await currentVault.value?.drizzle
+  await currentVault.value?.drizzle
     .update(haexSettings)
     .set({ key: 'theme', value: theme.name })
     .where(eq(haexSettings.key, 'theme'))
   currentTheme.value = theme
 }
 
-const onSetVaultNameAsync = async (vaultName: string) => {
-  updateVaultNameAsync(vaultName)
+const { add } = useSnackbar()
+const onSetVaultNameAsync = async () => {
+  try {
+    await updateVaultNameAsync(currentVaultName.value)
+    add({ text: t('vaultName.update.success'), type: 'success' })
+  } catch (error) {
+    add({ text: t('vaultName.update.error'), type: 'error' })
+  }
 }
 </script>
 
@@ -66,12 +70,19 @@ const onSetVaultNameAsync = async (vaultName: string) => {
 de:
   language: Sprache
   design: Design
-  vaultName: Vaultname
   save: Änderung speichern
-
+  vaultName:
+    label: Vaultname
+    update:
+      success: Vaultname erfolgreich aktualisiert
+      error: Vaultname konnte nicht aktualisiert werden
 en:
   language: Language
   design: Design
-  vaultName: Vault Name
   save: save changes
+  vaultName:
+    label: Vault Name
+    update:
+      success: Vault Name successfully updated
+      error: Vault name could not be updated
 </i18n>
