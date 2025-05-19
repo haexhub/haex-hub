@@ -11,8 +11,11 @@ export default defineNuxtConfig({
     "@vueuse/nuxt",
     "@nuxt/icon",
     "nuxt-snackbar",
-    "nuxt-svgo-loader",
+
+
   ],
+
+
 
   imports: {
     dirs: ["composables/**", "stores/**", "components/**", "pages/**", "types/**"],
@@ -26,9 +29,22 @@ export default defineNuxtConfig({
       scan: true,
       includeCustomCollections: true,
     },
-    serverBundle: { collections: ["mdi", "line-md", "solar", "gg", "emojione"] }
-    //collections: ["mdi", "line-md"]
+    serverBundle: { collections: ["mdi", "line-md", "solar", "gg", "emojione"] },
+
+    customCollections: [
+      {
+        prefix: 'my-icon',
+        dir: './src/assets/icons/'
+      },
+    ],
   },
+
+
+
+  /* svgo: {
+    autoImportPath: '~/assets/svg/',
+    dts: true,
+  }, */
 
   i18n: {
     strategy: "prefix_and_default",
@@ -90,4 +106,4 @@ export default defineNuxtConfig({
       strictPort: true,
     },
   },
-});
+})

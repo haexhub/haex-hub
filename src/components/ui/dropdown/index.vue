@@ -1,5 +1,5 @@
 <template>
-  <div class="dropdown relative inline-flex">
+  <div class="dropdown relative inline-flex" :class="dropdownClass">
     <button
       :id
       class="dropdown-toggle"
@@ -47,6 +47,7 @@ const { itemIs = 'li' } = defineProps<{
   items?: T[]
   itemIs?: string
   activatorClass?: string
+  dropdownClass?: string
 }>()
 
 defineEmits<{ select: [T] }>()

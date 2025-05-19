@@ -1,5 +1,8 @@
 <template>
-  <UiDropdown activator-class="btn btn-text btn-circle">
+  <UiDropdown
+    activator-class="btn btn-text btn-circle "
+    dropdown-class="[--offset:20]"
+  >
     <template #activator>
       <div
         class="size-9.5 rounded-full items-center justify-center text-base-content text-base"

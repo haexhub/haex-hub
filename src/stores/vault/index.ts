@@ -43,17 +43,16 @@ export const useVaultStore = defineStore("vaultStore", () => {
     },
   });
 
-  const openVaults = ref<IOpenVaults | undefined>();
+  const openVaults = ref<IOpenVaults>({});
 
-  const currentVault = ref<IVault | undefined>();
+  const currentVault = computed(() => openVaults.value?.[currentVaultId.value ?? ""])  //ref<IVault>();
 
-  watch(
+  /* watch(
     currentVaultId,
-    async () => {
+    () => {
       currentVault.value = openVaults.value?.[currentVaultId.value ?? ""];
-    },
-    { immediate: true }
-  );
+    }
+  ); */
 
   const hostKey = computedAsync(async () => "".concat(type(), version(), await hostname() ?? ""))
 
@@ -106,11 +105,7 @@ export const useVaultStore = defineStore("vaultStore", () => {
       };
 
       const { addVaultAsync } = useLastVaultStore();
-      addVaultAsync({ path });
-
-      syncLocaleAsync()
-      syncThemeAsync()
-      syncVaultNameAsync()
+      await addVaultAsync({ path })
 
       return vaultId;
     } catch (error) {
@@ -158,8 +153,6 @@ export const useVaultStore = defineStore("vaultStore", () => {
   const syncLocaleAsync = async () => {
     try {
       const app = useNuxtApp()
-      app.$i18n.availableLocales
-      //const { availableLocales, defaultLocale, setLocale, locale } = useI18n()
 
       const currentLocaleRow = await currentVault.value?.drizzle
         .select()
@@ -197,7 +190,7 @@ export const useVaultStore = defineStore("vaultStore", () => {
       await currentVault.value?.drizzle.insert(schema.haexSettings).values({
         id: crypto.randomUUID(),
         key: 'theme',
-        value: currentTheme.value.name,
+        value: currentTheme.value.value,
       })
     }
   }
@@ -234,6 +227,9 @@ export const useVaultStore = defineStore("vaultStore", () => {
     openVaults,
     read_only,
     refreshDatabaseAsync,
+    syncLocaleAsync,
+    syncThemeAsync,
+    syncVaultNameAsync,
     updateVaultNameAsync,
   };
 });

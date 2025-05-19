@@ -1,6 +1,6 @@
 <template>
   <div>
-    <fieldset class="join w-full">
+    <fieldset class="join w-full pt-0.5">
       <slot name="prepend" />
 
       <div class="input join-item">

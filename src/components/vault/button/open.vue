@@ -7,7 +7,7 @@
         @click="onLoadDatabase"
       >
         <Icon name="mdi:folder-open-outline" />
-        {{ t("database.open") }}
+        {{ t('database.open') }}
       </button>
     </template>
 
@@ -22,62 +22,60 @@
 
     <template #buttons>
       <UiButton class="btn-error" @click="onClose">
-        {{ t("abort") }}
+        {{ t('abort') }}
       </UiButton>
 
       <UiButton type="submit" class="btn-primary" @click="onOpenDatabase">
-        {{ t("open") }}
+        {{ t('open') }}
       </UiButton>
     </template>
   </UiDialog>
 </template>
 
 <script setup lang="ts">
-import { open } from "@tauri-apps/plugin-dialog";
-import { vaultDatabaseSchema } from "./schema";
+import { open } from '@tauri-apps/plugin-dialog'
+import { vaultDatabaseSchema } from './schema'
 
-const { t } = useI18n();
+const { t } = useI18n()
 
-const isOpen = defineModel("isOpen", { type: Boolean });
+const isOpen = defineModel('isOpen', { type: Boolean })
 
 const props = defineProps({
   path: String,
-});
+})
 
-const check = ref(false);
+const check = ref(false)
 
 const database = reactive<{
-  name: string;
-  password: string;
-  path: string | null;
-  type: "password" | "text";
+  name: string
+  password: string
+  path: string | null
+  type: 'password' | 'text'
 }>({
-  name: "",
-  password: "",
-  path: "",
-  type: "password",
-});
+  name: '',
+  password: '',
+  path: '',
+  type: 'password',
+})
 
 const initDatabase = () => {
-  database.name = "";
-  database.password = "";
-  database.path = "";
-  database.type = "password";
-};
+  database.name = ''
+  database.password = ''
+  database.path = ''
+  database.type = 'password'
+}
 
-initDatabase();
+initDatabase()
 
-const { add } = useSnackbar();
+const { add } = useSnackbar()
 
 const handleError = (error: unknown) => {
-  isOpen.value = false;
-  console.log("handleError", error, typeof error);
-  add({ type: "error", text: "Passwort falsch" });
-  //console.error(error);
-};
+  isOpen.value = false
+  console.error('handleError', error, typeof error)
+  add({ type: 'error', text: 'Passwort falsch' })
+}
 
-const { openAsync } = useVaultStore();
-//const { show } = storeToRefs(useSidebarStore());
+const { openAsync } = useVaultStore()
 
 const onLoadDatabase = async () => {
   try {
@@ -86,75 +84,77 @@ const onLoadDatabase = async () => {
       directory: false,
       filters: [
         {
-          name: "HaexVault",
-          extensions: ["db"],
+          name: 'HaexVault',
+          extensions: ['db'],
         },
       ],
-    });
+    })
 
-    if (!database.path) return;
+    if (!database.path) return
 
-    isOpen.value = true;
+    isOpen.value = true
   } catch (error) {
-    handleError(error);
+    handleError(error)
   }
-};
+}
 
-const localePath = useLocalePath();
+const localePath = useLocalePath()
 
-const { currentVault, currentVaultId } = storeToRefs(useVaultStore());
+const { syncLocaleAsync, syncThemeAsync, syncVaultNameAsync } = useVaultStore()
 const onOpenDatabase = async () => {
   try {
-    check.value = true;
-    const path = database.path || props.path;
-    const pathCheck = vaultDatabaseSchema.path.safeParse(path);
-    const passwordCheck = vaultDatabaseSchema.password.safeParse(database.password);
+    check.value = true
+    const path = database.path || props.path
+    const pathCheck = vaultDatabaseSchema.path.safeParse(path)
+    const passwordCheck = vaultDatabaseSchema.password.safeParse(
+      database.password
+    )
 
     if (!pathCheck.success || !passwordCheck.success || !path) {
       add({
-        type: "error",
+        type: 'error',
         text: `Params falsch. Path: ${pathCheck.error} | Password: ${passwordCheck.error}`,
-      });
-      return;
+      })
+      return
     }
-
-    console.log("try to open", path);
 
     const vaultId = await openAsync({
       path,
       password: database.password,
-    });
+    })
 
     if (!vaultId) {
       add({
-        type: "error",
-        text: "Vault konnte nicht geöffnet werden. \n Vermutlich ist das Passwort falsch",
-      });
-      return;
+        type: 'error',
+        text: 'Vault konnte nicht geöffnet werden. \n Vermutlich ist das Passwort falsch',
+      })
+      return
     }
 
-    onClose();
+    onClose()
 
-    currentVaultId.value = vaultId;
-    console.log("vault before navigation", currentVault.value, currentVaultId.value, vaultId);
     await navigateTo(
       localePath({
-        name: "vaultOverview",
+        name: 'vaultOverview',
         params: {
           vaultId,
         },
       })
-    );
+    )
+    await Promise.allSettled([
+      syncLocaleAsync(),
+      syncThemeAsync(),
+      syncVaultNameAsync(),
+    ])
   } catch (error) {
-    console.log(error);
-    handleError(error);
+    handleError(error)
   }
-};
+}
 
 const onClose = () => {
-  initDatabase();
-  isOpen.value = false;
-};
+  initDatabase()
+  isOpen.value = false
+}
 </script>
 
 <i18n lang="json">

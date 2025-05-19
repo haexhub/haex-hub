@@ -43,9 +43,9 @@
 
 <script setup lang="ts">
 import { save } from '@tauri-apps/plugin-dialog'
+import { onKeyStroke } from '@vueuse/core'
 import { useVaultStore } from '~/stores/vault'
 import { vaultDatabaseSchema } from './schema'
-import { onKeyStroke } from '@vueuse/core'
 
 onKeyStroke('Enter', (e) => {
   e.preventDefault()
