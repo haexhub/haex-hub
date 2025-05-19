@@ -46,6 +46,7 @@ export const useBrowserExtensionStore = defineStore(
 
 const initializeAsync = async () => {
   const { isInitialized } = storeToRefs(useBrowserExtensionStore());
+  return
   if (isInitialized.value) return;
 
   // Lade Erweiterungen aus dem Erweiterungsverzeichnis
@@ -87,4 +88,4 @@ const processNavigation = (url: string) => {
   return true;
 };
 
-const injectContentScripts = (t: string) => {};
+const injectContentScripts = (t: string) => { };

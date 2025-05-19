@@ -1,15 +1,15 @@
 <template>
-  <div class="h-full"></div>
+  <div class="h-full text-base-content"></div>
 </template>
 
 <script setup lang="ts">
 definePageMeta({
-  name: "vaultOverview",
-});
+  name: 'vaultOverview',
+})
 
-const extensionStore = useExtensionsStore();
+const extensionStore = useExtensionsStore()
 
 onMounted(async () => {
-  await extensionStore.loadExtensionsAsync();
-});
+  await extensionStore.loadExtensionsAsync()
+})
 </script>

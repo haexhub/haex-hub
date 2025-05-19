@@ -14,13 +14,6 @@ export const useSidebarStore = defineStore("sidebarStore", () => {
 
   const menu = ref<ISidebarItem[]>([
     {
-      id: "haex-browser",
-      name: "Haex Browser",
-      icon: "solar:global-outline",
-      to: { name: "haexBrowser" },
-    },
-
-    {
       id: "haex-extensions-add",
       name: "Haex Extensions",
       icon: "gg:extension",

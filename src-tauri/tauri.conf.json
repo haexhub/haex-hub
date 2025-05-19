@@ -19,7 +19,7 @@
     ],
     "security": {
       "csp": {
-        "default-src": ["'self'", "haex-extension: data: blob: asset:"],
+        "default-src": "'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost; default-src 'self' asset: http://asset.localhost",
         "script-src": ["'self'", "haex-extension:"],
         "style-src": ["'self'", "haex-extension:"],
         "connect-src": ["'self'", "haex-extension:"],
@@ -29,7 +29,7 @@
       },
       "assetProtocol": {
         "enable": true,
-        "scope": ["$RESOURCE/extensions/**"]
+        "scope": ["$RESOURCE/**", "$APPDATA/**"]
       }
     }
   },

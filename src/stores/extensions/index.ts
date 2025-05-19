@@ -285,12 +285,12 @@ export const useExtensionsStore = defineStore("extensionsStore", () => {
   const extensionEntry = computedAsync(
     async () => {
       try {
-        console.log("extensionEntry start", currentExtension.value);
-        const regex = /((href|src)=["'])([^"']+)(["'])/g;
+        /* console.log("extensionEntry start", currentExtension.value);
+        const regex = /((href|src)=["'])([^"']+)(["'])/g; */
 
         if (!currentExtension.value?.id || !currentExtension.value.version) {
           console.log("extension id or entry missing", currentExtension.value);
-          return "no mani: " + currentExtension.value;
+          return ""// "no mani: " + currentExtension.value;
         }
 
         const extensionPath = await getExtensionPathAsync(
@@ -304,7 +304,7 @@ export const useExtensionsStore = defineStore("extensionsStore", () => {
           currentExtension.value.version
         );
 
-        if (!manifest) return "no manifest readable";
+        if (!manifest) return ""//"no manifest readable";
 
         const entryPath = await join(extensionPath, manifest.entry);
 
@@ -322,12 +322,12 @@ export const useExtensionsStore = defineStore("extensionsStore", () => {
         console.log("entryHtml", entryHtml);
         const replacements = [];
         let match;
-        while ((match = regex.exec(entryHtml)) !== null) {
+        /* while ((match = regex.exec(entryHtml)) !== null) {
           const [fullMatch, prefix, attr, resource, suffix] = match;
           if (!resource.startsWith("http")) {
             replacements.push({ match: fullMatch, resource, prefix, suffix });
           }
-        }
+        } */
 
         for (const { match, resource, prefix, suffix } of replacements) {
           const srcFile = convertFileSrc(await join(extensionPath, resource));

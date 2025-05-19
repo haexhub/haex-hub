@@ -1,5 +1,5 @@
 <template>
-  <div class="text-white h-full">
+  <div class="w-full h-full">
     <NuxtLayout name="app">
       <NuxtPage />
     </NuxtLayout>
@@ -8,6 +8,6 @@
 
 <script setup lang="ts">
 definePageMeta({
-  middleware: "database",
-});
+  middleware: 'database',
+})
 </script>

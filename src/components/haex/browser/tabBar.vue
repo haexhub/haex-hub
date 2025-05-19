@@ -10,10 +10,7 @@
       <span class="tab-title">
         {{ tab.title || 'Neuer Tab' }}
       </span>
-      <button
-        class="tab-close"
-        @click.stop="$emit('closeTab', tab.id)"
-      >
+      <button class="tab-close" @click.stop="$emit('closeTab', tab.id)">
         ×
       </button>
     </div>
@@ -22,22 +19,22 @@
 
 <script setup lang="ts">
 interface Tab {
-  id: string;
-  title: string;
-  url: string;
-  isLoading: boolean;
-  isActive: boolean;
+  id: string
+  title: string
+  url: string
+  isLoading: boolean
+  isActive: boolean
 }
 
 interface Props {
-  tabs: Tab[];
-  activeTabId: string | null;
+  tabs: Tab[]
+  activeTabId: string | null
 }
 
-defineProps<Props>();
+defineProps<Props>()
 
 defineEmits<{
-  (e: 'closeTab', tabId: string): void;
-  (e: 'activateTab', tabId: string): void;
-}>();
+  (e: 'closeTab', tabId: string): void
+  (e: 'activateTab', tabId: string): void
+}>()
 </script>

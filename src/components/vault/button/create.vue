@@ -6,12 +6,11 @@
         @click="open = true"
       >
         <Icon name="mdi:plus" />
-        {{ t("database.create") }}
+        {{ t('database.create') }}
       </button>
     </template>
 
     <form class="flex flex-col gap-4" @submit="onCreateAsync">
-      <!--  @keyup.enter="onCreateAsync" -->
       <UiInput
         :check-input="check"
         :label="t('database.label')"
@@ -32,98 +31,116 @@
 
     <template #buttons>
       <UiButton class="btn-error" @click="onClose">
-        {{ t("abort") }}
+        {{ t('abort') }}
       </UiButton>
 
       <UiButton class="btn-primary" @click="onCreateAsync">
-        {{ t("create") }}
+        {{ t('create') }}
       </UiButton>
     </template>
   </UiDialog>
 </template>
 
 <script setup lang="ts">
-import { save } from "@tauri-apps/plugin-dialog";
-import { useVaultStore } from "~/stores/vault";
-import { vaultDatabaseSchema } from "./schema";
+import { save } from '@tauri-apps/plugin-dialog'
+import { useVaultStore } from '~/stores/vault'
+import { vaultDatabaseSchema } from './schema'
+import { onKeyStroke } from '@vueuse/core'
 
-const check = ref(false);
-const open = ref();
+onKeyStroke('Enter', (e) => {
+  e.preventDefault()
+  onCreateAsync()
+})
 
-const { t } = useI18n();
+const check = ref(false)
+const open = ref()
+
+const { t } = useI18n()
 
 const database = reactive<{
-  name: string;
-  password: string;
-  path: string | null;
-  type: "password" | "text";
+  name: string
+  password: string
+  path: string | null
+  type: 'password' | 'text'
 }>({
-  name: "",
-  password: "",
-  path: "",
-  type: "password",
-});
+  name: '',
+  password: '',
+  path: '',
+  type: 'password',
+})
 
 const initDatabase = () => {
-  database.name = t("database.name");
-  database.password = "";
-  database.path = "";
-  database.type = "password";
-};
+  database.name = t('database.name')
+  database.password = ''
+  database.path = ''
+  database.type = 'password'
+}
 
-initDatabase();
+initDatabase()
 
-const { add } = useSnackbar();
-const { createAsync } = useVaultStore();
+const { add } = useSnackbar()
+const { createAsync } = useVaultStore()
 
 const onCreateAsync = async () => {
-  check.value = true;
+  check.value = true
 
-  const nameCheck = vaultDatabaseSchema.name.safeParse(database.name);
-  const passwordCheck = vaultDatabaseSchema.password.safeParse(database.password);
+  const nameCheck = vaultDatabaseSchema.name.safeParse(database.name)
+  const passwordCheck = vaultDatabaseSchema.password.safeParse(
+    database.password
+  )
 
-  console.log("checks", database.name, nameCheck, database.password, passwordCheck);
-  if (!nameCheck.success || !passwordCheck.success) return;
+  console.log(
+    'checks',
+    database.name,
+    nameCheck,
+    database.password,
+    passwordCheck
+  )
+  if (!nameCheck.success || !passwordCheck.success) return
 
-  open.value = false;
+  open.value = false
   try {
     database.path = await save({
-      defaultPath: database.name.endsWith(".db") ? database.name : `${database.name}.db`,
-    });
+      defaultPath: database.name.endsWith('.db')
+        ? database.name
+        : `${database.name}.db`,
+    })
 
-    console.log("data", database);
+    console.log('data', database)
 
     if (database.path && database.password) {
       const vaultId = await createAsync({
         path: database.path,
         password: database.password,
-      });
+      })
 
-      console.log("vaultId", vaultId);
+      console.log('vaultId', vaultId)
       if (vaultId) {
-        await navigateTo(useLocaleRoute()({ name: "vaultOverview", params: { vaultId } }));
+        await navigateTo(
+          useLocaleRoute()({ name: 'vaultOverview', params: { vaultId } })
+        )
       }
     }
   } catch (error) {
-    console.error(error);
-    add({ type: "error", text: JSON.stringify(error) });
+    console.error(error)
+    add({ type: 'error', text: JSON.stringify(error) })
   }
-};
+}
 
 const onClose = () => {
-  open.value = false;
-  initDatabase();
-};
+  open.value = false
+  initDatabase()
+}
 </script>
 
 <i18n lang="json">
 {
   "de": {
     "database": {
-      "label": "Datenbankname",
-      "placeholder": "Passwörter",
+      "label": "Vaultname",
+      "placeholder": "Vaultname",
       "create": "Neue Vault anlegen",
-      "name": "Passwörter"
+      "name": "HaexVault"
     },
     "title": "Neue Datenbank anlegen",
     "create": "Erstellen",
@@ -133,10 +150,10 @@ const onClose = () => {
 
   "en": {
     "database": {
-      "label": "Databasename",
-      "placeholder": "Databasename",
+      "label": "Vaultname",
+      "placeholder": "Vaultname",
       "create": "Create new Vault",
-      "name": "Passwords"
+      "name": "HaexVault"
     },
     "title": "Create New Database",
     "create": "Create",

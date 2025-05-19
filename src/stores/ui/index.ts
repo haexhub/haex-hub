@@ -2,6 +2,12 @@ import { breakpointsTailwind, useBreakpoints } from '@vueuse/core';
 import de from './de.json';
 import en from './en.json';
 
+export interface ITheme {
+  value: string,
+  name: string,
+  icon: string
+}
+
 export const useUiStore = defineStore('uiStore', () => {
   const breakpoints = useBreakpoints(breakpointsTailwind);
 
@@ -28,14 +34,22 @@ export const useUiStore = defineStore('uiStore', () => {
       icon: 'line-md:moon-to-sunny-outline-loop-transition',
     },
     { value: 'soft', name: t('ui.soft'), icon: 'line-md:paint-drop' },
+    {
+      value: 'corporate',
+      name: t('ui.corporate'),
+      icon: 'hugeicons:corporate',
+    },
   ]);
 
-  const currentTheme = ref(availableThemes.value[0].value);
+  const defaultTheme = ref(availableThemes.value[0])
+
+  const currentTheme = ref(defaultTheme);
 
   return {
+    availableThemes,
     breakpoints,
     currentScreenSize,
     currentTheme,
-    availableThemes,
+    defaultTheme,
   };
 });

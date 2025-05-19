@@ -1,11 +1,9 @@
-//import Database from '@tauri-apps/plugin-sql';
-import { drizzle, SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
-//import Database from "tauri-plugin-sql-api";
-import * as schema from "@/../src-tauri/database/schemas/vault";
 
+import * as schema from "@/../src-tauri/database/schemas/vault";
 import { invoke } from "@tauri-apps/api/core";
-import { and, count, eq } from "drizzle-orm";
-import { platform } from "@tauri-apps/plugin-os";
+import { hostname, platform, type, version } from "@tauri-apps/plugin-os";
+import { eq } from "drizzle-orm";
+import { drizzle, SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy";
 
 interface IVault {
   name: string;
@@ -16,12 +14,16 @@ interface IOpenVaults {
 }
 
 export const useVaultStore = defineStore("vaultStore", () => {
+
   const currentVaultId = computed<string | undefined>({
     get: () => getSingleRouteParam(useRouter().currentRoute.value.params.vaultId),
     set: (newVaultId) => {
       useRouter().currentRoute.value.params.vaultId = newVaultId ?? "";
     },
   });
+
+  const defaultVaultName = ref("HaexHub")
+  const currentVaultName = ref(defaultVaultName.value)
 
   const read_only = computed<boolean>({
     get: () => {
@@ -52,6 +54,8 @@ export const useVaultStore = defineStore("vaultStore", () => {
     },
     { immediate: true }
   );
+
+  const hostKey = computedAsync(async () => "".concat(type(), version(), await hostname() ?? ""))
 
   const openAsync = async ({ path = "", password }: { path: string; password: string }) => {
     try {
@@ -102,7 +106,11 @@ export const useVaultStore = defineStore("vaultStore", () => {
       };
 
       const { addVaultAsync } = useLastVaultStore();
-      await addVaultAsync({ path });
+      addVaultAsync({ path });
+
+      syncLocaleAsync()
+      syncThemeAsync()
+      syncVaultNameAsync()
 
       return vaultId;
     } catch (error) {
@@ -147,15 +155,86 @@ export const useVaultStore = defineStore("vaultStore", () => {
     delete openVaults.value?.[currentVaultId.value];
   };
 
+  const syncLocaleAsync = async () => {
+    try {
+      const app = useNuxtApp()
+      app.$i18n.availableLocales
+      //const { availableLocales, defaultLocale, setLocale, locale } = useI18n()
+
+      const currentLocaleRow = await currentVault.value?.drizzle
+        .select()
+        .from(schema.haexSettings)
+        .where(eq(schema.haexSettings.key, 'locale'))
+
+      if (currentLocaleRow?.[0]?.value) {
+        const currentLocale = app.$i18n.availableLocales.find(
+          (locale) => locale === currentLocaleRow[0].value
+        )
+        await app.$i18n.setLocale(currentLocale ?? app.$i18n.defaultLocale)
+      } else {
+        await currentVault.value?.drizzle
+          .insert(schema.haexSettings)
+          .values({ id: crypto.randomUUID(), key: 'locale', value: app.$i18n.locale.value })
+      }
+    } catch (error) {
+      console.log("ERROR syncLocaleAsync", error)
+    }
+  }
+
+  const syncThemeAsync = async () => {
+    const { availableThemes, defaultTheme, currentTheme } = storeToRefs(useUiStore())
+    const currentThemeRow = await currentVault.value?.drizzle
+      .select()
+      .from(schema.haexSettings)
+      .where(eq(schema.haexSettings.key, 'theme'))
+
+    if (currentThemeRow?.[0]?.value) {
+      const theme = availableThemes.value.find(
+        (theme) => theme.name === currentThemeRow[0].value
+      )
+      currentTheme.value = theme ?? defaultTheme.value
+    } else {
+      await currentVault.value?.drizzle.insert(schema.haexSettings).values({
+        id: crypto.randomUUID(),
+        key: 'theme',
+        value: currentTheme.value.name,
+      })
+    }
+  }
+
+  const syncVaultNameAsync = async () => {
+    const currentVaultNameRow = await currentVault.value?.drizzle
+      .select()
+      .from(schema.haexSettings)
+      .where(eq(schema.haexSettings.key, 'vaultName'))
+
+    if (currentVaultNameRow?.[0]?.value) {
+      currentVaultName.value = currentVaultNameRow.at(0)?.value ?? defaultVaultName.value
+    } else {
+      await currentVault.value?.drizzle.insert(schema.haexSettings).values({
+        id: crypto.randomUUID(),
+        key: 'vaultName',
+        value: currentVaultName.value,
+      })
+    }
+  }
+
+  const updateVaultNameAsync = async (newVaultName?: string | null) => {
+    return currentVault.value?.drizzle.update(schema.haexSettings).set({ value: newVaultName ?? defaultVaultName.value }).where(eq(schema.haexSettings.key, "vaultName"))
+  }
+
   return {
     closeAsync,
     createAsync,
     currentVault,
     currentVaultId,
+    currentVaultName,
+    hostKey,
     openAsync,
     openVaults,
-    refreshDatabaseAsync,
     read_only,
+    refreshDatabaseAsync,
+    updateVaultNameAsync,
   };
 });
 
@@ -174,3 +253,6 @@ const isSelectQuery = (sql: string) => {
   const selectRegex = /^\s*SELECT\b/i;
   return selectRegex.test(sql);
 };
+
+
+

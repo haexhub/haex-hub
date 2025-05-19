@@ -41,7 +41,6 @@ pub fn run() {
                         })
                 }
             }
-            //extension::core::extension_protocol_handler(&context, &request)
         })
         .plugin(tauri_plugin_http::init())
         .manage(DbConnection(Mutex::new(None)))

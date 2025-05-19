@@ -1,16 +1,10 @@
 <template>
   <div class="browser">
     <div class="browser-controls">
-      <button
-        @click="$emit('goBack', activeTabId)"
-        :disabled="!activeTabId"
-      >
+      <button @click="$emit('goBack', activeTabId)" :disabled="!activeTabId">
         ←
       </button>
-      <button
-        @click="$emit('goForward', activeTabId)"
-        :disabled="!activeTabId"
-      >
+      <button @click="$emit('goForward', activeTabId)" :disabled="!activeTabId">
         →
       </button>
       <button @click="$emit('createTab')">+</button>
@@ -29,15 +23,9 @@
       @activateTab="$emit('activateTab', $event)"
     />
 
-    <div
-      class="browser-content"
-      ref="contentRef"
-    >
+    <div class="browser-content" ref="contentRef">
       <!-- Die eigentlichen Webview-Inhalte werden von Tauri verwaltet -->
-      <div
-        v-if="!activeTabId"
-        class="empty-state"
-      >
+      <div v-if="!activeTabId" class="empty-state">
         <p>
           Kein Tab geöffnet. Erstellen Sie einen neuen Tab mit dem + Button.
         </p>
@@ -47,9 +35,8 @@
 </template>
 
 <script setup lang="ts">
-import { invoke } from '@tauri-apps/api/core';
-import { Window } from '@tauri-apps/api/window';
-import { getCurrentWebview, Webview } from '@tauri-apps/api/webview';
+import { Webview } from '@tauri-apps/api/webview'
+import { Window } from '@tauri-apps/api/window'
 /* const appWindow = new Window('uniqueLabel');
 const webview = new Webview(appWindow, 'theUniqueLabel', {
   url: 'https://www.google.de',
@@ -64,46 +51,46 @@ webview.once('tauri://created', function () {
 }); */
 
 interface Tab {
-  id: string;
-  title: string;
-  url: string;
-  isLoading: boolean;
-  isActive: boolean;
-  window_label: string;
+  id: string
+  title: string
+  url: string
+  isLoading: boolean
+  isActive: boolean
+  window_label: string
 }
 
 interface Props {
-  tabs: Tab[];
-  activeTabId: string | null;
+  tabs: Tab[]
+  activeTabId: string | null
 }
 
-const props = defineProps<Props>();
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'createTab'): void;
-  (e: 'closeTab', tabId: string): void;
-  (e: 'navigate', tabId: string, url: string): void;
-  (e: 'goBack', tabId: string | null): void;
-  (e: 'goForward', tabId: string | null): void;
-  (e: 'activateTab', tabId: string | null): void;
-}>();
+  (e: 'createTab'): void
+  (e: 'closeTab', tabId: string): void
+  (e: 'navigate', tabId: string, url: string): void
+  (e: 'goBack', tabId: string | null): void
+  (e: 'goForward', tabId: string | null): void
+  (e: 'activateTab', tabId: string | null): void
+}>()
 
 const { initializeAsync, processNavigation, injectContentScripts } =
-  useBrowserExtensionStore();
-const contentRef = ref<HTMLDivElement | null>(null);
+  useBrowserExtensionStore()
+const contentRef = ref<HTMLDivElement | null>(null)
 //const extensionManager = ref<ExtensionManager>(new ExtensionManager());
 
 const activeTab = computed(() =>
   props.tabs?.find((tab) => tab.id === props.activeTabId)
-);
+)
 
 onMounted(async () => {
   // Initialisiere das Erweiterungssystem
-  await initializeAsync();
+  await initializeAsync()
   // Aktualisiere die Webview-Größe
-  await updateWebviewBoundsAsync();
+  await updateWebviewBoundsAsync()
   //window.addEventListener('resize', updateWebviewBounds);
-});
+})
 
 // Wenn ein neuer Tab aktiviert wird, injiziere Content-Scripts
 /* watch(
@@ -124,32 +111,46 @@ onMounted(async () => {
   }
 ); */
 
+const createNewTabAsync = async () => {
+  const appWindow = new Window(crypto.randomUUID())
+  appWindow.setAlwaysOnTop(true)
+  appWindow.setDecorations(false)
+  const webview = new Webview(appWindow, 'theUniqueLabel', {
+    url: 'https://www.google.de',
+    x: 0,
+    y: 0,
+    height: 1000,
+    width: 1000,
+  })
+}
+
 const handleUrlSubmit = (url: string) => {
+  createNewTabAsync()
   if (props.activeTabId) {
     // Prüfe URL mit Erweiterungen vor der Navigation
-    if (processNavigation(url)) {
-      emit('navigate', props.activeTabId, url);
+    /* if (processNavigation(url)) {
+      //emit('navigate', props.activeTabId, url);
     } else {
-      console.log('Navigation blockiert durch Erweiterung');
+      console.log('Navigation blockiert durch Erweiterung')
       // Hier könnten Sie eine Benachrichtigung anzeigen
-    }
+    } */
   }
-};
+}
 
 const updateWebviewBoundsAsync = async () => {
-  if (!contentRef.value) return;
+  if (!contentRef.value) return
 
-  const rect = contentRef.value.getBoundingClientRect();
+  const rect = contentRef.value.getBoundingClientRect()
   const bounds = {
     x: rect.left,
     y: rect.top,
     width: rect.width,
     height: rect.height,
-  };
+  }
 
   /* await invoke('update_window_bounds', {
     contentBounds: { x: bounds.x, y: bounds.y },
     contentSize: { width: bounds.width, height: bounds.height },
   }); */
-};
+}
 </script>

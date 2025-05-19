@@ -1,6 +1,6 @@
 <template>
   <div>
-    <NuxtLayout :data-theme="currentTheme">
+    <NuxtLayout :data-theme="currentTheme.value">
       <NuxtPage />
       <NuxtSnackbar />
     </NuxtLayout>
@@ -8,7 +8,7 @@
 </template>
 
 <script setup lang="ts">
-const { currentTheme } = storeToRefs(useUiStore());
+const { currentTheme } = storeToRefs(useUiStore())
 </script>
 
 <style>

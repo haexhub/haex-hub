@@ -22,11 +22,11 @@ export default defineNuxtConfig({
     provider: 'server',
     mode: "svg",
     clientBundle: {
-      icons: ["solar:global-outline", "gg:extension"],
+      icons: ["solar:global-outline", "gg:extension", "hugeicons:corporate"],
       scan: true,
       includeCustomCollections: true,
     },
-    serverBundle: { collections: ["mdi", "line-md", "solar", "gg"] }
+    serverBundle: { collections: ["mdi", "line-md", "solar", "gg", "emojione"] }
     //collections: ["mdi", "line-md"]
   },
 
