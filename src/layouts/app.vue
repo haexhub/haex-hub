@@ -1,88 +1,50 @@
 <template>
-  <div class="w-full h-full flex flex-col min-w-min relative overflow-hidden">
-    <nav
-      class="navbar bg-base-100 rounded-b max-sm:shadow border-b border-base-content/25 sm:z-20 relative px-2"
-    >
+  <div class="w-full h-full flex flex-col min-w-min ">
+    <nav class="navbar bg-base-100 rounded-b max-sm:shadow border-b border-base-content/25 sm:z-20 relative px-2">
       <UiTooltip :tooltip="isVisible ? t('sidebar.close') : t('sidebar.show')">
-        <button
-          type="button"
-          class="btn btn-text btn-square me-2 z-50"
-          aria-haspopup="dialog"
-          aria-expanded="false"
-          aria-controls="sidebar"
-          @click="toogleSidebar"
-          ref="sidebarToogleRef"
-        >
-          <Icon
-            :name="
-              isVisible
-                ? 'tabler:layout-sidebar-filled'
-                : 'tabler:layout-sidebar'
-            "
-            size="28"
-          />
+        <button type="button" class="btn btn-text btn-square me-2 z-50" aria-haspopup="dialog" aria-expanded="false"
+          aria-controls="sidebar" @click="toogleSidebar" ref="sidebarToogleRef">
+          <Icon :name="isVisible
+              ? 'tabler:layout-sidebar-filled'
+              : 'tabler:layout-sidebar'
+            " size="28" />
         </button>
       </UiTooltip>
 
       <div class="flex flex-1 items-center">
-        <NuxtLinkLocale
-          class="link text-base-content link-neutral text-xl font-semibold no-underline"
-          :to="{ name: 'vaultOverview' }"
-        >
+        <NuxtLinkLocale class="link text-base-content link-neutral text-xl font-semibold no-underline"
+          :to="{ name: 'vaultOverview' }">
           <UiTextGradient class="text-nowrap">{{
             currentVaultName
-          }}</UiTextGradient>
+            }}</UiTextGradient>
         </NuxtLinkLocale>
       </div>
 
       <div class="navbar-end flex items-center gap-4 me-4">
-        <div
-          class="dropdown relative inline-flex [--auto-close:inside] [--offset:8] [--placement:bottom-end]"
-        >
-          <button
-            id="dropdown-scrollable"
-            type="button"
+        <div class="dropdown relative inline-flex [--auto-close:inside] [--offset:8] [--placement:bottom-end]">
+          <button id="dropdown-scrollable" type="button"
             class="dropdown-toggle btn btn-text btn-circle dropdown-open:bg-base-content/10 size-10"
-            aria-haspopup="menu"
-            aria-expanded="false"
-            aria-label="Dropdown"
-          >
+            aria-haspopup="menu" aria-expanded="false" aria-label="Dropdown">
             <div class="indicator">
-              <span
-                v-show="notifications.length"
-                class="indicator-item bg-error size-2 rounded-full text-sm"
-              ></span>
-              <span
-                class="icon-[tabler--bell] text-base-content size-[1.375rem]"
-              ></span>
+              <span v-show="notifications.length" class="indicator-item bg-error size-2 rounded-full text-sm"></span>
+              <span class="icon-[tabler--bell] text-base-content size-[1.375rem]"></span>
             </div>
           </button>
-          <div
-            class="dropdown-menu dropdown-open:opacity-100 hidden"
-            role="menu"
-            aria-orientation="vertical"
-            aria-labelledby="dropdown-scrollable"
-          >
+          <div class="dropdown-menu dropdown-open:opacity-100 hidden" role="menu" aria-orientation="vertical"
+            aria-labelledby="dropdown-scrollable">
             <div class="dropdown-header justify-center">
               <h6 class="text-base-content text-base">
                 {{ t('notifications.label') }}
               </h6>
             </div>
             <div
-              class="vertical-scrollbar horizontal-scrollbar rounded-scrollbar text-base-content/80 max-h-56 overflow-auto max-md:max-w-60"
-            >
+              class="vertical-scrollbar horizontal-scrollbar rounded-scrollbar text-base-content/80 max-h-56 overflow-auto max-md:max-w-60">
               <div class="dropdown-item" v-for="notification in notifications">
                 <div class="avatar">
                   <div class="w-10 rounded-full">
-                    <img
-                      v-if="notification.image"
-                      :src="notification.image"
-                      :alt="notification.alt ?? 'notification avatar'"
-                    />
-                    <Icon
-                      v-else-if="notification.icon"
-                      :name="notification.icon"
-                    />
+                    <img v-if="notification.image" :src="notification.image"
+                      :alt="notification.alt ?? 'notification avatar'" />
+                    <Icon v-else-if="notification.icon" :name="notification.icon" />
                   </div>
                 </div>
                 <div class="w-60">
@@ -107,26 +69,12 @@
     </nav>
 
     <div class="flex h-full overflow-hidden">
-      <aside
-        id="sidebar"
-        class="sm:shadow-none transition-all h-full overflow-hidden border-r border-base-300"
-        :class="[!isVisible ? 'w-0' : 'w-16']"
-        role="dialog"
-        tabindex="-1"
-      >
+      <aside id="sidebar" class="sm:shadow-none transition-all h-full overflow-hidden border-r border-base-300"
+        :class="[!isVisible ? 'w-0' : 'w-16']" role="dialog" tabindex="-1">
         <div class="drawer-body h-full">
           <ul class="menu p-0 h-full rounded-none">
-            <HaexSidebarLink
-              v-bind="item"
-              v-for="item in menu"
-              :key="item.id"
-            />
-            <HaexSidebarLink
-              v-for="item in extensionLinks"
-              :key="item.id"
-              v-bind="item"
-              icon-type="svg"
-            />
+            <HaexSidebarLink v-bind="item" v-for="item in menu" :key="item.id" />
+            <HaexSidebarLink v-for="item in extensionLinks" :key="item.id" v-bind="item" icon-type="svg" />
           </ul>
         </div>
       </aside>
