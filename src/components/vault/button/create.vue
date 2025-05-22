@@ -1,41 +1,32 @@
 <template>
-  <Dialog>
-    <!-- class="btn btn-primary btn-outline shadow-md md:btn-lg shrink-0 flex-1 whitespace-nowrap flex-nowrap" -->
-    <DialogTrigger as-child>
-      <Button>
+  <UiDialog :title="t('title')" v-model:open="open"
+    class="btn btn-primary btn-outline shadow-md md:btn-lg shrink-0 flex-1 whitespace-nowrap flex-nowrap">
+    <template #trigger>
 
-        <Icon name="mdi:plus" />
-        {{ t('database.create') }}
-      </Button>
-    </DialogTrigger>
 
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Edit profile</DialogTitle>
-        <DialogDescription>
-          Make changes to your profile here. Click save when you're done.
-        </DialogDescription>
-      </DialogHeader>
+      <Icon name="mdi:plus" />
+      {{ t('database.create') }}
 
-      <form class="flex flex-col gap-4" @submit="onCreateAsync">
-        <Input :check-input="check" :label="t('database.label')" :placeholder="t('database.placeholder')"
-          :rules="vaultDatabaseSchema.name" autofocus prepend-icon="mdi:safe" v-model="database.name" />
+    </template>
 
-        <!-- <UiInputPassword :check-input="check" :rules="vaultDatabaseSchema.password" prepend-icon="mdi:key-outline"
-          v-model="database.password" /> -->
-      </form>
+    <form class="flex flex-col gap-4" @submit="onCreateAsync">
+      <UiInput :check-input="check" :label="t('database.label')" :placeholder="t('database.placeholder')"
+        :rules="vaultDatabaseSchema.name" autofocus prepend-icon="mdi:safe" v-model="database.name" />
 
-      <DialogFooter>
-        <Button class="btn-error" @click="onClose">
-          {{ t('abort') }}
-        </Button>
+      <UiInputPassword :check-input="check" :rules="vaultDatabaseSchema.password" prepend-icon="mdi:key-outline"
+        v-model="database.password" />
+    </form>
 
-        <Button class="btn-primary" @click="onCreateAsync">
-          {{ t('create') }}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
+    <template #buttons>
+      <UiButton class="btn-error" @click="onClose">
+        {{ t('abort') }}
+      </UiButton>
+
+      <UiButton class="btn-primary" @click="onCreateAsync">
+        {{ t('create') }}
+      </UiButton>
+    </template>
+  </UiDialog>
 </template>
 
 <script setup lang="ts">
@@ -43,7 +34,6 @@ import { save } from '@tauri-apps/plugin-dialog'
 import { onKeyStroke } from '@vueuse/core'
 import { useVaultStore } from '~/stores/vault'
 import { vaultDatabaseSchema } from './schema'
-import { toast } from 'vue-sonner'
 
 onKeyStroke('Enter', (e) => {
   e.preventDefault()
@@ -76,7 +66,7 @@ const initDatabase = () => {
 
 initDatabase()
 
-
+const { add } = useSnackbar()
 const { createAsync } = useVaultStore()
 
 const onCreateAsync = async () => {
@@ -121,7 +111,7 @@ const onCreateAsync = async () => {
     }
   } catch (error) {
     console.error(error)
-    toast({ type: 'error', text: JSON.stringify(error) })
+    add({ type: 'error', text: JSON.stringify(error) })
   }
 }
 

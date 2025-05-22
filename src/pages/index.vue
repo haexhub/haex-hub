@@ -1,9 +1,7 @@
 <template>
   <div class="items-center justify-center min-h-full flex w-full relative">
     <div class="fixed top-2 right-2">
-      <!-- <UiDropdownLocale @select="setLocale" /> -->
-      <ThemeSwitcher />
-
+      <UiDropdownLocale @select="setLocale" />
     </div>
     <div class="flex flex-col justify-center items-center gap-5 max-w-3xl">
       <img src="/logo.svg" class="bg-primary p-3 size-16 rounded-full" alt="HaexVault Logo" />
@@ -12,22 +10,13 @@
         <p class="whitespace-nowrap">
           {{ t('welcome') }}
         </p>
-        <!-- <UiTextGradient>Haex Hub</UiTextGradient> -->
+        <UiTextGradient>Haex Hub</UiTextGradient>
       </span>
 
       <div class="flex flex-col md:flex-row gap-4 w-full h-24 md:h-auto">
         <VaultButtonCreate />
-        <TestDialog />
-        <BaseDialog />
-        <!-- 
 
-        <VaultButtonOpen
-          v-model:isOpen="passwordPromptOpen"
-          :path="vaultPath"
-        /> -->
-
-
-
+        <VaultButtonOpen v-model:isOpen="passwordPromptOpen" :path="vaultPath" />
       </div>
 
       <div v-show="lastVaults.length" class="w-full">
@@ -60,7 +49,7 @@
         <h4>{{ t('sponsors') }}</h4>
         <div>
           <button @click="openUrl('https://itemis.com')">
-            <!-- <UiLogoItemis class="text-[#00457C]" /> -->
+            <UiLogoItemis class="text-[#00457C]" />
           </button>
         </div>
       </div>

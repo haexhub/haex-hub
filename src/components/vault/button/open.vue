@@ -1,29 +1,16 @@
 <template>
-  <UiDialog
-    class="btn btn-primary btn-outline shadow-md md:btn-lg shrink-0 flex-1"
-    v-model:open="isOpen"
-    @click="onLoadDatabase"
-  >
-    <!-- @close="initDatabase" -->
+  <UiDialog v-model:open="isOpen" class="btn btn-primary btn-outline shadow-md md:btn-lg shrink-0 flex-1 "
+    @open="onLoadDatabase">
+
     <template #trigger>
-      <!-- <button
-        class="btn btn-primary btn-outline shadow-md md:btn-lg shrink-0 flex-1"
-        @click="onLoadDatabase"
-      > -->
 
       <Icon name="mdi:folder-open-outline" />
       {{ t('database.open') }}
-      <!-- </button> -->
+
     </template>
 
-    <UiInputPassword
-      :check-input="check"
-      :rules="vaultDatabaseSchema.password"
-      @keyup.enter="onOpenDatabase"
-      autofocus
-      prepend-icon="mdi:key-outline"
-      v-model="database.password"
-    />
+    <UiInputPassword :check-input="check" :rules="vaultDatabaseSchema.password" @keyup.enter="onOpenDatabase" autofocus
+      prepend-icon="mdi:key-outline" v-model="database.password" />
 
     <template #buttons>
       <UiButton class="btn-error" @click="onClose">
@@ -95,6 +82,7 @@ const onLoadDatabase = async () => {
       ],
     })
 
+    console.log("database.path", database.path)
     if (!database.path) return
 
     isOpen.value = true
@@ -162,8 +150,7 @@ const onClose = () => {
 }
 </script>
 
-<i18n lang="json">
-{
+<i18n lang="json">{
   "de": {
     "open": "Öffnen",
     "abort": "Abbrechen",
@@ -171,7 +158,6 @@ const onClose = () => {
       "open": "Vault öffnen"
     }
   },
-
   "en": {
     "open": "Open",
     "abort": "Abort",
@@ -179,5 +165,4 @@ const onClose = () => {
       "open": "Open Vault"
     }
   }
-}
-</i18n>
+}</i18n>

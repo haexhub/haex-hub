@@ -1,7 +1,14 @@
 import tailwindcss from '@tailwindcss/vite'
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  extends: ['github:haexhub/haex-base-ui', { install: true }],
+  modules: [
+    'nuxt-zod-i18n',
+    '@nuxtjs/i18n',
+    '@pinia/nuxt',
+    '@vueuse/nuxt',
+    '@nuxt/icon',
+    'nuxt-snackbar',
+  ],
 
   compatibilityDate: '2024-11-01',
 
@@ -37,26 +44,33 @@ export default defineNuxtConfig({
     ],
   },
 
-  /* i18n: {
-    strategy: "prefix_and_default",
-    defaultLocale: "de",
-    vueI18n: "~/i18n/i18n.config.ts",
+  i18n: {
+    strategy: 'prefix_and_default',
+    defaultLocale: 'de',
+    vueI18n: '~/i18n/i18n.config.ts',
 
     locales: [
-      { code: "de", language: "de-DE", isCatchallLocale: true },
-      { code: "en", language: "en-EN" },
+      { code: 'de', language: 'de-DE', isCatchallLocale: true },
+      { code: 'en', language: 'en-EN' },
     ],
 
     detectBrowserLanguage: {
       useCookie: true,
-      cookieKey: "i18n_redirected",
-      redirectOn: "root", // recommended
+      cookieKey: 'i18n_redirected',
+      redirectOn: 'root', // recommended
     },
-    types: "composition",
+    types: 'composition',
     bundle: {
       optimizeTranslationDirective: false,
     },
-  }, */
+  },
+
+  zodI18n: {
+    localeCodesMapping: {
+      'en-GB': 'en',
+      'de-DE': 'de',
+    },
+  },
 
   runtimeConfig: {
     public: {

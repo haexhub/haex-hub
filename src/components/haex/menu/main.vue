@@ -1,41 +1,36 @@
 <template>
-  <UiDropdown
-    activator-class="btn btn-text btn-circle "
-    dropdown-class="[--offset:20]"
-  >
+  <UiDropdown activator-class="btn btn-text btn-circle " dropdown-class="[--offset:20]">
     <template #activator>
-      <div
-        class="size-9.5 rounded-full items-center justify-center text-base-content text-base"
-      >
+      <div class="size-9.5 rounded-full items-center justify-center text-base-content text-base">
         <Icon name="mdi:format-list-bulleted" class="size-full p-2" />
       </div>
     </template>
 
-    <template #items>
-      <ul
-        class="dropdown-menu dropdown-open:opacity-100 hidden min-w-60"
-        role="menu"
-        aria-orientation="vertical"
-        aria-labelledby="dropdown-avatar"
-      >
-        <li>
-          <NuxtLinkLocale class="dropdown-item" :to="{ name: 'haexSettings' }">
-            <span class="icon-[tabler--settings]"></span>
-            {{ t('settings') }}
-          </NuxtLinkLocale>
-        </li>
 
-        <li class="dropdown-footer gap-2">
-          <button
-            class="btn btn-error btn-soft btn-block"
-            @click="onVaultCloseAsync"
-          >
-            <span class="icon-[tabler--logout]"></span>
-            {{ t('vault.close') }}
-          </button>
-        </li>
-      </ul>
+    <!-- <ul class="dropdown-menu dropdown-open:opacity-100 hidden min-w-60" role="menu" aria-orientation="vertical"
+      aria-labelledby="dropdown-avatar"> -->
+
+    <template #items>
+
+      <li>
+        <NuxtLinkLocale class="dropdown-item" :to="{ name: 'haexSettings' }">
+          <span class="icon-[tabler--settings]"></span>
+          {{ t('settings') }}
+        </NuxtLinkLocale>
+      </li>
+
+
+
+      <li class="dropdown-footer gap-2">
+        <button class="btn btn-error btn-soft btn-block" @click="onVaultCloseAsync">
+          <span class="icon-[tabler--logout]"></span>
+          {{ t('vault.close') }}
+        </button>
+      </li>
     </template>
+    <!-- 
+    </ul> -->
+
   </UiDropdown>
 </template>
 

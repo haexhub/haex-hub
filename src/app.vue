@@ -1,16 +1,15 @@
 <template>
-  <div class=" ">
-    <BaseDialog />
-    <!-- <NuxtLayout>
+  <div>
+    <NuxtLayout :data-theme="currentTheme.value">
       <NuxtPage />
-      <Toaster />
-    </NuxtLayout> -->
+      <NuxtSnackbar />
+    </NuxtLayout>
   </div>
 </template>
 
 <script setup lang="ts">
-//import 'vue-sonner/style.css'
-//const { currentTheme } = storeToRefs(useUiStore())
+
+const { currentTheme } = storeToRefs(useUiStore())
 </script>
 
 <style>
