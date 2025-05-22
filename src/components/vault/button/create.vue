@@ -1,13 +1,11 @@
 <template>
-  <UiDialog :title="t('title')" v-model:open="open">
-    <template #trigger="{ id }">
-      <button
-        class="btn btn-primary btn-outline shadow-md md:btn-lg shrink-0 flex-1 whitespace-nowrap flex-nowrap"
-        @click="open = true"
-      >
-        <Icon name="mdi:plus" />
-        {{ t('database.create') }}
-      </button>
+  <UiDialog
+    :title="t('title')"
+    class="btn btn-primary btn-outline shadow-md md:btn-lg shrink-0 flex-1 whitespace-nowrap flex-nowrap"
+  >
+    <template #trigger>
+      <Icon name="mdi:plus" />
+      {{ t('database.create') }}
     </template>
 
     <form class="flex flex-col gap-4" @submit="onCreateAsync">

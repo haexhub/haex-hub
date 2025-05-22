@@ -19,17 +19,18 @@
     ],
     "security": {
       "csp": {
-        "default-src": "'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost; default-src 'self' asset: http://asset.localhost",
-        "script-src": ["'self'", "haex-extension:"],
-        "style-src": ["'self'", "haex-extension:"],
-        "connect-src": ["'self'", "haex-extension:"],
-        "img-src": ["'self'", "haex-extension:", "data:"],
-        "font-src": ["'self'", "haex-extension:", "data:"],
-        "media-src": "'self' haex-extension: data: blob: asset:"
+        "default-src": ["'self'", "ipc: http://ipc.localhost", "blob:"],
+        "media-src": [
+          "'self'",
+          "asset:",
+          "http://asset.localhost",
+          "blob:",
+          "asset: http://asset.localhost"
+        ]
       },
       "assetProtocol": {
         "enable": true,
-        "scope": ["$RESOURCE/**", "$APPDATA/**"]
+        "scope": ["*"]
       }
     }
   },

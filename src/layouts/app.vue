@@ -116,8 +116,12 @@
       >
         <div class="drawer-body h-full">
           <ul class="menu p-0 h-full rounded-none">
-            <UiSidebarLink v-bind="item" v-for="item in menu" :key="item.id" />
-            <UiSidebarLink
+            <HaexSidebarLink
+              v-bind="item"
+              v-for="item in menu"
+              :key="item.id"
+            />
+            <HaexSidebarLink
               v-for="item in extensionLinks"
               :key="item.id"
               v-bind="item"

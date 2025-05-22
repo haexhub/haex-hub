@@ -39,15 +39,4 @@ const isActive = computed(() => {
 const linkRef = useTemplateRef('linkRef')
 
 const triggerNavigate = () => linkRef.value?.$el.click()
-
-/* computed(() => {
-  const found = useRouter()
-    .getRoutes()
-    .find((route) => route.name === useLocaleRoute()(props.to)?.name);
-  console.log('found route', found, useRoute());
-  return (
-    found?.name === useRoute().name ||
-    found?.children.some((child) => child.name === useRoute().name)
-  );
-}); */
 </script>

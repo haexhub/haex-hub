@@ -2,19 +2,11 @@ import tailwindcss from "@tailwindcss/vite";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: "2024-11-01",
-
-  modules: [
-    "nuxt-zod-i18n",
-    "@nuxtjs/i18n",
-    "@pinia/nuxt",
-    "@vueuse/nuxt",
-    "@nuxt/icon",
-    "nuxt-snackbar",
-
-
+  extends: [
+    "github:haexhub/haex-base-ui"
   ],
 
+  compatibilityDate: "2024-11-01",
 
 
   imports: {
@@ -39,14 +31,7 @@ export default defineNuxtConfig({
     ],
   },
 
-
-
-  /* svgo: {
-    autoImportPath: '~/assets/svg/',
-    dts: true,
-  }, */
-
-  i18n: {
+  /* i18n: {
     strategy: "prefix_and_default",
     defaultLocale: "de",
     vueI18n: "~/i18n/i18n.config.ts",
@@ -65,14 +50,9 @@ export default defineNuxtConfig({
     bundle: {
       optimizeTranslationDirective: false,
     },
-  },
+  }, */
 
-  zodI18n: {
-    localeCodesMapping: {
-      "en-GB": "en",
-      "de-DE": "de",
-    },
-  },
+
 
   runtimeConfig: {
     public: {
@@ -82,8 +62,6 @@ export default defineNuxtConfig({
       },
     },
   },
-
-  css: ["~/assets/css/main.css"],
 
   devtools: { enabled: true },
 

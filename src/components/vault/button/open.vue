@@ -1,14 +1,19 @@
 <template>
-  <UiDialog v-model:open="isOpen">
+  <UiDialog
+    class="btn btn-primary btn-outline shadow-md md:btn-lg shrink-0 flex-1"
+    v-model:open="isOpen"
+    @click="onLoadDatabase"
+  >
     <!-- @close="initDatabase" -->
     <template #trigger>
-      <button
+      <!-- <button
         class="btn btn-primary btn-outline shadow-md md:btn-lg shrink-0 flex-1"
         @click="onLoadDatabase"
-      >
-        <Icon name="mdi:folder-open-outline" />
-        {{ t('database.open') }}
-      </button>
+      > -->
+
+      <Icon name="mdi:folder-open-outline" />
+      {{ t('database.open') }}
+      <!-- </button> -->
     </template>
 
     <UiInputPassword
