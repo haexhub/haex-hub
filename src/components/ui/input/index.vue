@@ -1,14 +1,15 @@
 <template>
   <div>
-    <fieldset class="join w-full pt-0.5">
+    <fieldset class="join w-full pt-1.5 " v-bind="$attrs">
       <slot name="prepend" />
 
       <div class="input join-item">
         <Icon v-if="prependIcon" :name="prependIcon" class="my-auto shrink-0" />
 
         <div class="input-floating grow">
-          <input :id :name="name ?? id" :placeholder="placeholder || label" :type :autofocus class="ps-3"
-            v-bind="$attrs" v-model="input" ref="inputRef" :readonly="read_only" />
+          <input
+:id ref="inputRef" v-model="input" :name="name ?? id" :placeholder="placeholder || label" :type
+            :autofocus class="ps-3" :readonly="read_only" >
           <label class="input-floating-label" :for="id">{{ label }}</label>
         </div>
 
@@ -17,13 +18,14 @@
 
       <slot name="append" class="h-auto" />
 
-      <UiButton v-if="withCopyButton" class="btn-outline btn-accent btn-square join-item h-auto"
+      <UiButton
+v-if="withCopyButton" class="btn-outline btn-accent btn-square join-item h-auto"
         @click="copy(`${input}`)">
         <Icon :name="copied ? 'mdi:check' : 'mdi:content-copy'" />
       </UiButton>
     </fieldset>
 
-    <span class="flex flex-col px-2 pt-0.5" v-show="errors">
+    <span v-show="errors" class="flex flex-col px-2 pt-0.5">
       <span v-for="error in errors" class="label-text-alt text-error">
         {{ error }}
       </span>
@@ -32,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { type ZodSchema } from "zod";
+import type { ZodSchema } from "zod";
 
 const inputRef = useTemplateRef("inputRef");
 defineExpose({ inputRef });

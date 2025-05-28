@@ -199,6 +199,7 @@ pub fn extension_protocol_handler<R: Runtime>(
     let segments_iter = path_str.split('/').filter(|s| !s.is_empty());
     let resource_segments: Vec<&str> = segments_iter.collect();
     let raw_asset_path = resource_segments.join("/");
+    let asset_to_load = if raw_asset_path.is_empty() { "index.html"} else {&raw_asset_path};
 
     match process_hex_encoded_json(&host) {
         Ok(info) => {
@@ -209,7 +210,7 @@ pub fn extension_protocol_handler<R: Runtime>(
                 context.app_handle(),
                 &info.id,
                 &info.version,
-                &raw_asset_path,
+                &asset_to_load,
             )?;
 
             println!("absolute_secure_path: {}", absolute_secure_path.display());
@@ -222,9 +223,10 @@ pub fn extension_protocol_handler<R: Runtime>(
                             .to_string();
                         let content_length = content.len();
                         println!(
-                            "Liefere {} ({}) ",
+                            "Liefere {} ({}, {} bytes) ", // Content-Length zum Log hinzugefügt
                             absolute_secure_path.display(),
-                            mime_type
+                            mime_type,
+                            content_length
                         );
                         Response::builder()
                             .status(200)
@@ -271,7 +273,7 @@ pub fn extension_protocol_handler<R: Runtime>(
             eprintln!("Fehler bei der Datenverarbeitung: {}", e);
 
             Response::builder()
-                .status("500")
+                .status(500)
                 .body(Vec::new()) // Leerer Body für Fehler
                 .map_err(|e| e.into())
         }

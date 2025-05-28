@@ -8,6 +8,7 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@nuxt/icon',
     'nuxt-snackbar',
+    '@nuxt/eslint',
   ],
 
   compatibilityDate: '2024-11-01',

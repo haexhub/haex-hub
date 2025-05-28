@@ -1,25 +1,31 @@
-import type { RouteLocationAsRelativeGeneric } from "vue-router";
+import type { RouteLocationAsRelativeGeneric } from 'vue-router'
 
 export interface ISidebarItem {
-  name: string;
-  icon: string;
-  tooltip?: string;
-  id: string;
-  to?: RouteLocationAsRelativeGeneric;
-  iconType?: "icon" | "svg";
+  name: string
+  icon: string
+  tooltip?: string
+  id: string
+  to?: RouteLocationAsRelativeGeneric
+  iconType?: 'icon' | 'svg'
 }
 
-export const useSidebarStore = defineStore("sidebarStore", () => {
-  const isVisible = ref(true);
+export const useSidebarStore = defineStore('sidebarStore', () => {
+  const isVisible = ref(true)
 
   const menu = ref<ISidebarItem[]>([
     {
-      id: "haex-extensions-add",
-      name: "Haex Extensions",
-      icon: "gg:extension",
-      to: { name: "extensionOverview" },
+      id: 'haex-pass',
+      name: 'HaexPass',
+      icon: 'mdi:safe',
+      to: { name: 'haexpassOverview' },
     },
-  ]);
+    {
+      id: 'haex-extensions',
+      name: 'Haex Extensions',
+      icon: 'gg:extension',
+      to: { name: 'extensionOverview' },
+    },
+  ])
 
   /* const loadAsync = async (id: string) => {
     extensions.value.some(async (extension) => {
@@ -36,5 +42,5 @@ export const useSidebarStore = defineStore("sidebarStore", () => {
     menu,
     isVisible,
     //loadAsync,
-  };
-});
+  }
+})

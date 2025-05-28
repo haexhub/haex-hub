@@ -1,38 +1,38 @@
 export interface ResourceRequestDetails {
-  url: string;
-  resourceType: string;
-  tabId?: string;
-  frameId?: number;
+  url: string
+  resourceType: string
+  tabId?: string
+  frameId?: number
 }
 
 export interface ResourceRequestResult {
-  cancel: boolean;
-  redirectUrl?: string;
+  cancel: boolean
+  redirectUrl?: string
 }
 
 export interface ContentScript {
-  code: string;
-  matches?: string[];
-  runAt?: 'document_start' | 'document_end' | 'document_idle';
+  code: string
+  matches?: string[]
+  runAt?: 'document_start' | 'document_end' | 'document_idle'
 }
 
 export interface Extension {
-  id: string;
-  name: string;
-  version: string;
-  description?: string;
-  processNavigation?: (url: string) => boolean;
+  id: string
+  name: string
+  version: string
+  description?: string
+  processNavigation?: (url: string) => boolean
   processResourceRequest?: (
-    details: ResourceRequestDetails
-  ) => ResourceRequestResult;
-  contentScripts?: ContentScript[];
+    details: ResourceRequestDetails,
+  ) => ResourceRequestResult
+  contentScripts?: ContentScript[]
 }
 
 export const useBrowserExtensionStore = defineStore(
   'useBrowserExtensionStore',
   () => {
-    const extensions = ref<Extension[]>([]);
-    const isInitialized = ref<boolean>(false);
+    const extensions = ref<Extension[]>([])
+    const isInitialized = ref<boolean>(false)
 
     return {
       extensions,
@@ -40,28 +40,28 @@ export const useBrowserExtensionStore = defineStore(
       initializeAsync,
       processNavigation,
       injectContentScripts,
-    };
-  }
-);
+    }
+  },
+)
 
 const initializeAsync = async () => {
-  const { isInitialized } = storeToRefs(useBrowserExtensionStore());
+  const { isInitialized } = storeToRefs(useBrowserExtensionStore())
   return
-  if (isInitialized.value) return;
+  if (isInitialized.value) return
 
   // Lade Erweiterungen aus dem Erweiterungsverzeichnis
   try {
-    const extensions = await loadExtensionsAsync();
+    const extensions = await loadExtensionsAsync()
     for (const extension of extensions) {
-      registerExtension(extension);
+      registerExtension(extension)
     }
 
-    isInitialized.value = true;
-    console.log(`${extensions.length} Erweiterungen geladen`);
+    isInitialized.value = true
+    console.log(`${extensions.length} Erweiterungen geladen`)
   } catch (error) {
-    console.error('Fehler beim Laden der Erweiterungen:', error);
+    console.error('Fehler beim Laden der Erweiterungen:', error)
   }
-};
+}
 
 const loadExtensionsAsync = async (): Promise<Extension[]> => {
   // In einer realen Implementierung würden Sie hier Erweiterungen aus einem Verzeichnis laden
@@ -69,23 +69,23 @@ const loadExtensionsAsync = async (): Promise<Extension[]> => {
   /* const adBlocker = (await import('./ad-blocker')).default;
     const trackerBlocker = (await import('./tracker-blocker')).default; */
 
-  return [];
-};
+  return []
+}
 
 const registerExtension = (extension: Extension): boolean => {
-  const { extensions } = storeToRefs(useBrowserExtensionStore());
+  const { extensions } = storeToRefs(useBrowserExtensionStore())
   if (!extension.id || !extension.name) {
-    console.error('Ungültige Erweiterung:', extension);
-    return false;
+    console.error('Ungültige Erweiterung:', extension)
+    return false
   }
 
-  console.log(`Erweiterung registriert: ${extension.name}`);
-  extensions.value.push(extension);
-  return true;
-};
+  console.log(`Erweiterung registriert: ${extension.name}`)
+  extensions.value.push(extension)
+  return true
+}
 
-const processNavigation = (url: string) => {
-  return true;
-};
+const processNavigation = () => {
+  return true
+}
 
-const injectContentScripts = (t: string) => { };
+const injectContentScripts = () => {}

@@ -1,6 +1,7 @@
 <template>
-  <UiInput :check-input :label="label || t('password')" :placeholder="placeholder || t('password')" :rules :type="type"
-    :autofocus v-model="value">
+  <UiInput
+v-model="value" :check-input :label="label || t('password')" :placeholder="placeholder || t('password')" :rules
+    :type="type" :autofocus>
     <template #append>
       <UiButton class="btn-outline btn-accent btn-square h-auto" @click="tooglePasswordType">
         <Icon :name="type === 'password' ? 'mdi:eye-off' : 'mdi:eye'" />

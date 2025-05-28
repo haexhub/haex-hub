@@ -1,40 +1,52 @@
 <template>
-  <UiDialog v-model:open="isOpen" class="btn btn-primary btn-outline shadow-md md:btn-lg shrink-0 flex-1 "
-    @open="onLoadDatabase">
+  <UiDialogConfirm
+    v-model:open="open"
+    class="btn btn-primary btn-outline shadow-md md:btn-lg shrink-0 flex-1"
+    :confirm-label="t('open')"
+    :abort-label="t('abort')"
+    @open="onLoadDatabase"
+    @abort="onAbort"
+  >
+    <template #title>
+      <i18n-t
+        keypath="title"
+        tag="p"
+        class="flex gap-2"
+      >
+        <template #haexvault>
+          <UiTextGradient>HaexVault</UiTextGradient>
+        </template>
+      </i18n-t>
+      <p class="text-sm">{{ path }}</p>
+    </template>
 
     <template #trigger>
-
       <Icon name="mdi:folder-open-outline" />
       {{ t('database.open') }}
-
     </template>
 
-    <UiInputPassword :check-input="check" :rules="vaultDatabaseSchema.password" @keyup.enter="onOpenDatabase" autofocus
-      prepend-icon="mdi:key-outline" v-model="database.password" />
-
-    <template #buttons>
-      <UiButton class="btn-error" @click="onClose">
-        {{ t('abort') }}
-      </UiButton>
-
-      <UiButton type="submit" class="btn-primary" @click="onOpenDatabase">
-        {{ t('open') }}
-      </UiButton>
-    </template>
-  </UiDialog>
+    <UiInputPassword
+      v-model="database.password"
+      :check-input="check"
+      :rules="vaultDatabaseSchema.password"
+      autofocus
+      prepend-icon="mdi:key-outline"
+      @keyup.enter="onOpenDatabase"
+    />
+  </UiDialogConfirm>
 </template>
 
 <script setup lang="ts">
-import { open } from '@tauri-apps/plugin-dialog'
+import { open as openVault } from '@tauri-apps/plugin-dialog'
 import { vaultDatabaseSchema } from './schema'
 
 const { t } = useI18n()
 
-const isOpen = defineModel('isOpen', { type: Boolean })
+const open = defineModel('open', { type: Boolean })
 
-const props = defineProps({
-  path: String,
-})
+const props = defineProps<{
+  path: string
+}>()
 
 const check = ref(false)
 
@@ -62,7 +74,7 @@ initDatabase()
 const { add } = useSnackbar()
 
 const handleError = (error: unknown) => {
-  isOpen.value = false
+  open.value = false
   console.error('handleError', error, typeof error)
   add({ type: 'error', text: 'Passwort falsch' })
 }
@@ -71,7 +83,7 @@ const { openAsync } = useVaultStore()
 
 const onLoadDatabase = async () => {
   try {
-    database.path = await open({
+    database.path = await openVault({
       multiple: false,
       directory: false,
       filters: [
@@ -82,10 +94,9 @@ const onLoadDatabase = async () => {
       ],
     })
 
-    console.log("database.path", database.path)
     if (!database.path) return
 
-    isOpen.value = true
+    open.value = true
   } catch (error) {
     handleError(error)
   }
@@ -100,7 +111,7 @@ const onOpenDatabase = async () => {
     const path = database.path || props.path
     const pathCheck = vaultDatabaseSchema.path.safeParse(path)
     const passwordCheck = vaultDatabaseSchema.password.safeParse(
-      database.password
+      database.password,
     )
 
     if (!pathCheck.success || !passwordCheck.success || !path) {
@@ -124,7 +135,7 @@ const onOpenDatabase = async () => {
       return
     }
 
-    onClose()
+    onAbort()
 
     await navigateTo(
       localePath({
@@ -132,7 +143,7 @@ const onOpenDatabase = async () => {
         params: {
           vaultId,
         },
-      })
+      }),
     )
     await Promise.allSettled([
       syncLocaleAsync(),
@@ -144,25 +155,24 @@ const onOpenDatabase = async () => {
   }
 }
 
-const onClose = () => {
+const onAbort = () => {
   initDatabase()
-  isOpen.value = false
+  open.value = false
 }
 </script>
 
-<i18n lang="json">{
-  "de": {
-    "open": "Öffnen",
-    "abort": "Abbrechen",
-    "database": {
-      "open": "Vault öffnen"
-    }
-  },
-  "en": {
-    "open": "Open",
-    "abort": "Abort",
-    "database": {
-      "open": "Open Vault"
-    }
-  }
-}</i18n>
+<i18n lang="yaml">
+de:
+  open: Öffnen
+  abort: Abbrechen
+  title: '{haexvault} entsperren'
+  database:
+    open: Vault öffnen
+
+en:
+  open: Open
+  abort: Abort
+  title: Unlock {haexvault}
+  database:
+    open: Open Vault
+</i18n>

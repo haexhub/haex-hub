@@ -1,28 +1,48 @@
 <template>
-  <UiDialog :title="t('title')" v-model:open="open"
-    class="btn btn-primary btn-outline shadow-md md:btn-lg shrink-0 flex-1 whitespace-nowrap flex-nowrap">
+  <UiDialog
+    v-model:open="open"
+    :title="t('title')"
+    class="btn btn-primary btn-outline shadow-md md:btn-lg shrink-0 flex-1 whitespace-nowrap flex-nowrap"
+  >
     <template #trigger>
-
-
       <Icon name="mdi:plus" />
       {{ t('database.create') }}
-
     </template>
 
-    <form class="flex flex-col gap-4" @submit="onCreateAsync">
-      <UiInput :check-input="check" :label="t('database.label')" :placeholder="t('database.placeholder')"
-        :rules="vaultDatabaseSchema.name" autofocus prepend-icon="mdi:safe" v-model="database.name" />
+    <form
+      class="flex flex-col gap-4"
+      @submit="onCreateAsync"
+    >
+      <UiInput
+        v-model="database.name"
+        :check-input="check"
+        :label="t('database.label')"
+        :placeholder="t('database.placeholder')"
+        :rules="vaultDatabaseSchema.name"
+        autofocus
+        prepend-icon="mdi:safe"
+      />
 
-      <UiInputPassword :check-input="check" :rules="vaultDatabaseSchema.password" prepend-icon="mdi:key-outline"
-        v-model="database.password" />
+      <UiInputPassword
+        v-model="database.password"
+        :check-input="check"
+        :rules="vaultDatabaseSchema.password"
+        prepend-icon="mdi:key-outline"
+      />
     </form>
 
     <template #buttons>
-      <UiButton class="btn-error" @click="onClose">
+      <UiButton
+        class="btn-error"
+        @click="onClose"
+      >
         {{ t('abort') }}
       </UiButton>
 
-      <UiButton class="btn-primary" @click="onCreateAsync">
+      <UiButton
+        class="btn-primary"
+        @click="onCreateAsync"
+      >
         {{ t('create') }}
       </UiButton>
     </template>
@@ -74,7 +94,7 @@ const onCreateAsync = async () => {
 
   const nameCheck = vaultDatabaseSchema.name.safeParse(database.name)
   const passwordCheck = vaultDatabaseSchema.password.safeParse(
-    database.password
+    database.password,
   )
 
   console.log(
@@ -82,7 +102,7 @@ const onCreateAsync = async () => {
     database.name,
     nameCheck,
     database.password,
-    passwordCheck
+    passwordCheck,
   )
   if (!nameCheck.success || !passwordCheck.success) return
 
@@ -105,7 +125,7 @@ const onCreateAsync = async () => {
       console.log('vaultId', vaultId)
       if (vaultId) {
         await navigateTo(
-          useLocaleRoute()({ name: 'vaultOverview', params: { vaultId } })
+          useLocaleRoute()({ name: 'vaultOverview', params: { vaultId } }),
         )
       }
     }
@@ -121,7 +141,8 @@ const onClose = () => {
 }
 </script>
 
-<i18n lang="json">{
+<i18n lang="json">
+{
   "de": {
     "database": {
       "label": "Vaultname",
@@ -146,4 +167,5 @@ const onClose = () => {
     "abort": "Abort",
     "description": "Haex Vault for your most secret secrets"
   }
-}</i18n>
+}
+</i18n>

@@ -4,7 +4,7 @@
 
     <div class="card-header">
       <div v-if="$slots.title || title">
-        <Icon :name="icon" />
+        <Icon v-if="icon" :name="icon" />
         <h5 v-if="title" class="card-title mb-0">
           {{ title }}
         </h5>
@@ -16,7 +16,7 @@
     <div class="card-body">
       <slot />
       aaaaaaaaa
-      <div class="card-actions" v-if="$slots.action">
+      <div v-if="$slots.action" class="card-actions">
         <slot name="action" />
       </div>
     </div>

@@ -1,6 +1,7 @@
 <template>
   <VaultCardEdit
     v-if="vaultGroup"
+    v-model:read_only="read_only"
     :color="vaultGroup.color ?? 'text-base-content'"
     :has-changes="hasChanges"
     :icon="vaultGroup.icon ?? 'mdi:folder-outline'"
@@ -9,42 +10,41 @@
     @close="$emit('close')"
     @reject="(to) => $emit('reject', to)"
     @submit="(to) => $emit('submit', to)"
-    v-model:read_only="read_only"
   >
     <div class="flex flex-col gap-4 w-full p-4">
       <UiInput
         v-show="!read_only"
+        v-model.trim="vaultGroup.name"
         :label="t('vaultGroup.name')"
         :placeholder="t('vaultGroup.name')"
         :rules="vaultGroupSchema.name"
         :with-copy-button="read_only"
         :read_only
         autofocus
-        v-model.trim="vaultGroup.name"
       />
 
       <UiInput
         v-show="!read_only || vaultGroup.description?.length"
+        v-model.trim="vaultGroup.description"
         :read_only
         :label="t('vaultGroup.description')"
         :placeholder="t('vaultGroup.description')"
         :rules="vaultGroupSchema.description"
         :with-copy-button="read_only"
-        v-model.trim="vaultGroup.description"
       />
 
       <UiColorPicker
+        v-model="vaultGroup.color"
         :read_only
         :label="t('vaultGroup.color')"
         :placeholder="t('vaultGroup.color')"
-        v-model="vaultGroup.color"
       />
 
       <UiIconPicker
+        v-model="vaultGroup.icon"
         :read_only
         :label="t('vaultGroup.icon')"
         :placeholder="t('vaultGroup.icon')"
-        v-model="vaultGroup.icon"
       />
     </div>
   </VaultCardEdit>

@@ -1,65 +1,58 @@
 <template>
-  <div>
-    <HaexExtensionManifestPermissionsTitle>
-      {{ t("filesystem.title") }}
-    </HaexExtensionManifestPermissionsTitle>
+  <UiAccordion v-if="filesystem?.read?.length">
+    <template #title>
+      <h3>{{ t('permission.read') }}</h3>
+    </template>
+    <ul class="space-y-0.5">
+      <li v-for="read in filesystem?.read" class="flex items-center justify-between px-4 py-0.5">
+        <div class="flex items-center gap-1">
+          <input :id="Object.keys(read).at(0)" type="checkbox" class="checkbox" :checked="Object.values(read).at(0)" >
+          <label class="label-text text-base" :for="Object.keys(read).at(0)">{{
+            Object.keys(read).at(0)
+          }}</label>
+        </div>
+      </li>
+    </ul>
+  </UiAccordion>
 
-    <div v-if="filesystem?.read?.length">
-      <UiAccordion>
-        <template #title>
-          <h3>{{ t("permission.read") }}</h3>
-        </template>
-        <ul class="space-y-0.5">
-          <li
-            class="flex items-center justify-between px-4 py-0.5"
-            v-for="read in filesystem?.read"
-          >
-            <div class="flex items-center gap-2">
-              <span>{{ read }}</span>
-            </div>
-          </li>
-        </ul>
-      </UiAccordion>
-    </div>
+  <UiAccordion v-if="filesystem?.write?.length">
+    <template #title>
+      <h3>{{ t('permission.write') }}</h3>
+    </template>
 
-    <div v-if="filesystem?.write?.length">
-      <UiAccordion>
-        <template #title>
-          <h3>{{ t("permission.write") }}</h3>
-        </template>
-
-        <ul class="space-y-0.5">
-          <li
-            class="flex items-center justify-between px-4 py-0.5"
-            v-for="write in filesystem?.write"
-          >
-            <div class="flex items-center gap-2">
-              <span>{{ write }}</span>
-            </div>
-          </li>
-        </ul>
-      </UiAccordion>
-    </div>
-  </div>
+    <ul class="space-y-0.5">
+      <li v-for="write in filesystem?.write" class="flex items-center justify-between px-4 py-0.5">
+        <div class="flex items-center gap-1">
+          <input
+:id="Object.keys(write).at(0)" type="checkbox" class="checkbox"
+            :checked="Object.values(write).at(0)" >
+          <label class="label-text text-base" :for="Object.keys(write).at(0)">{{
+            Object.keys(write).at(0)
+          }}</label>
+        </div>
+      </li>
+    </ul>
+  </UiAccordion>
 </template>
 
 <script setup lang="ts">
-defineProps<{ filesystem: IHaexHubExtensionManifest["permissions"]["filesystem"] }>();
-const { t } = useI18n();
+defineProps<{
+  filesystem?: {
+    read?: Record<string, boolean>[]
+    write?: Record<string, boolean>[]
+  }
+}>()
+const { t } = useI18n()
 </script>
 
-<i18n lang="json">
-{
-  "de": {
-    "permission": {
-      "read": "Lesen",
-      "write": "Schreiben"
-    },
+<i18n lang="yaml">
+  de: 
+    permission: 
+      read: Lesen
+      write: Schreiben
 
-    "filesystem": {
-      "title": "Dateisystem Berechtigungen"
-    }
-  },
-  "en": { "title": "Confirm Permission" }
-}
+  en: 
+    permission: 
+      read: Read
+      write: Write
 </i18n>

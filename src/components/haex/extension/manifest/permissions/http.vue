@@ -1,43 +1,33 @@
 <template>
-  <div>
-    <HaexExtensionManifestPermissionsTitle>
-      {{ t("http.title") }}
-    </HaexExtensionManifestPermissionsTitle>
+  <UiAccordion>
+    <template #title>
+      <h3>{{ t("http.access") }}</h3>
+    </template>
 
-    <div v-if="http?.length">
-      <UiAccordion>
-        <template #title>
-          <h3>{{ t("permission.access") }}</h3>
-        </template>
-
-        <ul class="space-y-0.5">
-          <li class="flex items-center justify-between px-4 py-0.5" v-for="access in http">
-            <div class="flex items-center gap-2">
-              <span>{{ access }}</span>
-            </div>
-          </li>
-        </ul>
-      </UiAccordion>
-    </div>
-  </div>
+    <ul class="space-y-0.5">
+      <li v-for="access in http" class="flex items-center justify-between px-4 py-0.5">
+        <div class="flex items-center gap-1">
+          <input
+:id="Object.keys(access).at(0)" type="checkbox" class="checkbox"
+            :checked="Object.values(access).at(0)" >
+          <label class="label-text text-base" :for="Object.keys(access).at(0)">{{ Object.keys(access).at(0) }}</label>
+        </div>
+      </li>
+    </ul>
+  </UiAccordion>
 </template>
 
 <script setup lang="ts">
-defineProps<{ http: IHaexHubExtensionManifest["permissions"]["http"] }>();
+defineProps<{ http?: Record<string, boolean>[] }>();
 const { t } = useI18n();
 </script>
 
-<i18n lang="json">
-{
-  "de": {
-    "permission": {
-      "access": "Zugriff"
-    },
+<i18n lang="yaml">
+  de: 
+    http: 
+      access: Internet Zugriff
 
-    "http": {
-      "title": "Internet Berechtigungen"
-    }
-  },
-  "en": { "title": "Confirm Permission" }
-}
+  en: 
+    http: 
+      access: Internet Access
 </i18n>

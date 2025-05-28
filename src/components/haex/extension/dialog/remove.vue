@@ -1,5 +1,5 @@
 <template>
-  <UiDialog :title="t('title')" v-model:open="open">
+  <UiDialogConfirm v-model:open="open" :title="t('title')" @confirm="onConfirm">
     <div>
       <i18n-t keypath="question" tag="p">
         <template #name>
@@ -7,16 +7,7 @@
         </template>
       </i18n-t>
     </div>
-    <template #buttons>
-      <UiButton class="btn-outline btn-error" @click="open = false">
-        <Icon name="mdi:cancel" /> {{ t("abort") }}
-      </UiButton>
-
-      <UiButton class="btn-error" @click="onConfirm">
-        <Icon name="mdi:trash" /> {{ t("remove") }}
-      </UiButton>
-    </template>
-  </UiDialog>
+  </UiDialogConfirm>
 </template>
 
 <script setup lang="ts">
@@ -36,8 +27,7 @@ const onConfirm = () => {
 };
 </script>
 
-<i18n lang="json">
-{
+<i18n lang="json">{
   "de": {
     "title": "Erweiterung löschen",
     "question": "Soll {name} wirklich gelöscht werden?",
@@ -46,9 +36,8 @@ const onConfirm = () => {
   },
   "en": {
     "title": "Remove Extension",
-    "question": "Soll {name} wirklich gelöscht werden?",
+    "question": "Should {name} really be deleted?",
     "abort": "Abort",
     "remove": "Remove"
   }
-}
-</i18n>
+}</i18n>

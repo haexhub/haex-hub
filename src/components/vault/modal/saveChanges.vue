@@ -16,9 +16,9 @@
         </span>
       </UiButton>
       <UiButton
+        ref="abortButtonRef"
         class="btn-outline focus:bg-primary"
         tabindex="11"
-        ref="abortButtonRef"
         @click="showConfirmation = false"
       >
         <Icon name="mdi:close" />
@@ -41,17 +41,16 @@
 </template>
 
 <script setup lang="ts">
-const showConfirmation = defineModel<boolean>();
-const abortButtonRef = useTemplateRef('abortButtonRef');
+const showConfirmation = defineModel<boolean>()
+const abortButtonRef = useTemplateRef('abortButtonRef')
 
-const { t } = useI18n();
-const { currentScreenSize } = storeToRefs(useUiStore());
+const { t } = useI18n()
 
 onUpdated(() => {
-  abortButtonRef.value?.$el.focus();
-});
+  abortButtonRef.value?.$el.focus()
+})
 
-defineEmits(['submit', 'reject']);
+defineEmits(['submit', 'reject'])
 </script>
 
 <i18n lang="json">

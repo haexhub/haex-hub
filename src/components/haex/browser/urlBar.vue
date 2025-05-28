@@ -1,6 +1,6 @@
 <template>
   <form class="url-bar" @submit.prevent="handleSubmit">
-    <input type="text" v-model="inputValue" placeholder="URL eingeben" />
+    <input v-model="inputValue" type="text" placeholder="URL eingeben" >
     <span v-if="isLoading" class="loading-indicator">Laden...</span>
     <button v-else type="submit">Go</button>
   </form>

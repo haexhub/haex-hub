@@ -1,29 +1,29 @@
 <template>
   <div class="browser">
     <div class="browser-controls">
-      <button @click="$emit('goBack', activeTabId)" :disabled="!activeTabId">
+      <button :disabled="!activeTabId" @click="$emit('goBack', activeTabId)">
         ←
       </button>
-      <button @click="$emit('goForward', activeTabId)" :disabled="!activeTabId">
+      <button :disabled="!activeTabId" @click="$emit('goForward', activeTabId)">
         →
       </button>
       <button @click="$emit('createTab')">+</button>
 
       <HaexBrowserUrlBar
         :url="activeTab?.url || ''"
-        :isLoading="activeTab?.isLoading || false"
+        :is-loading="activeTab?.isLoading || false"
         @submit="handleUrlSubmit"
       />
     </div>
 
     <HaexBrowserTabBar
       :tabs="tabs"
-      :activeTabId="activeTabId"
-      @closeTab="$emit('closeTab', $event)"
-      @activateTab="$emit('activateTab', $event)"
+      :active-tab-id="activeTabId"
+      @close-tab="$emit('closeTab', $event)"
+      @activate-tab="$emit('activateTab', $event)"
     />
 
-    <div class="browser-content" ref="contentRef">
+    <div ref="contentRef" class="browser-content">
       <!-- Die eigentlichen Webview-Inhalte werden von Tauri verwaltet -->
       <div v-if="!activeTabId" class="empty-state">
         <p>

@@ -1,14 +1,23 @@
 <template>
   <div class="tooltip [--prevent-popper:false]">
-    <div class="tooltip-toggle" aria-label="Tooltip">
+    <div
+      class="tooltip-toggle"
+      aria-label="Tooltip"
+    >
       <slot>
         <button class="btn btn-square">
           <Icon name="mdi:chevron-up-box-outline" />
         </button>
       </slot>
 
-      <span class="tooltip-content tooltip-shown:opacity-100 tooltip-shown:visible z-40" role="tooltip">
-        <span class="tooltip-body" v-bind="$attrs">
+      <span
+        class="tooltip-content tooltip-shown:opacity-100 tooltip-shown:visible z-40"
+        role="tooltip"
+      >
+        <span
+          class="tooltip-body"
+          v-bind="$attrs"
+        >
           {{ tooltip }}
         </span>
       </span>
@@ -17,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import type { PropType } from 'vue';
+import type { PropType } from 'vue'
 
 const props = defineProps({
   direction: {
@@ -38,15 +47,18 @@ const props = defineProps({
     default: 'top',
   },
 
-  tooltip: String,
+  tooltip: {
+    type: String,
+    default: '',
+  },
 
   trigger: {
     type: String as PropType<'focus' | 'hover' | 'click'>,
     default: 'hover',
   },
-});
+})
 
 defineOptions({
   inheritAttrs: false,
-});
+})
 </script>

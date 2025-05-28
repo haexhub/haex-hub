@@ -1,9 +1,10 @@
 export interface IHaexNotication {
-  title: string;
-  description?: string;
-  icon?: string;
-  image?: string;
-  alt?: string;
+  title: string
+  description?: string
+  icon?: string
+  image?: string
+  alt?: string
+  date: Date
 }
 
 export const useNotificationStore = defineStore('notificationStore', () => {
@@ -13,10 +14,11 @@ export const useNotificationStore = defineStore('notificationStore', () => {
       alt: 'test',
       description: 'Ganz was tolles',
       image: 'https://cdn.flyonui.com/fy-assets/avatar/avatar-1.png',
+      date: new Date(),
     },
-  ]);
+  ])
 
   return {
     notifications,
-  };
-});
+  }
+})

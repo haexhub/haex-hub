@@ -1,3 +1,5 @@
+import type { LocationQueryValue, RouteLocationRawI18n } from 'vue-router'
+
 export const bytesToBase64DataUrlAsync = async (
   bytes: Uint8Array,
   type = 'application/octet-stream'
@@ -15,7 +17,7 @@ export const blobToImageAsync = (blob: Blob): Promise<HTMLImageElement> => {
   return new Promise((resolve) => {
     console.log('transform blob', blob)
     const url = URL.createObjectURL(blob)
-    let img = new Image()
+    const img = new Image()
     img.onload = () => {
       URL.revokeObjectURL(url)
       resolve(img)
@@ -61,8 +63,6 @@ export const readableFileSize = (sizeInByte: number | string = 0) => {
 
   return `${sizeInKb.toFixed(2)} KB`
 }
-
-import type { LocationQueryValue, RouteLocationRawI18n } from 'vue-router'
 
 export const getSingleRouteParam = (
   param: string | string[] | LocationQueryValue | LocationQueryValue[]

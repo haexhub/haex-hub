@@ -14,7 +14,7 @@
 
       <li>
         <NuxtLinkLocale class="dropdown-item" :to="{ name: 'haexSettings' }">
-          <span class="icon-[tabler--settings]"></span>
+          <span class="icon-[tabler--settings]"/>
           {{ t('settings') }}
         </NuxtLinkLocale>
       </li>
@@ -23,7 +23,7 @@
 
       <li class="dropdown-footer gap-2">
         <button class="btn btn-error btn-soft btn-block" @click="onVaultCloseAsync">
-          <span class="icon-[tabler--logout]"></span>
+          <span class="icon-[tabler--logout]"/>
           {{ t('vault.close') }}
         </button>
       </li>

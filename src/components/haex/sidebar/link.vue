@@ -1,16 +1,10 @@
 <template>
   <li
-    @click="triggerNavigate"
-    class="hover:text-primary rounded"
-    :class="{ ['bg-base-200 text-base-content']: isActive }"
-  >
+class="hover:text-primary rounded" :class="{ ['bg-base-200 text-base-content']: isActive }"
+    @click="triggerNavigate">
     <UiTooltip :tooltip="tooltip ?? name" direction="right-start">
-      <NuxtLinkLocale
-        :to
-        class="flex items-center justify-center cursor-pointer tooltip-toogle"
-        ref="linkRef"
-      >
-        <div v-if="iconType === 'svg'" v-html="icon" class="shrink-0 size-5" />
+      <NuxtLinkLocale ref="linkRef" :to class="flex items-center justify-center cursor-pointer tooltip-toogle">
+        <div v-if="iconType === 'svg'" class="shrink-0 size-5" v-html="icon" />
         <Icon v-else :name="icon" size="1.5em" />
       </NuxtLinkLocale>
     </UiTooltip>
@@ -18,7 +12,7 @@
 </template>
 
 <script setup lang="ts">
-import { type ISidebarItem } from '#imports'
+import type { ISidebarItem } from '#imports'
 
 const props = defineProps<ISidebarItem>()
 

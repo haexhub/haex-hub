@@ -1,10 +1,11 @@
 import 'flyonui/flyonui'
 
-import type { HSOverlay, IStaticMethods } from 'flyonui/flyonui'
+import type { HSOverlay, IStaticMethods, HSAccordion } from 'flyonui/flyonui'
 declare global {
   interface Window {
     HSStaticMethods: IStaticMethods
     HSOverlay: typeof HSOverlay
+    HSAccordion: typeof HSAccordion
   }
 }
 

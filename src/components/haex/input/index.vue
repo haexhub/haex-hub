@@ -6,7 +6,8 @@
 
       <!-- <div class="">
       -->
-      <HaexButton v-if="withCopyButton" class="btn-outline btn-accent btn-square join-item h-auto"
+      <HaexButton
+v-if="withCopyButton" class="btn-outline btn-accent btn-square join-item h-auto"
         @click="copy(`${input}`)">
         <Icon :name="copied ? 'mdi:check' : 'mdi:content-copy'" />
       </Haexbutton>
@@ -19,7 +20,7 @@
       <label class="floating-label input join-item">
         <Icon v-if="iconPrepend" :name="iconPrepend" class="my-auto size-6" />
         <span>Your Email</span>
-        <input type="text" placeholder="mail@site.com" class=" join-item " />
+        <input type="text" placeholder="mail@site.com" class=" join-item " >
         <Icon v-if="iconAppend" :name="iconAppend" class="my-auto shrink-0" />
       </label>
 
@@ -28,13 +29,14 @@
 
       <slot name="append" class="h-auto" />
 
-      <HaexButton v-if="withCopyButton" class="btn-outline btn-accent btn-square join-item h-auto"
+      <HaexButton
+v-if="withCopyButton" class="btn-outline btn-accent btn-square join-item h-auto"
         @click="copy(`${input}`)">
         <Icon :name="copied ? 'mdi:check' : 'mdi:content-copy'" />
       </Haexbutton>
     </fieldset>
 
-    <span class="flex flex-col px-2 pt-0.5" v-show="errors">
+    <span v-show="errors" class="flex flex-col px-2 pt-0.5">
       <span v-for="error in errors" class="label-text-alt text-error">
         {{ error }}
       </span>

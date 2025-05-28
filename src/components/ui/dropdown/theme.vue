@@ -1,5 +1,5 @@
 <template>
-  <UiDropdown :items="availableThemes" @select="(theme) => $emit('select', theme)" class="btn btn-primary btn-outline">
+  <UiDropdown :items="availableThemes" class="btn btn-primary btn-outline" @select="(theme) => $emit('select', theme)">
     <template #activator>
       <Icon :name="currentTheme.icon" />
     </template>

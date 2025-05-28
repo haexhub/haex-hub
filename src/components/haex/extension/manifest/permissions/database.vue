@@ -1,63 +1,71 @@
 <template>
-  <div>
-    <HaexExtensionManifestPermissionsTitle>
-      {{ t("database.title") }}
-    </HaexExtensionManifestPermissionsTitle>
+  <UiAccordion v-if="database?.read?.length">
+    <template #title>
+      <h3>{{ t("permission.read") }}</h3>
+    </template>
 
-    <div v-if="database?.read?.length">
-      <UiAccordion>
-        <template #title>
-          <h3>{{ t("permission.read") }}</h3>
-        </template>
+    <ul class="space-y-0.5">
+      <li v-for="read in database?.read" class="flex items-center justify-between px-4 py-1">
+        <div class="flex items-center gap-1">
+          <input :id="Object.keys(read).at(0)" type="checkbox" class="checkbox" :checked="Object.values(read).at(0)" >
+          <label class="label-text text-base" :for="Object.keys(read).at(0)">{{ Object.keys(read).at(0) }}</label>
+        </div>
+      </li>
+    </ul>
+  </UiAccordion>
 
-        <ul class="space-y-0.5">
-          <li class="flex items-center justify-between px-4 py-0.5" v-for="read in database?.read">
-            <div class="flex items-center gap-2">
-              <span>{{ read }}</span>
-            </div>
-          </li>
-        </ul>
-      </UiAccordion>
-    </div>
+  <UiAccordion v-if="database?.write?.length">
+    <template #title>
+      <h3>{{ t("permission.write") }}</h3>
+    </template>
 
-    <div v-if="database?.write?.length">
-      <UiAccordion>
-        <template #title>
-          <h3>{{ t("permission.write") }}</h3>
-        </template>
+    <ul class="space-y-0.5">
+      <li v-for="write in database?.write" class="flex items-center justify-between px-4 py-0.5">
+        <div class="flex items-center gap-1">
+          <input
+:id="Object.keys(write).at(0)" type="checkbox" class="checkbox"
+            :checked="Object.values(write).at(0)" >
+          <label class="label-text text-base" :for="Object.keys(write).at(0)">{{ Object.keys(write).at(0) }}</label>
+        </div>
+      </li>
+    </ul>
+  </UiAccordion>
 
-        <ul class="space-y-0.5">
-          <li
-            class="flex items-center justify-between px-4 py-0.5"
-            v-for="write in database?.write"
-          >
-            <div class="flex items-center gap-2">
-              <span>{{ write }}</span>
-            </div>
-          </li>
-        </ul>
-      </UiAccordion>
-    </div>
-  </div>
+  <UiAccordion v-if="database?.create?.length">
+    <template #title>
+      <h3>{{ t("permission.create") }}</h3>
+    </template>
+
+    <ul class="space-y-0.5">
+      <li v-for="create in database?.create" class="flex items-center justify-between px-4 py-0.5">
+        <div class="flex items-center gap-1">
+          <input
+:id="Object.keys(create).at(0)" type="checkbox" class="checkbox"
+            :checked="Object.values(create).at(0)" >
+          <label class="label-text text-base" :for="Object.keys(create).at(0)">{{ Object.keys(create).at(0) }}</label>
+        </div>
+      </li>
+    </ul>
+  </UiAccordion>
 </template>
 
 <script setup lang="ts">
-defineProps<{ database: IHaexHubExtensionManifest["permissions"]["database"] }>();
+
+
+defineProps<{ database?: { read?: Record<string, boolean>[], write?: Record<string, boolean>[], create?: Record<string, boolean>[] } }>();
 const { t } = useI18n();
 </script>
 
-<i18n lang="json">
-{
-  "de": {
-    "permission": {
-      "read": "Lesen",
-      "write": "Schreiben"
-    },
+<i18n lang="yaml">
+  de: 
+    permission: 
+      read: Lesen
+      write: Schreiben
+      create: Erstellen
 
-    "database": {
-      "title": "Datenbank Berechtigungen"
-    }
-  },
-  "en": { "title": "Confirm Permission" }
-}
+  en: 
+    permission: 
+      read: Read
+      write: Write
+      create: Create
 </i18n>

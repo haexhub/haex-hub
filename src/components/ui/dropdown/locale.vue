@@ -1,6 +1,7 @@
 <template>
-  <UiDropdown :items="availableLocales" @select="(locale) => $emit('select', locale)"
-    class="btn btn-primary  btn-outline">
+  <UiDropdown
+:items="availableLocales" class="btn btn-primary  btn-outline"
+    @select="(locale) => $emit('select', locale)">
     <template #activator>
 
       <Icon :name="flags[locale]" />
@@ -20,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { type Locale } from 'vue-i18n'
+import type { Locale } from 'vue-i18n'
 
 const flags = {
   de: 'emojione:flag-for-germany',

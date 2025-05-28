@@ -10,10 +10,16 @@
 
     <div class="p-2">{{ t('vaultName.label') }}</div>
     <div>
-      <UiInput v-model="currentVaultName" :placeholder="t('vaultName.label')">
+      <UiInput
+        v-model="currentVaultName"
+        :placeholder="t('vaultName.label')"
+      >
         <template #append>
           <UiTooltip :tooltip="t('save')">
-            <UiButton class="btn-primary" @click="onSetVaultNameAsync">
+            <UiButton
+              class="btn-primary"
+              @click="onSetVaultNameAsync"
+            >
               <Icon name="mdi:content-save-outline" />
             </UiButton>
           </UiTooltip>
@@ -25,7 +31,7 @@
 
 <script setup lang="ts">
 import { eq } from 'drizzle-orm'
-import { type Locale } from 'vue-i18n'
+import type { Locale } from 'vue-i18n'
 import { haexSettings } from '~~/src-tauri/database/schemas/vault'
 
 definePageMeta({
@@ -61,6 +67,7 @@ const onSetVaultNameAsync = async () => {
     await updateVaultNameAsync(currentVaultName.value)
     add({ text: t('vaultName.update.success'), type: 'success' })
   } catch (error) {
+    console.error(error)
     add({ text: t('vaultName.update.error'), type: 'error' })
   }
 }

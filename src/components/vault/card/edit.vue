@@ -66,7 +66,6 @@
 
         <div
           class="flex flex-col items-center w-full min-h-14 gap-2 py-1"
-          :class="{ '-ml-6': !show }"
           :style="{ color }"
         >
           <Icon
@@ -91,10 +90,7 @@
         v-show="!read_only"
         class="fixed bottom-2 left-0 w-full flex items-center justify-between px-4 md:hidden"
       >
-        <div
-          class="transition-all duration-500"
-          :class="{ 'pl-96': show }"
-        >
+        <div class="transition-all duration-500">
           <button
             class="btn btn-square btn-error btn-outline"
             @click="onClose"
@@ -112,7 +108,7 @@
             <span class="hidden"> {{ t('create') }} </span>
           </button>
         </div>
-        <div></div>
+        <div />
       </div>
       <!-- <UiButtonAction
         class=""
@@ -129,89 +125,86 @@
 </template>
 
 <script setup lang="ts">
-import type { RouteLocationNormalizedLoadedGeneric } from 'vue-router';
+import type { RouteLocationNormalizedLoadedGeneric } from 'vue-router'
 
-const { t } = useI18n();
+const { t } = useI18n()
 
-const { show } = storeToRefs(useSidebarStore());
+const read_only = defineModel<boolean>('read_only', { default: false })
 
-const read_only = defineModel<boolean>('read_only', { default: false });
-
-const props = defineProps({
-  color: String,
-  hasChanges: Boolean,
-  icon: String,
-  title: String,
-});
+const props = defineProps<{
+  color: string
+  hasChanges: boolean
+  icon: string
+  title: string
+}>()
 
 const emit = defineEmits<{
-  back: [void];
-  close: [void];
-  reject: [to?: RouteLocationNormalizedLoadedGeneric];
-  submit: [to?: RouteLocationNormalizedLoadedGeneric];
-}>();
+  back: [void]
+  close: [void]
+  reject: [to?: RouteLocationNormalizedLoadedGeneric]
+  submit: [to?: RouteLocationNormalizedLoadedGeneric]
+}>()
 
-const showConfirmation = ref(false);
+const showConfirmation = ref(false)
 
-const to = ref<RouteLocationNormalizedLoadedGeneric>();
+const to = ref<RouteLocationNormalizedLoadedGeneric>()
 
-const isApprovedForLeave = ref(false);
+const isApprovedForLeave = ref(false)
 
-const wantToGoBack = ref(false);
+const wantToGoBack = ref(false)
 
 const onSubmit = () => {
-  showConfirmation.value = false;
-  isApprovedForLeave.value = true;
+  showConfirmation.value = false
+  isApprovedForLeave.value = true
   if (wantToGoBack.value) {
-    wantToGoBack.value = false;
-    read_only.value = true;
-    emit('submit');
+    wantToGoBack.value = false
+    read_only.value = true
+    emit('submit')
   } else {
-    emit('submit', to.value);
+    emit('submit', to.value)
   }
-};
+}
 
 const onReject = () => {
-  showConfirmation.value = false;
-  isApprovedForLeave.value = true;
-  read_only.value = true;
+  showConfirmation.value = false
+  isApprovedForLeave.value = true
+  read_only.value = true
 
   if (wantToGoBack.value) {
-    wantToGoBack.value = false;
-    emit('back');
-  } else emit('reject', to.value);
-};
+    wantToGoBack.value = false
+    emit('back')
+  } else emit('reject', to.value)
+}
 
 const onBack = () => {
   if (props.hasChanges) {
-    wantToGoBack.value = true;
-    showConfirmation.value = true;
+    wantToGoBack.value = true
+    showConfirmation.value = true
   } else {
-    emit('back');
+    emit('back')
   }
-};
+}
 
 const onClose = () => {
   if (props.hasChanges) {
-    showConfirmation.value = true;
+    showConfirmation.value = true
   } else {
-    emit('close'); //read_only.value = true;
+    emit('close') //read_only.value = true;
   }
-};
+}
 
-const onDelete = () => {};
 onBeforeRouteLeave((_to, _from, next) => {
   //console.log('check before leave', _to, _from);
-  to.value = _to;
+  to.value = _to
   if (isApprovedForLeave.value) {
-    isApprovedForLeave.value = false;
-    next();
+    isApprovedForLeave.value = false
+    next()
   } else if (props.hasChanges) {
-    showConfirmation.value = true;
+    showConfirmation.value = true
   } else {
-    next();
+    next()
   }
-});
+})
 </script>
 
 <i18n lang="json">

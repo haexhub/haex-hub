@@ -1,20 +1,20 @@
 <template>
   <div class="dropdown relative inline-flex">
-    <button :id class="dropdown-toggle " v-bind="$attrs" aria-haspopup="menu" aria-expanded="false" :aria-label="label">
+    <button :id class="dropdown-toggle" v-bind="$attrs" aria-haspopup="menu" aria-expanded="false" :aria-label="label">
       <slot name="activator">
         {{ label }}
-        <span class="icon-[tabler--chevron-down] dropdown-open:rotate-180 size-4">
-        </span>
+        <span class="icon-[tabler--chevron-down] dropdown-open:rotate-180 size-4"/>
       </slot>
     </button>
 
-    <ul class="dropdown-menu dropdown-open:opacity-100 hidden min-w-28" role="menu" aria-orientation="vertical"
+    <ul
+class="dropdown-menu dropdown-open:opacity-100 hidden min-w-28" role="menu" aria-orientation="vertical"
       :aria-labelledby="id">
 
       <slot name="items">
 
 
-        <li v-for="item in items" :is="itemIs" class="dropdown-item" @click="$emit('select', item)">
+        <li :is="itemIs" v-for="item in items" class="dropdown-item" @click="$emit('select', item)">
           <slot name="item" :item>
             {{ item }}
           </slot>

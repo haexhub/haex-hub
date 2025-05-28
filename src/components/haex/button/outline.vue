@@ -1,5 +1,6 @@
 <template>
-  <button :class="cn(
+  <button
+:class="cn(
     `relative flex items-center justify-center min-w-28 min-h-10 overflow-hidden outline-2 outline-offset-2 rounded cursor-pointer`, className
   )
     ">

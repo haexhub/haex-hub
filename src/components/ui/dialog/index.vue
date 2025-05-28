@@ -1,29 +1,58 @@
 <template>
-  <button v-bind="$attrs" type="button" aria-haspopup="dialog" aria-expanded="false" :aria-label="label"
-    class="--prevent-on-load-init " @click="$emit('open')">
-    <slot name="trigger">open</slot>
+  <button
+    v-if="$slots.trigger || label"
+    v-bind="$attrs"
+    type="button"
+    aria-haspopup="dialog"
+    aria-expanded="false"
+    :aria-label="label"
+    class="--prevent-on-load-init"
+    @click="$emit('open')"
+  >
+    <slot name="trigger">
+      {{ label }}
+    </slot>
   </button>
 
-  <div :id class="overlay modal overlay-open:opacity-100 hidden overlay-open:duration-300" role="dialog" ref="modalRef"
-    tabindex="-1">
+  <div
+    :id
+    ref="modalRef"
+    class="overlay modal overlay-open:opacity-100 hidden overlay-open:duration-300 modal-middle"
+    role="dialog"
+    tabindex="-1"
+  >
     <div
-      class="overlay-animation-target overlay-open:mt-4 overlay-open:duration-500 mt-12 transition-all ease-out modal-dialog overlay-open:opacity-100">
-      <div class="modal-content">
+      class="overlay-animation-target overlay-open:mt-4 overlay-open:duration-500 mt-12 transition-all ease-out modal-dialog overlay-open:opacity-100"
+    >
+      <div class="modal-content gap-2">
         <div class="modal-header">
-          <slot name="title">
-            <h3 v-if="title" class="modal-title text-base sm:text-lg">
+          <div
+            v-if="title || $slots.title"
+            class="modal-title"
+          >
+            <slot name="title">
               {{ title }}
-            </h3>
-          </slot>
+            </slot>
+          </div>
 
-          <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" :aria-label="t('close')"
-            tabindex="1" @click="open = false">
-            <Icon name="mdi:close" size="18" />
+          <button
+            type="button"
+            class="btn btn-text btn-circle btn-sm absolute end-3 top-3"
+            :aria-label="t('close')"
+            tabindex="1"
+            @click="open = false"
+          >
+            <Icon
+              name="mdi:close"
+              size="18"
+            />
           </button>
         </div>
-        <div class="modal-body text-sm sm:text-base py-1">
+
+        <div class="modal-body text-sm sm:text-base">
           <slot />
         </div>
+
         <div class="modal-footer flex-wrap">
           <slot name="buttons" />
         </div>
@@ -33,65 +62,50 @@
 </template>
 
 <script setup lang="ts">
-import type { HSOverlay } from "flyonui/flyonui";
+import type { HSOverlay } from 'flyonui/flyonui'
 
-defineOptions({
-  inheritAttrs: false,
-});
+defineProps<{ title?: string; label?: string }>()
 
-defineProps<{ title?: string; label?: string }>();
+const emit = defineEmits(['open', 'close'])
 
-defineEmits(["open", "close"]);
+const id = useId()
 
-const id = useId();
+const open = defineModel<boolean>('open', { default: false })
 
-const open = defineModel<boolean>("open", { default: false });
+const { t } = useI18n()
 
-const { t } = useI18n();
+const modalRef = useTemplateRef('modalRef')
 
-const modalRef = useTemplateRef("modalRef");
+defineExpose({ modalRef })
 
-defineExpose({ modalRef });
-
-const modal = ref<HSOverlay>();
+const modal = ref<HSOverlay>()
 
 watch(open, async () => {
-  console.log("watch open modal", open.value, modal.value);
   if (open.value) {
-    await modal.value?.open();
+    await modal.value?.open()
   } else {
-    await modal.value?.close(true);
-    //HSOverlay.close(`#${id}`);
-    //console.log("close dialog");
+    await modal.value?.close(true)
+    emit('close')
   }
-});
+})
 
 onMounted(async () => {
-  if (!modalRef.value) return;
-  // flyonui has a problem importing HSOverlay at component level due to ssr
-  // that's the workaround I found
-  //const flyonui = await import("flyonui/flyonui");
+  if (!modalRef.value) return
 
   modal.value = new window.HSOverlay(modalRef.value, {
     isClosePrev: true,
-  });
+  })
 
-  modal.value.on("close", () => {
-    console.log("on close", open.value);
-    open.value = false;
-  });
-  /* modal.value.on("open", () => {
-    console.log("on open", open.value);
-    open.value = true;
-  }); */
-});
+  modal.value.on('close', () => {
+    open.value = false
+  })
+})
 </script>
 
-<i18n lang="json">{
-  "de": {
-    "close": "Schließen"
-  },
-  "en": {
-    "close": "Close"
-  }
-}</i18n>
+<i18n lang="yaml">
+de:
+  close: Schließen
+
+en:
+  close: Close
+</i18n>
