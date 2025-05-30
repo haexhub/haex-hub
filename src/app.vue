@@ -8,7 +8,6 @@
 </template>
 
 <script setup lang="ts">
-
 const { currentTheme } = storeToRefs(useUiStore())
 </script>
 

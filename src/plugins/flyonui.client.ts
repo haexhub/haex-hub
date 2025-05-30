@@ -19,11 +19,11 @@ export default defineNuxtPlugin(() => {
     }, 50)
   })
 
-  if (import.meta.client) {
+  /* if (import.meta.client) {
     setTimeout(() => {
       if (window.HSStaticMethods) {
         window.HSStaticMethods.autoInit()
       }
     }, 50)
-  }
+  } */
 })

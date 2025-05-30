@@ -4,11 +4,11 @@
       <UiDropdownLocale @select="setLocale" />
     </div>
     <div class="flex flex-col justify-center items-center gap-5 max-w-3xl">
-      <img
+      <!-- <img
         src="/logo.svg"
         class="bg-primary p-3 size-16 rounded-full"
         alt="HaexVault Logo"
-      >
+      /> -->
 
       <span
         class="flex flex-wrap font-bold text-pretty text-xl gap-2 justify-center"

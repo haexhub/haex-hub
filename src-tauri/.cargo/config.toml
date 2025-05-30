@@ -1,0 +1,9 @@
+# Nur dieser Inhalt in src-tauri/.cargo/config.toml
+
+[target.aarch64-linux-android]
+# Ersetze die Pfade durch deine tatsächlichen NDK-Pfade
+# Dein NDK-Basispfad: /home/haex/Android/Sdk/ndk/29.0.13113456
+# Stelle sicher, dass der clang-Name (mit API-Level, z.B. ...24-clang) korrekt ist.
+linker = "/home/haex/Android/Sdk/ndk/29.0.13113456/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang"
+#ar = "/home/haex/Android/Sdk/ndk/29.0.13113456/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+#ranlib = "/home/haex/Android/Sdk/ndk/29.0.13113456/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ranlib"

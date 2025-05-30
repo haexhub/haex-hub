@@ -3,6 +3,7 @@
     v-model:open="open"
     :title="t('title')"
     class="btn btn-primary btn-outline shadow-md md:btn-lg shrink-0 flex-1 whitespace-nowrap flex-nowrap"
+    @click="open = true"
   >
     <template #trigger>
       <Icon name="mdi:plus" />

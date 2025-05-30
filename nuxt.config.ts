@@ -1,6 +1,11 @@
 import tailwindcss from '@tailwindcss/vite'
 // https://nuxt.com/docs/api/configuration/nuxt-config
+
 export default defineNuxtConfig({
+  app: {
+    baseURL: './',
+  },
+
   modules: [
     'nuxt-zod-i18n',
     '@nuxtjs/i18n',
@@ -89,12 +94,10 @@ export default defineNuxtConfig({
   ssr: false,
   // Enables the development server to be discoverable by other devices when running on iOS physical devices
   devServer: {
-    host: process.env.TAURI_DEV_HOST || '0.0.0.0',
+    host: process.env.TAURI_DEV_HOST || 'localhost',
   },
 
   vite: {
-    base: './',
-
     plugins: [tailwindcss()],
     // Better support for Tauri CLI output
     clearScreen: false,
