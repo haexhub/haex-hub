@@ -1,5 +1,8 @@
 <template>
-  <UiDialog v-model:open="open" @close="onAbort">
+  <UiDialog
+    v-model:open="open"
+    @close="onAbort"
+  >
     <template #trigger>
       <slot name="trigger" />
     </template>
@@ -12,41 +15,46 @@
 
     <template #buttons>
       <slot name="buttons">
-        <UiButton class="btn-error btn-outline" @click="onAbort">
-          <Icon name="mdi:close" /> {{ abortLabel ?? t("abort") }}
+        <UiButton
+          class="btn-error btn-outline"
+          @click="onAbort"
+        >
+          <Icon name="mdi:close" /> {{ abortLabel ?? t('abort') }}
         </UiButton>
-        <UiButton class="btn-primary " @click="onConfirm">
-          <Icon name="mdi:check" /> {{ confirmLabel ?? t("confirm") }}
+        <UiButton
+          class="btn-primary"
+          @click="onConfirm"
+        >
+          <Icon name="mdi:check" /> {{ confirmLabel ?? t('confirm') }}
         </UiButton>
       </slot>
-
     </template>
   </UiDialog>
 </template>
 
 <script setup lang="ts">
-defineProps<{ confirmLabel?: string, abortLabel?: string }>()
-const open = defineModel<boolean>("open", { default: false })
+defineProps<{ confirmLabel?: string; abortLabel?: string }>()
+const open = defineModel<boolean>('open', { default: false })
 const { t } = useI18n()
-const emit = defineEmits(["confirm", "abort"])
+const emit = defineEmits(['confirm', 'abort'])
 
 const onAbort = () => {
+  emit('abort')
   open.value = false
-  emit("abort")
 }
 
 const onConfirm = () => {
+  emit('confirm')
   open.value = false
-  emit("confirm")
 }
 </script>
 
 <i18n lang="yaml">
-  de:
-    abort: Abbrechen
-    confirm: Bestätigen
+de:
+  abort: Abbrechen
+  confirm: Bestätigen
 
-  en:
-    abort: Abort
-    confirm: Confirm
+en:
+  abort: Abort
+  confirm: Confirm
 </i18n>

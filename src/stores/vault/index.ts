@@ -119,6 +119,7 @@ export const useVaultStore = defineStore('vaultStore', () => {
       return vaultId
     } catch (error) {
       console.error('Error openAsync ', error)
+      throw new Error(JSON.stringify(error))
       return false
     }
   }

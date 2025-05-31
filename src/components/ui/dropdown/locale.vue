@@ -1,17 +1,23 @@
 <template>
   <UiDropdown
-:items="availableLocales" class="btn btn-primary  btn-outline"
-    @select="(locale) => $emit('select', locale)">
+    :items="availableLocales"
+    class="btn btn-primary btn-outline"
+    @select="(locale) => $emit('select', locale)"
+  >
     <template #activator>
-
       <Icon :name="flags[locale]" />
-      <Icon name="tabler:chevron-down" class="dropdown-open:rotate-180 size-4" />
-
+      <Icon
+        name="tabler:chevron-down"
+        class="dropdown-open:rotate-180 size-4"
+      />
     </template>
 
     <template #item="{ item }">
       <div class="flex gap-2 justify-center">
-        <Icon :name="flags[item]" class="my-auto" />
+        <Icon
+          :name="flags[item]"
+          class="my-auto"
+        />
         <p>
           {{ item }}
         </p>

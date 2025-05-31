@@ -1,11 +1,12 @@
 <template>
   <UiDialogConfirm
     v-model:open="open"
-    class="btn btn-primary btn-outline shadow-md md:btn-lg shrink-0 flex-1"
+    class="btn btn-primary btn-outline shadow-md md:btn-lg"
     :confirm-label="t('open')"
     :abort-label="t('abort')"
-    @open="onLoadDatabase"
     @abort="onAbort"
+    @confirm="onOpenDatabase"
+    @open="onLoadDatabase"
   >
     <template #title>
       <i18n-t
@@ -76,7 +77,7 @@ const { add } = useSnackbar()
 const handleError = (error: unknown) => {
   open.value = false
   console.error('handleError', error, typeof error)
-  add({ type: 'error', text: 'Passwort falsch' })
+  add({ type: 'error', text: JSON.stringify(error) })
 }
 
 const { openAsync } = useVaultStore()

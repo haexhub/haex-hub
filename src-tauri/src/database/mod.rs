@@ -33,7 +33,7 @@ pub async fn sql_execute(
 
 /// Erstellt eine verschlüsselte Datenbank
 #[tauri::command]
-pub fn create_encrypted_database_old(
+pub fn create_encrypted_database(
     app_handle: AppHandle,
     path: String,
     key: String,
@@ -41,9 +41,15 @@ pub fn create_encrypted_database_old(
 ) -> Result<String, String> {
     // Ressourcenpfad zur eingebundenen Datenbank auflösen
 
+    println!("Arbeitsverzeichnis: {:?}", std::env::current_dir());
+    println!(
+        "Ressourcenverzeichnis: {:?}",
+        app_handle.path().resource_dir()
+    );
+
     let resource_path = app_handle
         .path()
-        .resolve("vault.db", BaseDirectory::Resource)
+        .resolve("database/vault.db", BaseDirectory::Resource)
         .map_err(|e| format!("Fehler beim Auflösen des Ressourcenpfads: {}", e))?;
 
     // Prüfen, ob die Ressourcendatei existiert
@@ -227,9 +233,10 @@ pub fn open_encrypted_database(
         return Err("Datenbankdatei nicht gefunden".into());
     }
 
-    let conn = core::open_and_init_db(&path, &key, false)?;
+    let conn = core::open_and_init_db(&path, &key, false)
+        .map_err(|e| format!("Fehler beim öffnen: {}", e));
     let mut db = state.0.lock().map_err(|e| e.to_string())?;
-    *db = Some(conn);
+    *db = Some(conn.unwrap());
 
     Ok(format!("success"))
 }
@@ -260,7 +267,7 @@ fn prepare_temporary_asset_db(
     //.resolve("vault.db", BaseDirectory::Resource)
     let asset_bytes = app_handle
         .asset_resolver()
-        .get(asset_name.to_string())
+        .get(asset_name.to_owned())
         .ok_or_else(|| format!("Asset '{}' wurde nicht im Bundle gefunden.", asset_name))?
         .bytes()
         .to_vec();
@@ -493,7 +500,7 @@ fn open_and_verify_encrypted_db(db_path: &Path, key: &str) -> Result<Connection,
 
 /// Hauptfunktion: Erstellt eine verschlüsselte Datenbank aus einem gebündelten Asset.
 #[tauri::command]
-pub fn create_encrypted_database(
+pub fn create_encrypted_database_new(
     app_handle: AppHandle<Wry>,
     path: String,
     key: String,
@@ -503,7 +510,7 @@ pub fn create_encrypted_database(
     let temp_db_path: PathBuf; // Muss deklariert werden, um im Fehlerfall aufgeräumt werden zu können
 
     // Schritt 1: Asset vorbereiten
-    match prepare_temporary_asset_db(&app_handle, &asset_name, BaseDirectory::AppData) {
+    match prepare_temporary_asset_db(&app_handle, &asset_name, BaseDirectory::Resource) {
         Ok(path) => temp_db_path = path,
         Err(e) => return Err(e),
     }

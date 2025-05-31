@@ -54,6 +54,6 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": ["test.txt"]
+    "resources": ["database/vault.db"]
   }
 }
