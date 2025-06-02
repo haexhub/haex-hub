@@ -11,6 +11,8 @@ export const haexSettings = sqliteTable('haex_settings', {
   key: text(),
   value: text(),
 })
+export type InsertHaexSettings = typeof haexSettings.$inferInsert
+export type SelectHaexSettings = typeof haexSettings.$inferSelect
 
 export const haexExtensions = sqliteTable('haex_extensions', {
   id: text().primaryKey(),
@@ -21,6 +23,8 @@ export const haexExtensions = sqliteTable('haex_extensions', {
   url: text(),
   version: text(),
 })
+export type InsertHaexExtensions = typeof haexExtensions.$inferInsert
+export type SelectHaexExtensions = typeof haexExtensions.$inferSelect
 
 export const haexExtensionsPermissions = sqliteTable(
   'haex_extensions_permissions',
@@ -37,14 +41,21 @@ export const haexExtensionsPermissions = sqliteTable(
     unique().on(table.extensionId, table.resource, table.operation, table.path),
   ],
 )
-
-export type InsertHaexSettings = typeof haexSettings.$inferInsert
-export type SelectHaexSettings = typeof haexSettings.$inferSelect
-
-export type InsertHaexExtensions = typeof haexExtensions.$inferInsert
-export type SelectHaexExtensions = typeof haexExtensions.$inferSelect
-
 export type InsertHaexExtensionsPermissions =
   typeof haexExtensionsPermissions.$inferInsert
 export type SelectHaexExtensionsPermissions =
   typeof haexExtensionsPermissions.$inferSelect
+
+export const haexNotifications = sqliteTable('haex_notofications', {
+  id: text().primaryKey(),
+  title: text(),
+  text: text(),
+  type: text({ enum: ['error', 'success', 'warning', 'info'] }).notNull(),
+  read: integer({ mode: 'boolean' }),
+  date: text(),
+  image: text(),
+  alt: text(),
+  icon: text(),
+})
+export type InsertHaexNotifications = typeof haexNotifications.$inferInsert
+export type SelectHaexNotifications = typeof haexNotifications.$inferSelect

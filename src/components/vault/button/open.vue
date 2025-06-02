@@ -18,7 +18,7 @@
           <UiTextGradient>HaexVault</UiTextGradient>
         </template>
       </i18n-t>
-      <p class="text-sm">{{ path }}</p>
+      <p class="text-sm">{{ database.path }}</p>
     </template>
 
     <template #trigger>
@@ -62,6 +62,11 @@ const database = reactive<{
   path: '',
   type: 'password',
 })
+
+watch(
+  () => props.path,
+  () => (database.path = props.path),
+)
 
 const initDatabase = () => {
   database.name = ''

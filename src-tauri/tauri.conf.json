@@ -29,7 +29,8 @@
         "connect-src": [
           "'self'",
           "http://tauri.localhost",
-          "ipc:http://ipc.localhost"
+          "ipc:",
+          "http://ipc.localhost"
         ],
         "img-src": ["'self'", "http://tauri.localhost", "data:", "blob:"],
         "font-src": ["'self'", "http://tauri.localhost"],

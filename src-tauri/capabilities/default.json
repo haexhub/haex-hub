@@ -16,6 +16,8 @@
     "dialog:default",
     "fs:allow-appdata-read-recursive",
     "fs:allow-appdata-write-recursive",
+    "fs:allow-appconfig-read-recursive",
+    "fs:allow-appconfig-write-recursive",
     "fs:allow-read-file",
     "fs:allow-resource-read-recursive",
     "fs:default",
@@ -26,6 +28,10 @@
     "opener:default",
     "os:default",
     "os:allow-hostname",
-    "store:default"
+    "store:default",
+    "notification:default",
+    "notification:allow-notify",
+    "notification:allow-create-channel",
+    "notification:allow-list-channels"
   ]
 }

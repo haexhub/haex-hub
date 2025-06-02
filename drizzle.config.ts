@@ -1,10 +1,10 @@
-import { defineConfig } from 'drizzle-kit';
+import { defineConfig } from 'drizzle-kit'
 
 export default defineConfig({
-  schema: './src/database/schemas/**.ts',
-  out: './src/database/migrations',
+  schema: './src-tauri/database/schemas/**.ts',
+  out: './src-tauri/database/migrations',
   dialect: 'sqlite',
   dbCredentials: {
-    url: './src/database/default.db',
+    url: './src-tauri/database/vault.db',
   },
-});
+})

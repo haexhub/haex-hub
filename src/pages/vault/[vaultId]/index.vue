@@ -14,8 +14,10 @@ definePageMeta({
 })
 
 const extensionStore = useExtensionsStore()
+const { readNotificationsAsync } = useNotificationStore()
 
 onMounted(async () => {
   await extensionStore.loadExtensionsAsync()
+  await readNotificationsAsync()
 })
 </script>

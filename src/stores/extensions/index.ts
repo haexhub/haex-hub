@@ -14,6 +14,7 @@ const logoFileName = 'icon.svg'
 
 export const useExtensionsStore = defineStore('extensionsStore', () => {
   const availableExtensions = ref<IHaexHubExtensionLink[]>([])
+  const { addNotificationAsync } = useNotificationStore()
 
   const extensionLinks = computed<ISidebarItem[]>(() =>
     availableExtensions.value
@@ -78,6 +79,7 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
       return true
     } catch (error) {
       console.error(error)
+      addNotificationAsync({ type: 'error', text: JSON.stringify(error) })
       //throw error //new Error(`Keine Leseberechtigung für Ordner ${extensionDirectory}`);
     }
   }
@@ -176,6 +178,7 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
       */
       return manifest
     } catch (error) {
+      addNotificationAsync({ type: 'error', text: JSON.stringify(error) })
       console.error('ERROR readManifestFileAsync', error)
     }
   }
@@ -218,7 +221,12 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
         })
 
       console.log('insert extensions', res)
+      addNotificationAsync({
+        type: 'success',
+        text: `${manifest.name} wurde installiert`,
+      })
     } catch (error) {
+      addNotificationAsync({ type: 'error', text: JSON.stringify(error) })
       throw error
       /*
       const resourcePath = await resourceDir();

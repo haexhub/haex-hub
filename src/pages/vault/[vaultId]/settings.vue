@@ -26,6 +26,20 @@
         </template>
       </UiInput>
     </div>
+
+    <div class="p-2">{{ t('notifications.label') }}</div>
+    <div class="flex items-center">
+      <input
+        type="checkbox"
+        class="switch switch-primary"
+        :checked="isNotificationAllowed"
+        readonly
+      />
+      {{ isNotificationAllowed }}
+      <UiButton @click="requestNotificationPermissionAsync">
+        {{ t('notifications.requestPermission') }}
+      </UiButton>
+    </div>
   </div>
 </template>
 
@@ -71,6 +85,10 @@ const onSetVaultNameAsync = async () => {
     add({ text: t('vaultName.update.error'), type: 'error' })
   }
 }
+
+const { isNotificationAllowed } = storeToRefs(useNotificationStore())
+const { requestNotificationPermissionAsync } = useNotificationStore()
+//const { test } = useLastVaultStore()
 </script>
 
 <i18n lang="yaml">
@@ -78,6 +96,9 @@ de:
   language: Sprache
   design: Design
   save: Änderung speichern
+  notifications:
+    label: Benachrichtigungen
+    requestPermission: Benachrichtigung erlauben
   vaultName:
     label: Vaultname
     update:
@@ -87,6 +108,9 @@ en:
   language: Language
   design: Design
   save: save changes
+  notifications:
+    label: Notifications
+    requestPermission: Grant Permission
   vaultName:
     label: Vault Name
     update:

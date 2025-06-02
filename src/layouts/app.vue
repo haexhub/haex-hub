@@ -37,7 +37,7 @@
 
       <div class="navbar-end flex items-center gap-4 me-4">
         <div
-          class="dropdown relative inline-flex [--auto-close:inside] [--offset:8] [--placement:bottom-end]"
+          class="dropdown relative inline-flex [--auto-close:inside] [--offset:20] [--placement:bottom-end]"
         >
           <button
             id="dropdown-scrollable"
@@ -73,7 +73,7 @@
             >
               <div
                 v-for="notification in notifications"
-                :key="notification.date.toDateString()"
+                :key="notification.id"
                 class="dropdown-item"
               >
                 <div class="avatar">
@@ -94,7 +94,7 @@
                     {{ notification.title }}
                   </h6>
                   <small class="text-base-content/50 truncate">
-                    {{ notification.description }}
+                    {{ notification.text }}
                   </small>
                 </div>
               </div>

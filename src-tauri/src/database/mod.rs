@@ -4,11 +4,12 @@ pub mod core;
 use rusqlite::{Connection, OpenFlags, Result as RusqliteResult};
 use serde_json::Value as JsonValue;
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tauri::utils::resources::Resource;
 use tauri::{path::BaseDirectory, AppHandle, Manager, State, Wry};
-use tokio::io::join;
+use tauri_plugin_fs::FsExt;
 
 pub struct DbConnection(pub Mutex<Option<Connection>>);
 
@@ -31,6 +32,18 @@ pub async fn sql_execute(
     core::execute(sql, params, &state).await
 }
 
+// remember to call `.manage(MyState::default())`
+#[tauri::command]
+pub fn test(app_handle: AppHandle) -> Result<String, String> {
+    let resource_path = app_handle
+        .path()
+        .resolve("database/vault.db", BaseDirectory::Resource)
+        .map_err(|e| format!("Fehler {}", e));
+    //let file = app_handle.fs().open(resource_path, {}).unwrap().read();
+    Ok(String::from(resource_path.unwrap().to_string_lossy()))
+    /* std::fs::exists(String::from(resource_path.unwrap().to_string_lossy()))
+    .map_err(|e| format!("Fehler: {}", e)) */
+}
 /// Erstellt eine verschlüsselte Datenbank
 #[tauri::command]
 pub fn create_encrypted_database(

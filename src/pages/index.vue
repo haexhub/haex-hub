@@ -4,11 +4,6 @@
       <UiDropdownLocale @select="setLocale" />
     </div>
     <div class="flex flex-col justify-center items-center gap-5 max-w-3xl">
-      <!-- <img
-        :src="convertFileSrc('/logo.svg', 'http')"
-        class="bg-primary p-3 size-16 rounded-full"
-        alt="HaexVault Logo"
-      /> -->
       <UiLogoHaexhub class="bg-primary p-3 size-16 rounded-full" />
       <span
         class="flex flex-wrap font-bold text-pretty text-xl gap-2 justify-center"
@@ -26,8 +21,6 @@
           v-model:open="passwordPromptOpen"
           :path="vaultPath"
         />
-
-        <UiButton @click="refresh">Refresh</UiButton>
       </div>
 
       <div
@@ -83,7 +76,6 @@
 
 <script setup lang="ts">
 import { UiLogoHaexhub } from '#components'
-import { convertFileSrc } from '@tauri-apps/api/core'
 import { openUrl } from '@tauri-apps/plugin-opener'
 
 const refresh = () => location.reload()

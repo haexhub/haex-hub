@@ -199,7 +199,11 @@ pub fn extension_protocol_handler<R: Runtime>(
     let segments_iter = path_str.split('/').filter(|s| !s.is_empty());
     let resource_segments: Vec<&str> = segments_iter.collect();
     let raw_asset_path = resource_segments.join("/");
-    let asset_to_load = if raw_asset_path.is_empty() { "index.html"} else {&raw_asset_path};
+    let asset_to_load = if raw_asset_path.is_empty() {
+        "index.html"
+    } else {
+        &raw_asset_path
+    };
 
     match process_hex_encoded_json(&host) {
         Ok(info) => {

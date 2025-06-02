@@ -12,6 +12,7 @@ pub fn run() {
     let protocol_name = "haex-extension";
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .register_uri_scheme_protocol(protocol_name, move |context, request| {
             match extension::core::extension_protocol_handler(&context, &request) {
                 Ok(response) => response, // Wenn der Handler Ok ist, gib die Response direkt zurück
@@ -58,7 +59,8 @@ pub fn run() {
             database::sql_select,
             extension::database::extension_sql_execute,
             extension::database::extension_sql_select,
-            extension::copy_directory //browser::create_tab
+            extension::copy_directory,
+            database::test
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

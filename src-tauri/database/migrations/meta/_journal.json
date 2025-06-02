@@ -22,6 +22,13 @@
       "when": 1747583956679,
       "tag": "0002_married_bushwacker",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1748873820060,
+      "tag": "0003_familiar_doctor_faustus",
+      "breakpoints": true
     }
   ]
 }

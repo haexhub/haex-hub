@@ -1,5 +1,8 @@
 <template>
-  <div class="dropdown relative inline-flex">
+  <div
+    class="dropdown relative inline-flex"
+    :class="offset"
+  >
     <button
       :id
       class="dropdown-toggle"
@@ -42,13 +45,12 @@
 </template>
 
 <script setup lang="ts" generic="T">
-import type { HSDropdown } from 'flyonui/flyonui'
-
-const { itemIs = 'li' } = defineProps<{
+const { itemIs = 'li', offset = '[--offset:0]' } = defineProps<{
   label?: string
   items?: T[]
   itemIs?: string
   activatorClass?: string
+  offset?: string
 }>()
 
 defineOptions({
@@ -58,4 +60,6 @@ defineOptions({
 defineEmits<{ select: [T] }>()
 
 const id = useId()
+
+//const offset = '[--offset:30]'
 </script>

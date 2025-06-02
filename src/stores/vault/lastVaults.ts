@@ -59,7 +59,9 @@ export const useLastVaultStore = defineStore('lastVaultStore', () => {
     await syncLastVaultsAsync()
   }
 
+  const test = async () => console.log('test')
   return {
+    test,
     addVaultAsync,
     syncLastVaultsAsync,
     lastVaults,
