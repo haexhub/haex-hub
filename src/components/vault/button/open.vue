@@ -1,7 +1,7 @@
 <template>
   <UiDialogConfirm
     v-model:open="open"
-    class="btn btn-primary btn-outline shadow-md md:btn-lg"
+    class="btn btn-primary btn-outline shadow-md btn-lg"
     :confirm-label="t('open')"
     :abort-label="t('abort')"
     @abort="onAbort"
@@ -12,13 +12,14 @@
       <i18n-t
         keypath="title"
         tag="p"
-        class="flex gap-2"
+        class="flex gap-x-2 flex-wrap"
       >
         <template #haexvault>
           <UiTextGradient>HaexVault</UiTextGradient>
         </template>
       </i18n-t>
-      <p class="text-sm">{{ database.path }}</p>
+
+      <div class="text-sm">{{ props.path ?? database.path }}</div>
     </template>
 
     <template #trigger>
@@ -62,11 +63,6 @@ const database = reactive<{
   path: '',
   type: 'password',
 })
-
-watch(
-  () => props.path,
-  () => (database.path = props.path),
-)
 
 const initDatabase = () => {
   database.name = ''

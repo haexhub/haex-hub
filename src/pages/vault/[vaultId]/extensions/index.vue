@@ -109,10 +109,12 @@ const loadExtensionManifestAsync = async () => {
   } catch (error) {
     console.error('Fehler loadExtensionManifestAsync:', error)
     add({ type: 'error', text: JSON.stringify(error) })
+    await addNotificationAsync({ text: JSON.stringify(error), type: 'error' })
   }
 }
 
 const { add } = useSnackbar()
+const { addNotificationAsync } = useNotificationStore()
 
 const prepareInstallExtensionAsyn = async () => {
   try {
@@ -132,6 +134,7 @@ const prepareInstallExtensionAsyn = async () => {
     }
   } catch (error) {
     add({ type: 'error', text: JSON.stringify(error) })
+    await addNotificationAsync({ text: JSON.stringify(error), type: 'error' })
   }
 }
 
@@ -147,9 +150,17 @@ const addExtensionAsync = async () => {
       }),
       text: t('extension.success.text'),
     })
+    await addNotificationAsync({
+      text: t('extension.success.text'),
+      type: 'success',
+      title: t('extension.success.title', {
+        extension: extension.manifest?.name,
+      }),
+    })
   } catch (error) {
     console.error('Fehler addExtensionAsync:', error)
     add({ type: 'error', text: JSON.stringify(error) })
+    await addNotificationAsync({ text: JSON.stringify(error), type: 'error' })
   }
 }
 
@@ -182,8 +193,22 @@ const removeExtensionAsync = async () => {
         extensionName: extensionToBeRemoved.value.name,
       }),
     })
+    await addNotificationAsync({
+      text: t('extension.remove.success.text', {
+        extensionName: extensionToBeRemoved.value.name,
+      }),
+      type: 'success',
+      title: t('extension.remove.success.title', {
+        extensionName: extensionToBeRemoved.value.name,
+      }),
+    })
   } catch (error) {
     add({
+      type: 'error',
+      title: t('extension.remove.error.title'),
+      text: t('extension.remove.error.text', { error: JSON.stringify(error) }),
+    })
+    await addNotificationAsync({
       type: 'error',
       title: t('extension.remove.error.title'),
       text: t('extension.remove.error.text', { error: JSON.stringify(error) }),

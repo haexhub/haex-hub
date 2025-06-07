@@ -2,6 +2,11 @@ import tailwindcss from '@tailwindcss/vite'
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
 export default defineNuxtConfig({
+  app: {
+    pageTransition: {
+      name: 'fade',
+    },
+  },
   modules: [
     'nuxt-zod-i18n',
     '@nuxtjs/i18n',
@@ -91,6 +96,7 @@ export default defineNuxtConfig({
   // Enables the development server to be discoverable by other devices when running on iOS physical devices
   devServer: {
     host: process.env.TAURI_DEV_HOST || 'localhost',
+    port: 3003,
   },
 
   vite: {

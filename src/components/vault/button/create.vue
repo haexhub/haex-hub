@@ -2,7 +2,7 @@
   <UiDialog
     v-model:open="open"
     :title="t('title')"
-    class="btn btn-primary btn-outline shadow-md md:btn-lg"
+    class="btn btn-primary btn-outline shadow-md btn-lg"
     @click="open = true"
   >
     <template #trigger>
@@ -34,14 +34,14 @@
 
     <template #buttons>
       <UiButton
-        class="btn-error"
+        class="btn-error w-full sm:w-auto"
         @click="onClose"
       >
         {{ t('abort') }}
       </UiButton>
 
       <UiButton
-        class="btn-primary"
+        class="btn-primary w-full sm:w-auto"
         @click="onCreateAsync"
       >
         {{ t('create') }}

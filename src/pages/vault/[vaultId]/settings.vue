@@ -29,14 +29,10 @@
 
     <div class="p-2">{{ t('notifications.label') }}</div>
     <div class="flex items-center">
-      <input
-        type="checkbox"
-        class="switch switch-primary"
-        :checked="isNotificationAllowed"
-        readonly
-      />
-      {{ isNotificationAllowed }}
-      <UiButton @click="requestNotificationPermissionAsync">
+      <UiButton
+        class="btn-primary"
+        @click="requestNotificationPermissionAsync"
+      >
         {{ t('notifications.requestPermission') }}
       </UiButton>
     </div>
@@ -49,7 +45,7 @@ import type { Locale } from 'vue-i18n'
 import { haexSettings } from '~~/src-tauri/database/schemas/vault'
 
 definePageMeta({
-  name: 'haexSettings',
+  name: 'settings',
 })
 
 const { t, setLocale } = useI18n()

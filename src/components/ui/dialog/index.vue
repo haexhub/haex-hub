@@ -17,18 +17,18 @@
   <div
     :id
     ref="modalRef"
-    class="overlay modal overlay-open:opacity-100 hidden overlay-open:duration-300 modal-middle"
+    class="overlay modal overlay-open:opacity-100 hidden overlay-open:duration-300 sm:modal-middle p-0 xs:p-2"
     role="dialog"
     tabindex="-1"
   >
     <div
-      class="overlay-animation-target overlay-open:mt-4 overlay-open:duration-500 mt-12 transition-all ease-out modal-dialog overlay-open:opacity-100"
+      class="overlay-animation-target overlay-open:duration-300 transition-all ease-out modal-dialog overlay-open:opacity-100 pointer-events-auto overflow-y-auto"
     >
-      <div class="modal-content gap-2">
+      <div class="modal-content justify-between h-full max-h-none">
         <div class="modal-header">
           <div
             v-if="title || $slots.title"
-            class="modal-title"
+            class="modal-title py-4 break-all"
           >
             <slot name="title">
               {{ title }}
@@ -53,7 +53,7 @@
           <slot />
         </div>
 
-        <div class="modal-footer flex-wrap">
+        <div class="modal-footer flex-col sm:flex-row">
           <slot name="buttons" />
         </div>
       </div>

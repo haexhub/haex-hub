@@ -18,7 +18,7 @@
       <li>
         <NuxtLinkLocale
           class="dropdown-item"
-          :to="{ name: 'haexSettings' }"
+          :to="{ name: 'settings' }"
         >
           <span class="icon-[tabler--settings]" />
           {{ t('settings') }}

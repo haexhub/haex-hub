@@ -16,13 +16,13 @@
     <template #buttons>
       <slot name="buttons">
         <UiButton
-          class="btn-error btn-outline"
+          class="btn-error btn-outline w-full sm:w-auto"
           @click="onAbort"
         >
           <Icon name="mdi:close" /> {{ abortLabel ?? t('abort') }}
         </UiButton>
         <UiButton
-          class="btn-primary"
+          class="btn-primary w-full sm:w-auto"
           @click="onConfirm"
         >
           <Icon name="mdi:check" /> {{ confirmLabel ?? t('confirm') }}

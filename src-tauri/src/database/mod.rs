@@ -1,19 +1,15 @@
 // database/mod.rs
 pub mod core;
 
-use rusqlite::{Connection, OpenFlags, Result as RusqliteResult};
+use rusqlite::Connection;
 use serde_json::Value as JsonValue;
 use std::fs;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use tauri::utils::resources::Resource;
 use tauri::{path::BaseDirectory, AppHandle, Manager, State, Wry};
-use tauri_plugin_fs::FsExt;
 
 pub struct DbConnection(pub Mutex<Option<Connection>>);
 
-// Öffentliche Funktionen für direkten Datenbankzugriff
 #[tauri::command]
 pub async fn sql_select(
     sql: String,
@@ -32,7 +28,6 @@ pub async fn sql_execute(
     core::execute(sql, params, &state).await
 }
 
-// remember to call `.manage(MyState::default())`
 #[tauri::command]
 pub fn test(app_handle: AppHandle) -> Result<String, String> {
     let resource_path = app_handle
@@ -44,7 +39,7 @@ pub fn test(app_handle: AppHandle) -> Result<String, String> {
     /* std::fs::exists(String::from(resource_path.unwrap().to_string_lossy()))
     .map_err(|e| format!("Fehler: {}", e)) */
 }
-/// Erstellt eine verschlüsselte Datenbank
+
 #[tauri::command]
 pub fn create_encrypted_database(
     app_handle: AppHandle,
@@ -81,6 +76,18 @@ pub fn create_encrypted_database(
         }
     }
 
+    let target = Path::new(&path);
+    if target.exists() & target.is_file() {
+        println!(
+            "Datei '{}' existiert bereits. Sie wird gelöscht.",
+            target.display()
+        );
+
+        fs::remove_file(target)
+            .map_err(|e| format!("Kann Vault {} nicht löschen. \n {}", target.display(), e))?;
+    } else {
+        println!("Datei '{}' existiert nicht.", target.display());
+    }
     //core::copy_file(&resource_path, &path)?;
 
     println!(
@@ -235,7 +242,6 @@ pub fn create_encrypted_database(
     ))
 }
 
-/// Öffnet eine verschlüsselte Datenbank
 #[tauri::command]
 pub fn open_encrypted_database(
     path: String,
@@ -254,22 +260,6 @@ pub fn open_encrypted_database(
     Ok(format!("success"))
 }
 
-// Notwendige Imports an den Anfang des Moduls stellen
-//use tauri::{AppHandle, Manager, State, path::BaseDirectory, Wry};
-//use rusqlite::{Connection, OpenFlags, Result as RusqliteResult};
-//use std::fs;
-//use std::path::{Path, PathBuf};
-//use std::sync::Mutex; // Für den State
-
-// Stelle sicher, dass dein DbConnection-Typ hier bekannt ist.
-// z.B. durch pub struct DbConnection(pub Mutex<Option<Connection>>);
-// oder wenn es in einem anderen Modul ist: use crate::path_to::DbConnection;
-// Für dieses Beispiel gehe ich davon aus, dass es in crate::DbConnection liegt.
-// Ersetze `crate::DbConnection` mit dem korrekten Pfad zu deiner Definition.
-//type SharedDbConnectionState = State<'_, crate::DbConnection>;
-
-/// Hilfsfunktion: Lädt ein Asset und kopiert es in eine temporäre Datei.
-/// Gibt den Pfad zur temporären Datei zurück.
 fn prepare_temporary_asset_db(
     app_handle: &AppHandle<Wry>,
     asset_name: &str,

@@ -17,7 +17,7 @@ export const useSidebarStore = defineStore('sidebarStore', () => {
       id: 'haex-pass',
       name: 'HaexPass',
       icon: 'mdi:safe',
-      to: { name: 'haexpassOverview' },
+      to: { name: 'passwords' },
     },
     {
       id: 'haex-extensions',

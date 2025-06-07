@@ -1,5 +1,5 @@
 <template>
-  <div class="items-center justify-center min-h-full flex w-full relative">
+  <div class="items-center justify-center h-full flex w-full relative">
     <div class="fixed top-2 right-2">
       <UiDropdownLocale @select="setLocale" />
     </div>
@@ -78,7 +78,6 @@
 import { UiLogoHaexhub } from '#components'
 import { openUrl } from '@tauri-apps/plugin-opener'
 
-const refresh = () => location.reload()
 definePageMeta({
   name: 'vaultOpen',
 })

@@ -65,7 +65,7 @@
         </div>
 
         <div
-          class="flex flex-col items-center w-full min-h-14 gap-2 py-1"
+          class="flex items-center w-full min-h-14 gap-2 py-1"
           :style="{ color }"
         >
           <Icon
@@ -78,7 +78,7 @@
             v-show="read_only"
             class="overflow-hidden whitespace-nowrap"
           >
-            {{ title }}
+            a{{ title }}
           </h5>
         </div>
       </div>
@@ -91,6 +91,7 @@
         class="fixed bottom-2 left-0 w-full flex items-center justify-between px-4 md:hidden"
       >
         <div class="transition-all duration-500">
+          aa
           <button
             class="btn btn-square btn-error btn-outline"
             @click="onClose"

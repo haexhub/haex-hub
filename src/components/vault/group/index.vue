@@ -17,7 +17,6 @@
         v-model.trim="vaultGroup.name"
         :label="t('vaultGroup.name')"
         :placeholder="t('vaultGroup.name')"
-        :rules="vaultGroupSchema.name"
         :with-copy-button="read_only"
         :read_only
         autofocus
@@ -29,18 +28,17 @@
         :read_only
         :label="t('vaultGroup.description')"
         :placeholder="t('vaultGroup.description')"
-        :rules="vaultGroupSchema.description"
         :with-copy-button="read_only"
       />
 
-      <UiColorPicker
+      <UiSelectColor
         v-model="vaultGroup.color"
         :read_only
         :label="t('vaultGroup.color')"
         :placeholder="t('vaultGroup.color')"
       />
 
-      <UiIconPicker
+      <UiSelectIcon
         v-model="vaultGroup.icon"
         :read_only
         :label="t('vaultGroup.icon')"
@@ -51,29 +49,26 @@
 </template>
 
 <script setup lang="ts">
-import type { RouteLocationNormalizedLoadedGeneric } from 'vue-router';
-import {
-  vaultGroupSchema,
-  type SelectVaultGroup,
-} from '~/database/schemas/vault';
+import type { RouteLocationNormalizedLoadedGeneric } from 'vue-router'
+import type { SelectHaexPasswordsGroups } from '~~/src-tauri/database/schemas/vault'
 
-const { t } = useI18n();
-const showConfirmation = ref(false);
-const vaultGroup = defineModel<SelectVaultGroup>({ required: true });
-const read_only = defineModel<boolean>('read_only');
+const { t } = useI18n()
+const showConfirmation = ref(false)
+const vaultGroup = defineModel<SelectHaexPasswordsGroups>({ required: true })
+const read_only = defineModel<boolean>('read_only')
 const props = defineProps({
-  originally: Object as PropType<SelectVaultGroup>,
-});
+  originally: Object as PropType<SelectHaexPasswordsGroups>,
+})
 
 defineEmits<{
-  submit: [to?: RouteLocationNormalizedLoadedGeneric];
-  close: [void];
-  back: [void];
-  reject: [to?: RouteLocationNormalizedLoadedGeneric];
-}>();
+  submit: [to?: RouteLocationNormalizedLoadedGeneric]
+  close: [void]
+  back: [void]
+  reject: [to?: RouteLocationNormalizedLoadedGeneric]
+}>()
 
 const hasChanges = computed(() => {
-  console.log('group has changes', props.originally, vaultGroup.value);
+  console.log('group has changes', props.originally, vaultGroup.value)
   if (!props.originally) {
     if (
       vaultGroup.value.color?.length ||
@@ -81,13 +76,13 @@ const hasChanges = computed(() => {
       vaultGroup.value.icon?.length ||
       vaultGroup.value.name?.length
     ) {
-      return true;
+      return true
     } else {
-      return false;
+      return false
     }
   }
-  return JSON.stringify(props.originally) !== JSON.stringify(vaultGroup.value);
-});
+  return JSON.stringify(props.originally) !== JSON.stringify(vaultGroup.value)
+})
 
 /* const onClose = () => {
   if (props.originally) vaultGroup.value = { ...props.originally };

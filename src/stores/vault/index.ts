@@ -93,6 +93,7 @@ export const useVaultStore = defineStore('vaultStore', () => {
                 })
                 console.log('select', rows)
               } else {
+                console.log('sql_execute', sql, params)
                 // Otherwise, use the execute method
                 rows = await invoke<unknown[]>('sql_execute', {
                   sql,

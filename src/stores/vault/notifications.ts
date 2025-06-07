@@ -1,10 +1,9 @@
-import { eq } from 'drizzle-orm'
+import { and, eq, or, type SQLWrapper } from 'drizzle-orm'
 import {
   haexNotifications,
   type InsertHaexNotifications,
 } from '~~/src-tauri/database/schemas/vault'
 import {
-  channels,
   isPermissionGranted,
   requestPermission,
   sendNotification,
@@ -18,7 +17,7 @@ export interface IHaexNotification {
   image?: string | null
   alt?: string | null
   date: string | null
-  type?: 'error' | 'success' | 'warning' | 'info' | null
+  type?: 'error' | 'success' | 'warning' | 'info' | 'log' | null
 }
 
 export const useNotificationStore = defineStore('notificationStore', () => {
@@ -29,15 +28,8 @@ export const useNotificationStore = defineStore('notificationStore', () => {
     const permission = await requestPermission()
     console.log('got permission', permission)
     isNotificationAllowed.value = permission === 'granted'
-    sendNotification({
-      title: 'Tauri',
-      body: 'Tauri is awesome!',
-      icon: 'dialog-information',
-    })
-    /* const existingChannels = await channels()
-    console.log('existingChannels', existingChannels) */
   }
-  const test = async () => console.log('test')
+
   const checkNotificationAsync = async () => {
     isNotificationAllowed.value = await isPermissionGranted()
     return isNotificationAllowed.value
@@ -45,13 +37,24 @@ export const useNotificationStore = defineStore('notificationStore', () => {
 
   const notifications = ref<IHaexNotification[]>([])
 
-  const readNotificationsAsync = async (read: boolean = false) => {
+  const readNotificationsAsync = async (filter?: SQLWrapper[]) => {
     const { currentVault } = storeToRefs(useVaultStore())
-    notifications.value = await currentVault.value.drizzle
-      .select()
-      .from(haexNotifications)
-      .where(eq(haexNotifications.read, read))
-    console.log('readNotificationsAsync', notifications.value)
+
+    console.log('readNotificationsAsync', filter)
+    if (filter) {
+      return await currentVault.value.drizzle
+        .select()
+        .from(haexNotifications)
+        .where(and(...filter))
+    } else {
+      return await currentVault.value.drizzle.select().from(haexNotifications)
+    }
+  }
+
+  const syncNotificationsAsync = async () => {
+    notifications.value = await readNotificationsAsync([
+      eq(haexNotifications.read, false),
+    ])
   }
 
   const addNotificationAsync = async (
@@ -61,21 +64,22 @@ export const useNotificationStore = defineStore('notificationStore', () => {
     try {
       const _notification: InsertHaexNotifications = {
         id: crypto.randomUUID(),
-        type: notification.type || 'info',
         alt: notification.alt,
-        date: new Date().toUTCString(),
+        date: notification.date || new Date().toUTCString(),
         icon: notification.icon,
         image: notification.image,
         read: notification.read || false,
-        text: notification.text ?? '',
-        title: notification.title ?? '',
+        source: notification.source,
+        text: notification.text,
+        title: notification.title,
+        type: notification.type || 'info',
       }
 
       await currentVault.value.drizzle
         .insert(haexNotifications)
         .values(_notification)
 
-      await readNotificationsAsync()
+      await syncNotificationsAsync()
 
       if (!isNotificationAllowed.value) {
         const permission = await requestPermission()
@@ -88,16 +92,29 @@ export const useNotificationStore = defineStore('notificationStore', () => {
           body: _notification.text!,
         })
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  const deleteNotificationsAsync = async (notificationIds: string[]) => {
+    const { currentVault } = storeToRefs(useVaultStore())
+    const filter = notificationIds.map((id) => eq(haexNotifications.id, id))
+
+    console.log('deleteNotificationsAsync', notificationIds)
+    return currentVault.value.drizzle
+      .delete(haexNotifications)
+      .where(or(...filter))
   }
 
   return {
-    notifications,
-    isNotificationAllowed,
-    checkNotificationAsync,
     addNotificationAsync,
+    checkNotificationAsync,
+    deleteNotificationsAsync,
+    isNotificationAllowed,
+    notifications,
     readNotificationsAsync,
     requestNotificationPermissionAsync,
-    test,
+    syncNotificationsAsync,
   }
 })

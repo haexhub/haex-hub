@@ -1,5 +1,5 @@
 <template>
-  <div class="w-screen h-screen overflow-scroll bg-base-200">
+  <div class="w-screen h-screen bg-base-200 min-w-52">
     <slot />
   </div>
 </template>

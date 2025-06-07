@@ -1,7 +1,7 @@
 <template>
-  <div class="w-full h-full flex flex-col min-w-min">
+  <div class="h-full w-full flex flex-col overflow-hidden">
     <nav
-      class="navbar bg-base-100 rounded-b max-sm:shadow border-b border-base-content/25 sm:z-20 relative px-2"
+      class="navbar bg-base-100 rounded-b max-sm:shadow border-b border-base-content/25 sm:z-20 relative px-2 py-0 sm:py-2"
     >
       <UiTooltip :tooltip="isVisible ? t('sidebar.close') : t('sidebar.show')">
         <button
@@ -39,24 +39,26 @@
         <div
           class="dropdown relative inline-flex [--auto-close:inside] [--offset:20] [--placement:bottom-end]"
         >
-          <button
-            id="dropdown-scrollable"
-            type="button"
-            class="dropdown-toggle btn btn-text btn-circle dropdown-open:bg-base-content/10 size-10"
-            aria-haspopup="menu"
-            aria-expanded="false"
-            aria-label="Dropdown"
-          >
-            <div class="indicator">
-              <span
-                v-show="notifications.length"
-                class="indicator-item bg-error size-2 rounded-full text-sm"
-              />
-              <span
-                class="icon-[tabler--bell] text-base-content size-[1.375rem]"
-              />
-            </div>
-          </button>
+          <UiTooltip :tooltip="t('notifications.label')">
+            <button
+              id="dropdown-scrollable"
+              type="button"
+              class="dropdown-toggle btn btn-text btn-circle dropdown-open:bg-base-content/10 size-10"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-label="Dropdown"
+            >
+              <div class="indicator">
+                <span
+                  v-show="notifications.length"
+                  class="indicator-item bg-error size-2 rounded-full text-sm"
+                />
+                <span
+                  class="icon-[tabler--bell] text-base-content size-[1.375rem]"
+                />
+              </div>
+            </button>
+          </UiTooltip>
           <div
             class="dropdown-menu dropdown-open:opacity-100 hidden"
             role="menu"
@@ -69,7 +71,7 @@
               </h6>
             </div>
             <div
-              class="vertical-scrollbar horizontal-scrollbar rounded-scrollbar text-base-content/80 max-h-56 overflow-auto max-md:max-w-60"
+              class="vertical-scrollbar horizontal-scrollbar rounded-scrollbar text-base-content/80 max-h-56 overflow-auto max-w-full"
             >
               <div
                 v-for="notification in notifications"
@@ -99,13 +101,13 @@
                 </div>
               </div>
             </div>
-            <a
-              href="#"
+            <NuxtLinkLocale
+              :to="{ name: 'notifications' }"
               class="dropdown-footer justify-center gap-1"
             >
               <span class="icon-[tabler--eye] size-4" />
               {{ t('notifications.view_all') }}
-            </a>
+            </NuxtLinkLocale>
           </div>
         </div>
 
@@ -113,7 +115,7 @@
       </div>
     </nav>
 
-    <div class="flex h-full overflow-hidden">
+    <div class="flex h-full w-full overflow-hidden">
       <aside
         id="sidebar"
         class="sm:shadow-none transition-all h-full overflow-hidden border-r border-base-300"
@@ -138,8 +140,8 @@
         </div>
       </aside>
 
-      <main class="w-full h-full overflow-scroll">
-        <NuxtPage :transition="{ name: 'fade' }" />
+      <main class="w-full h-full overflow-auto">
+        <NuxtPage />
       </main>
     </div>
   </div>
