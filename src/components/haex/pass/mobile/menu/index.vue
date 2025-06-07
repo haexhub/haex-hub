@@ -5,9 +5,9 @@
   >
     <li
       v-for="(group, index) in groupItems.groups"
-      class="bg-base-100 rounded-lg hover:bg-base-100/45 origin-to intersect:motion-preset-slide-down intersect:motion-ease-spring-bouncier intersect:motion-delay ease-in-out shadow"
+      class="bg-base-100 rounded-lg hover:bg-base-content/20 origin-to intersect:motion-preset-slide-down intersect:motion-ease-spring-bouncier intersect:motion-delay ease-in-out shadow"
       :class="{
-        'bg-base-300/15 outline outline-accent hover:bg-base-300/15':
+        'bg-base-content/20 outline outline-accent hover:bg-base-content/20':
           selectedItems.has(group.id),
       }"
       :style="{ '--motion-delay': `${50 * index}ms` }"

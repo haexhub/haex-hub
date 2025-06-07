@@ -37,7 +37,7 @@
 
       <div class="navbar-end flex items-center gap-4 me-4">
         <div
-          class="dropdown relative inline-flex [--auto-close:inside] [--offset:20] [--placement:bottom-end]"
+          class="dropdown relative inline-flex [--auto-close:inside] [--offset:18] [--placement:bottom]"
         >
           <UiTooltip :tooltip="t('notifications.label')">
             <button
@@ -60,7 +60,7 @@
             </button>
           </UiTooltip>
           <div
-            class="dropdown-menu dropdown-open:opacity-100 hidden"
+            class="dropdown-menu dropdown-open:opacity-100 hidden w-full max-w-96 shadow"
             role="menu"
             aria-orientation="vertical"
             aria-labelledby="dropdown-scrollable"
@@ -71,7 +71,7 @@
               </h6>
             </div>
             <div
-              class="vertical-scrollbar horizontal-scrollbar rounded-scrollbar text-base-content/80 max-h-56 overflow-auto max-w-full"
+              class="vertical-scrollbar horizontal-scrollbar rounded-scrollbar text-base-content/80 max-h-56 overflow-auto"
             >
               <div
                 v-for="notification in notifications"
@@ -103,7 +103,7 @@
             </div>
             <NuxtLinkLocale
               :to="{ name: 'notifications' }"
-              class="dropdown-footer justify-center gap-1"
+              class="dropdown-footer justify-center gap-1 hover:bg-base-content/10"
             >
               <span class="icon-[tabler--eye] size-4" />
               {{ t('notifications.view_all') }}

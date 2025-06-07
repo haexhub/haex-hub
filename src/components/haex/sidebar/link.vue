@@ -2,7 +2,7 @@
   <li
     class="rounded"
     :class="{
-      ['bg-base-300/35 ']: isActive,
+      ['bg-base-content/20 ']: isActive,
     }"
     @click="triggerNavigate"
   >
