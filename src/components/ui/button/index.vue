@@ -1,14 +1,22 @@
 <template>
-  <button class="btn join-item" :type>
-    <slot />
+  <button
+    class="btn join-item pointer-events-auto"
+    :type
+  >
+    <UiTooltip
+      :tooltip
+      v-if="tooltip"
+    >
+      <slot />
+    </UiTooltip>
+
+    <slot v-else />
   </button>
 </template>
 
 <script setup lang="ts">
-defineProps({
-  type: {
-    type: String as PropType<"reset" | "submit" | "button">,
-    default: "button",
-  },
-});
+const { type = 'button' } = defineProps<{
+  type?: 'reset' | 'submit' | 'button'
+  tooltip?: string
+}>()
 </script>

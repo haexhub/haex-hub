@@ -14,7 +14,7 @@
         :value
         class=""
       >
-        <span>{{ value }}</span>
+        <span>{{ value ?? label }}</span>
       </slot>
     </button>
     <button

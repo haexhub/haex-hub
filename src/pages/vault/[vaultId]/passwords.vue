@@ -1,5 +1,5 @@
 <template>
-  <div class="p-4">
+  <div class="p-2 h-full">
     <NuxtPage />
   </div>
 </template>
@@ -8,6 +8,4 @@
 definePageMeta({
   name: 'passwords',
 })
-
-const { currentGroupId } = storeToRefs(usePasswordGroupStore())
 </script>

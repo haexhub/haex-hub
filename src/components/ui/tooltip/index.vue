@@ -2,7 +2,7 @@
   <div class="tooltip [--prevent-popper:false]">
     <div
       class="tooltip-toggle"
-      aria-label="Tooltip"
+      :aria-label="tooltip"
     >
       <slot>
         <button class="btn btn-square">
@@ -11,7 +11,7 @@
       </slot>
 
       <span
-        class="tooltip-content tooltip-shown:opacity-100 tooltip-shown:visible z-40"
+        class="tooltip-content tooltip-shown:opacity-100 tooltip-shown:visible z-40 pointer-events-none"
         role="tooltip"
       >
         <span

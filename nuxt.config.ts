@@ -15,6 +15,7 @@ export default defineNuxtConfig({
     '@nuxt/icon',
     'nuxt-snackbar',
     '@nuxt/eslint',
+    '@nuxt/image',
   ],
 
   compatibilityDate: '2024-11-01',

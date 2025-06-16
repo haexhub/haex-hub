@@ -1,150 +1,85 @@
 <template>
   <div>
-    <VaultGroup
+    <HaexPassGroup
+      v-model="currentGroup"
+      mode="edit"
+      @close="onClose"
       @submit="onSaveAsync"
-      @back="onBackAsync"
-      @reject="onRejectAsync"
-      @close="onCloseAsync"
-      v-model="vaultGroup"
-      v-model:read_only="read_only"
-      :originally
-    >
-      <!-- <template #bottom="{ onSubmit, onClose }">
-      <button
-        class="btn btn-error flex-1 flex-nowrap"
-        @click="onClose"
-        type="button"
-      >
-        {{ t('abort') }}
-        <Icon name="mdi:close" />
-      </button>
-
-      <button
-        class="btn btn-primary flex-1 flex-nowrap"
-        type="button"
-        @click="onSubmit"
-      >
-        {{ t('save') }}
-        <Icon name="mdi:check" />
-      </button>
-    </template> -->
-    </VaultGroup>
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import type { RouteLocationNormalizedLoadedGeneric } from 'vue-router'
-import type { SelectHaexPasswordsGroups } from '~~/src-tauri/database/schemas/vault'
-
 definePageMeta({
   name: 'passwordGroupEdit',
 })
 
-const { read_only } = storeToRefs(useVaultStore())
+const { t } = useI18n()
 
-const vaultGroup = ref<SelectHaexPasswordsGroups>({
-  color: '',
-  description: '',
-  icon: '',
-  id: '',
-  name: '',
-  order: null,
-  parentId: '',
-  createdAt: null,
-  updateAt: null,
+const check = ref(false)
+
+const { currentGroup } = storeToRefs(usePasswordGroupStore())
+
+//const group = computed(() => currentGroup.value)
+
+const errors = ref({
+  name: [],
+  description: [],
 })
 
-const originally = ref<SelectHaexPasswordsGroups>()
-
-const onCloseAsync = async () => {
-  if (read_only.value) return navigateToGroupItemsAsync(vaultGroup.value.id)
-  else read_only.value = true
+const onClose = () => {
+  useRouter().back()
 }
-/* {
-  await navigateTo(
-    useLocaleRoute()({
-      name: 'vaultGroupEntries',
-      params: {
-        ...useRouter().currentRoute.value.params,
-      },
-      query: {
-        ...useRouter().currentRoute.value.query,
-      },
-    })
-  );
-}; */
-
-const { currentGroupId } = storeToRefs(usePasswordGroupStore())
-const { readGroupAsync, navigateToGroupItemsAsync } = usePasswordGroupStore()
-
-const getGroupAsync = async () => {
-  if (!currentGroupId.value) return
-
-  const group = await readGroupAsync(currentGroupId.value)
-  console.log('found group', group)
-  if (group) {
-    vaultGroup.value = group
-    originally.value = { ...group }
-  }
-}
-watch(currentGroupId, async () => getGroupAsync(), { immediate: true })
 
 const { add } = useSnackbar()
 
-const onSaveAsync = async (to?: RouteLocationNormalizedLoadedGeneric) => {
+const onSaveAsync = async () => {
   try {
+    check.value = true
+    if (!currentGroup.value) return
+
+    console.log('onSave', errors.value)
+    if (errors.value.name.length || errors.value.description.length) return
+
     const { updateAsync } = usePasswordGroupStore()
-    await updateAsync(vaultGroup.value)
-    await getGroupAsync()
-    read_only.value = true
-    if (to) {
-      return navigateTo(to)
-    }
+
+    await updateAsync(currentGroup.value)
+
+    add({ type: 'success', text: t('change.success') })
+    onClose()
   } catch (error) {
-    add({
-      type: 'error',
-      text: JSON.stringify(error),
-    })
+    add({ type: 'error', text: t('change.error') })
     console.log(error)
   }
 }
-
-const onBackAsync = async () => {
-  if (originally.value) vaultGroup.value = { ...originally.value }
-  await navigateToGroupItemsAsync(vaultGroup.value.id)
-}
-
-const onRejectAsync = async (to?: RouteLocationNormalizedLoadedGeneric) => {
-  if (originally.value) vaultGroup.value = { ...originally.value }
-  if (to) return navigateTo(to)
-  else return onBackAsync
-}
 </script>
 
-<i18n lang="json">
-{
-  "de": {
-    "title": "Gruppe anpassen",
-    "abort": "Abbrechen",
-    "save": "Speichern",
-    "name": {
-      "label": "Name"
-    },
-    "description": {
-      "label": "Beschreibung"
-    }
-  },
+<i18n lang="yaml">
+de:
+  title: Gruppe ändern
+  abort: Abbrechen
+  save: Speichern
+  name:
+    label: Name
 
-  "en": {
-    "title": "Edit Group",
-    "abort": "Abort",
-    "save": "Save",
-    "name": {
-      "label": "Name"
-    },
-    "description": {
-      "label": "Description"
-    }
-  }
-}
+  description:
+    label: Beschreibung
+
+  change:
+    success: Änderung erfolgreich gespeichert
+    error: Änderung konnte nicht gespeichert werden
+
+en:
+  title: Edit Group
+  abort: Abort
+  save: Save
+  name:
+    label: Name
+
+  description:
+    label: Description
+
+  change:
+    success: Change successfully saved
+    error: Change could not be saved
 </i18n>

@@ -2,7 +2,10 @@
   <div class="card">
     <slot name="image" />
 
-    <div class="card-header">
+    <div
+      class="card-header"
+      v-if="$slots.title || title"
+    >
       <slot name="header">
         <div
           v-if="$slots.title || title"
@@ -28,7 +31,10 @@
       </slot>
     </div>
 
-    <div class="card-body px-2 sm:px-6">
+    <div
+      class="card-body"
+      :class="bodyClass"
+    >
       <slot />
       <div
         v-if="$slots.action"
@@ -37,13 +43,25 @@
         <slot name="action" />
       </div>
     </div>
+
+    <div
+      v-if="$slots.footer"
+      class="card-footer"
+    >
+      <slot name="footer" />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 const emit = defineEmits(['close', 'submit'])
 
-defineProps<{ title?: string; subtitle?: string; icon?: string }>()
+defineProps<{
+  title?: string
+  subtitle?: string
+  icon?: string
+  bodyClass?: string
+}>()
 
 const { escape, enter } = useMagicKeys()
 

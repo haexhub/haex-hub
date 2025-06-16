@@ -1,7 +1,8 @@
 <template>
   <UiDialog
-    v-model:open="open"
+    :title
     @close="onAbort"
+    v-model:open="open"
   >
     <template #trigger>
       <slot name="trigger" />
@@ -33,19 +34,19 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{ confirmLabel?: string; abortLabel?: string }>()
+defineProps<{ confirmLabel?: string; abortLabel?: string; title?: string }>()
+
 const open = defineModel<boolean>('open', { default: false })
+
 const { t } = useI18n()
 const emit = defineEmits(['confirm', 'abort'])
 
 const onAbort = () => {
   emit('abort')
-  open.value = false
 }
 
 const onConfirm = () => {
   emit('confirm')
-  open.value = false
 }
 </script>
 

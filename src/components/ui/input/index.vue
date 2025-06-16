@@ -29,8 +29,9 @@
           <label
             class="input-floating-label"
             :for="id"
-            >{{ label }}</label
           >
+            {{ label }}
+          </label>
         </div>
 
         <Icon
@@ -47,7 +48,8 @@
 
       <UiButton
         v-if="withCopyButton"
-        class="btn-outline btn-accent btn-square join-item h-auto"
+        :tooltip="t('copy')"
+        class="btn-outline btn-accent btn-square"
         @click="copy(`${input}`)"
       >
         <Icon :name="copied ? 'mdi:check' : 'mdi:content-copy'" />
@@ -167,4 +169,14 @@ const checkInput = () => {
 }
 
 const { copy, copied } = useClipboard()
+
+const { t } = useI18n()
 </script>
+
+<i18n lang="yaml">
+de:
+  copy: Kopieren
+
+en:
+  copy: Copy
+</i18n>

@@ -2,6 +2,7 @@ import 'flyonui/flyonui'
 import { Observer } from 'tailwindcss-intersect'
 
 Observer.start()
+
 import type {
   HSOverlay,
   IStaticMethods,

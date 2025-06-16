@@ -1,37 +1,77 @@
 <template>
-  <UiSelect
-    v-model="icon"
-    :options="icons"
-    label="Icon Picker"
+  <UiDropdown
+    :items="icons"
+    class="btn"
+    @select="(newIcon) => (iconName = newIcon)"
   >
-    <template #value="{ value }">
-      <Icon
-        :name="value"
-        v-if="value"
-      />
+    <template #activator>
+      <Icon :name="iconName ? iconName : defaultIcon || icons.at(0)" />
     </template>
-    <template #option="{ option }">
-      <Icon :name="option ?? ''" />
-    </template>
-  </UiSelect>
 
-  <UiDropdown :items="icons">
-    <template #activator> {{ icons.find((_icon) => _icon === icon) }}</template>
-    <template #item="{ item }">
-      <Icon :name="`mdi:${item}`" />
-      {{ item }}
+    <template #items="{ items }">
+      <div class="grid grid-cols-6 -ml-2">
+        <li
+          class="dropdown-item"
+          v-for="item in items"
+          @click="iconName = item"
+        >
+          <Icon
+            :name="item"
+            size="36"
+          />
+        </li>
+      </div>
     </template>
   </UiDropdown>
 </template>
 
 <script setup lang="ts">
 const icons = [
-  'streamline:money-bank-institution-money-saving-bank-payment-finance',
-  'material-symbols:star-outline-rounded',
+  'mdi:folder-outline',
+  'mdi:key-outline',
   'pepicons-pop:smartphone-home-button',
-  'majesticons:desktop-computer-line',
-  'mdi:folder',
+  'mdi:amazon',
+  'proicons:bank',
+  'mdi:bitcoin',
+  'mdi:piggy-bank-outline',
+  'mdi:account-outline',
+  'proicons:computer',
+  'proicons:cloud',
+  'proicons:game',
+  'proicons:github',
+  'proicons:wrench',
+  'proicons:vehicle-car',
+  'proicons:wi-fi',
+  'meteor-icons:microchip',
+  'meteor-icons:headphones',
+  'meteor-icons:star',
+  'fe:mail',
+  'fe:rocket',
+  'fxemoji:trolleybus',
+  'mdi:folder-outline',
+  'mdi:key-outline',
+  'pepicons-pop:smartphone-home-button',
+  'mdi:amazon',
+  'proicons:bank',
+  'mdi:bitcoin',
+  'mdi:piggy-bank-outline',
+  'mdi:account-outline',
+  'proicons:computer',
+  'proicons:cloud',
+  'proicons:game',
+  'proicons:github',
+  'proicons:wrench',
+  'proicons:vehicle-car',
+  'proicons:wi-fi',
+  'meteor-icons:microchip',
+  'meteor-icons:headphones',
+  'meteor-icons:star',
+  'fe:mail',
+  'fe:rocket',
+  'fxemoji:trolleybus',
 ]
 
-const icon = defineModel<string | undefined | null>({ default: '' })
+const iconName = defineModel<string | undefined | null>()
+
+defineProps<{ defaultIcon?: string }>()
 </script>

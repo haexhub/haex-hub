@@ -1,18 +1,18 @@
 <template>
-  <div class="z-10">
+  <div class="z-10 pointer-events-auto">
     <div
       class="dropdown relative inline-flex [--placement:top] [--strategy:absolute]"
     >
       <button
         :id
-        class="dropdown-toggle btn btn-primary btn-lg btn-square dropdown-open:rotate-45 transition-transform"
+        class="dropdown-toggle btn btn-primary btn-xl btn-square dropdown-open:rotate-45 transition-transform"
         aria-haspopup="menu"
         aria-expanded="false"
         aria-label="Menu"
       >
         <Icon
           :name="icon"
-          size="46"
+          class="size-11 shrink-0"
         />
       </button>
 
@@ -25,7 +25,7 @@
       >
         <li
           v-for="link in menu"
-          class="dropdown-item hover:bg-transparent px-0"
+          class="dropdown-item hover:bg-transparent px-0 py-1"
         >
           <NuxtLinkLocale
             v-if="link.to"

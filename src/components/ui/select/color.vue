@@ -1,29 +1,34 @@
 <template>
-  <div class="flex items-center gap-4">
-    <label
-      :for="id"
-      class="font-medium"
+  <div class="flex items-center gap-4 relative">
+    <UiButton
+      :style="{ 'background-color': model }"
+      :class="[textColorClass]"
+      @click="colorRef?.click()"
     >
       {{ t('label') }}
-    </label>
+    </UiButton>
 
     <input
       :id
       :readonly="read_only"
       :disabled="read_only"
-      :title="t('title')"
-      class="p-0 cursor-pointer disabled:opacity-50 disabled:pointer-events-none w-14 h-10"
+      :title="t('pick')"
+      class="top-0 left-0 absolute size-0"
       type="color"
       v-model="model"
+      ref="colorRef"
     />
 
-    <button
-      @click="model = null"
-      class="btn btn-sm text-sm"
-      :class="{ 'btn-disabled': read_only }"
-    >
-      {{ t('reset') }}
-    </button>
+    <UiTooltip :tooltip="t('reset')">
+      <button
+        @click="model = ''"
+        class="btn btn-sm text-sm btn-outline btn-error"
+        :class="{ 'btn-disabled': read_only }"
+        type="button"
+      >
+        <Icon name="mdi:refresh" />
+      </button>
+    </UiTooltip>
   </div>
 </template>
 
@@ -31,10 +36,19 @@
 const id = useId()
 const { t } = useI18n()
 
-const model = defineModel()
-
+const model = defineModel<string | null>()
+const colorRef = useTemplateRef('colorRef')
 defineProps({
   read_only: Boolean,
+})
+
+const { currentTheme } = storeToRefs(useUiStore())
+const textColorClass = computed(() => {
+  if (!model.value)
+    return currentTheme.value.value === 'dark' ? 'text-black' : 'text-white'
+
+  const color = getContrastingTextColor(model.value)
+  return color === 'white' ? 'text-white' : 'text-black'
 })
 </script>
 
@@ -43,12 +57,14 @@ defineProps({
   "de": {
     "label": "Farbauswahl",
     "title": "Wähle eine Farbe aus",
-    "reset": "zurücksetzen"
+    "reset": "zurücksetzen",
+    "pick": "Auswahl"
   },
   "en": {
     "label": "Color Picker",
     "title": "Choose a color",
-    "reset": "Reset"
+    "reset": "Reset",
+    "pick": "Pick"
   }
 }
 </i18n>

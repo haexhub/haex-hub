@@ -12,7 +12,7 @@ export const useUiStore = defineStore('uiStore', () => {
   const breakpoints = useBreakpoints(breakpointsTailwind)
 
   const currentScreenSize = computed(() =>
-    breakpoints.active().value.length > 0 ? breakpoints.active().value : 'xs'
+    breakpoints.active().value.length > 0 ? breakpoints.active().value : 'xs',
   )
 
   const { t } = useI18n({
@@ -45,11 +45,14 @@ export const useUiStore = defineStore('uiStore', () => {
 
   const currentTheme = ref(defaultTheme)
 
+  const currentThemeValue = computed(() => currentTheme.value.value)
+
   return {
     availableThemes,
     breakpoints,
     currentScreenSize,
     currentTheme,
+    currentThemeValue,
     defaultTheme,
   }
 })

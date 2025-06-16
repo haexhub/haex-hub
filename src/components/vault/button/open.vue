@@ -78,7 +78,7 @@ const { add } = useSnackbar()
 const handleError = (error: unknown) => {
   open.value = false
   console.error('handleError', error, typeof error)
-  add({ type: 'error', text: JSON.stringify(error) })
+  add({ type: 'error', text: `${error}` })
 }
 
 const { openAsync } = useVaultStore()

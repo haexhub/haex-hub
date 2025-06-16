@@ -1,9 +1,21 @@
 <template>
   <UiInput
-v-model="value" :check-input :label="label || t('password')" :placeholder="placeholder || t('password')" :rules
-    :type="type" :autofocus>
+    v-model="value"
+    :autofocus
+    :check-input
+    :label="label || t('password')"
+    :placeholder="placeholder || t('password')"
+    :rules
+    :type="type"
+    :with-copy-button
+  >
     <template #append>
-      <UiButton class="btn-outline btn-accent btn-square h-auto" @click="tooglePasswordType">
+      <slot name="append" />
+
+      <UiButton
+        class="btn-outline btn-accent btn-square join-item"
+        @click="tooglePasswordType"
+      >
         <Icon :name="type === 'password' ? 'mdi:eye-off' : 'mdi:eye'" />
       </UiButton>
     </template>
@@ -11,33 +23,35 @@ v-model="value" :check-input :label="label || t('password')" :placeholder="place
 </template>
 
 <script setup lang="ts">
-import type { ZodSchema } from "zod";
+import type { ZodSchema } from 'zod'
 
-const { t } = useI18n();
+const { t } = useI18n()
 
-const value = defineModel<string | number | null | undefined>();
+const value = defineModel<string | number | null | undefined>()
 
-defineProps({
-  label: String,
-  placeholder: String,
-  checkInput: Boolean,
-  rules: Object as PropType<ZodSchema>,
-  autofocus: Boolean,
-});
+defineProps<{
+  autofocus?: boolean
+  checkInput?: boolean
+  label?: string
+  placeholder?: string
+  rules?: ZodSchema
+  withCopyButton?: boolean
+}>()
 
-const type = ref<"password" | "text">("password");
+const type = ref<'password' | 'text'>('password')
 
 const tooglePasswordType = () => {
-  type.value = type.value === "password" ? "text" : "password";
-};
-
+  type.value = type.value === 'password' ? 'text' : 'password'
+}
 </script>
 
-<i18n lang="json">{
+<i18n lang="json">
+{
   "de": {
     "password": "Passwort"
   },
   "en": {
     "password": "Password"
   }
-}</i18n>
+}
+</i18n>

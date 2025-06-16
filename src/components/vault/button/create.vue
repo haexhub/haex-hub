@@ -1,15 +1,28 @@
 <template>
-  <UiDialog
+  <UiDialogConfirm
     v-model:open="open"
-    :title="t('title')"
     class="btn btn-primary btn-outline shadow-md btn-lg"
     @click="open = true"
+    @abort="open = false"
+    @confirm="onCreateAsync"
+    :confirm-label="t('create')"
   >
     <template #trigger>
       <Icon name="mdi:plus" />
       {{ t('database.create') }}
     </template>
 
+    <template #title>
+      <div class="flex gap-x-2 items-center">
+        <Icon
+          name="mdi:safe"
+          class="text-primary"
+        />
+        <p>
+          {{ t('title') }}
+        </p>
+      </div>
+    </template>
     <form
       class="flex flex-col gap-4"
       @submit="onCreateAsync"
@@ -32,11 +45,12 @@
       />
     </form>
 
-    <template #buttons>
+    <!--  <template #buttons>
       <UiButton
-        class="btn-error w-full sm:w-auto"
+        class="btn-error btn-outline w-full sm:w-auto"
         @click="onClose"
       >
+        <Icon name="mdi:x" />
         {{ t('abort') }}
       </UiButton>
 
@@ -46,8 +60,8 @@
       >
         {{ t('create') }}
       </UiButton>
-    </template>
-  </UiDialog>
+    </template> -->
+  </UiDialogConfirm>
 </template>
 
 <script setup lang="ts">
@@ -151,7 +165,7 @@ const onClose = () => {
       "create": "Neue Vault anlegen",
       "name": "HaexVault"
     },
-    "title": "Neue Datenbank anlegen",
+    "title": "Neue Vault anlegen",
     "create": "Erstellen",
     "abort": "Abbrechen",
     "description": "Haex Vault für deine geheimsten Geheimnisse"
@@ -163,7 +177,7 @@ const onClose = () => {
       "create": "Create new Vault",
       "name": "HaexVault"
     },
-    "title": "Create New Database",
+    "title": "Create New Vault",
     "create": "Create",
     "abort": "Abort",
     "description": "Haex Vault for your most secret secrets"

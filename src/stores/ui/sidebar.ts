@@ -27,20 +27,8 @@ export const useSidebarStore = defineStore('sidebarStore', () => {
     },
   ])
 
-  /* const loadAsync = async (id: string) => {
-    extensions.value.some(async (extension) => {
-      if (extension.id === id) {
-        await navigateTo(
-          useLocalePath()({ name: 'extension', params: { extensionId: id } })
-        );
-      } else {
-      }
-    });
-  }; */
-
   return {
     menu,
     isVisible,
-    //loadAsync,
   }
 })

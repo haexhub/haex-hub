@@ -6,7 +6,6 @@
     aria-haspopup="dialog"
     aria-expanded="false"
     :aria-label="label"
-    class="--prevent-on-load-init"
     @click="$emit('open')"
   >
     <slot name="trigger">
@@ -14,55 +13,58 @@
     </slot>
   </button>
 
-  <div
-    :id
-    ref="modalRef"
-    class="overlay modal overlay-open:opacity-100 hidden overlay-open:duration-300 sm:modal-middle p-0 xs:p-2"
-    role="dialog"
-    tabindex="-1"
-  >
+  <Teleport to="body">
     <div
-      class="overlay-animation-target overlay-open:duration-300 transition-all ease-out modal-dialog overlay-open:opacity-100 pointer-events-auto overflow-y-auto"
+      :id
+      ref="modalRef"
+      class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden modal-middle p-0 xs:p-2 --prevent-on-load-init pointer-events-auto max-w-none"
+      role="dialog"
+      tabindex="-1"
     >
-      <div class="modal-content justify-between h-full max-h-none">
-        <div class="modal-header">
-          <div
-            v-if="title || $slots.title"
-            class="modal-title py-4 break-all"
-          >
-            <slot name="title">
-              {{ title }}
-            </slot>
+      <div
+        class="overlay-animation-target overlay-open:duration-300 overlay-open:opacity-100 transition-all ease-out modal-dialog"
+      >
+        <div class="modal-content justify-between">
+          <div class="modal-header">
+            <div
+              v-if="title || $slots.title"
+              class="modal-title py-4 break-all"
+            >
+              <slot name="title">
+                {{ title }}
+              </slot>
+            </div>
+
+            <button
+              type="button"
+              class="btn btn-text btn-circle btn-sm absolute end-3 top-3"
+              :aria-label="t('close')"
+              tabindex="1"
+              @click="open = false"
+            >
+              <Icon
+                name="mdi:close"
+                size="18"
+              />
+            </button>
           </div>
 
-          <button
-            type="button"
-            class="btn btn-text btn-circle btn-sm absolute end-3 top-3"
-            :aria-label="t('close')"
-            tabindex="1"
-            @click="open = false"
-          >
-            <Icon
-              name="mdi:close"
-              size="18"
-            />
-          </button>
-        </div>
+          <div class="modal-body text-sm sm:text-base grow">
+            <slot />
+          </div>
 
-        <div class="modal-body text-sm sm:text-base">
-          <slot />
-        </div>
-
-        <div class="modal-footer flex-col sm:flex-row">
-          <slot name="buttons" />
+          <div class="modal-footer flex-col sm:flex-row">
+            <slot name="buttons" />
+          </div>
         </div>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 import type { HSOverlay } from 'flyonui/flyonui'
+const { currentTheme } = storeToRefs(useUiStore())
 
 defineProps<{ title?: string; label?: string }>()
 
@@ -81,10 +83,12 @@ defineExpose({ modalRef })
 const modal = ref<HSOverlay>()
 
 watch(open, async () => {
+  if (!modal.value) return
+
   if (open.value) {
-    await modal.value?.open()
+    await modal.value.open()
   } else {
-    await modal.value?.close(true)
+    await modal.value.close(true)
     emit('close')
   }
 })
@@ -92,10 +96,9 @@ watch(open, async () => {
 onMounted(async () => {
   if (!modalRef.value) return
 
-  modal.value = new window.HSOverlay(modalRef.value, {
-    isClosePrev: true,
-  })
+  modal.value = new window.HSOverlay(modalRef.value)
 
+  modal.value.isLayoutAffect = true
   modal.value.on('close', () => {
     open.value = false
   })

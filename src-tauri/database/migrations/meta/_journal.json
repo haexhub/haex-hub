@@ -57,6 +57,13 @@
       "when": 1749244165094,
       "tag": "0007_daffy_tusk",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1749727958231,
+      "tag": "0008_faulty_mercury",
+      "breakpoints": true
     }
   ]
 }

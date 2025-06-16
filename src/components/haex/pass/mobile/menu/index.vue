@@ -1,78 +1,124 @@
 <template>
-  <ul
-    class="flex flex-col w-full h-full gap-y-2 *:first:rounded-t-md *:last:rounded-b-md"
-    ref="listRef"
+  <div v-if="menuItems?.length">
+    <ul
+      class="flex flex-col w-full h-full gap-y-2 *:first:rounded-t-md *:last:rounded-b-md"
+      ref="listRef"
+    >
+      <li
+        v-for="(item, index) in menuItems"
+        :key="item.id"
+        class="bg-base-100 rounded-lg hover:bg-base-content/20 origin-to intersect:motion-preset-slide-down intersect:motion-ease-spring-bouncier intersect:motion-delay ease-in-out shadow"
+        :class="{
+          'bg-base-content/30 outline outline-accent hover:bg-base-content/20':
+            selectedItems.has(item) ||
+            (currentSelectedItem?.id === item.id &&
+              longPressedHook &&
+              !selectedItems.has(item)),
+          'opacity-60 shadow-accent': selectedGroupItems?.some(
+            (_item) => _item.id === item.id,
+          ),
+        }"
+        :style="{ '--motion-delay': `${50 * index}ms` }"
+        v-on-long-press="[
+          onLongPressCallbackHook,
+          {
+            delay: 1000,
+          },
+        ]"
+        @mousedown="
+          longPressedHook
+            ? (currentSelectedItem = null)
+            : (currentSelectedItem = item)
+        "
+      >
+        <HaexPassMobileMenuItem
+          v-bind="item"
+          @click="onClickItemAsync(item)"
+        />
+      </li>
+    </ul>
+  </div>
+  <div
+    v-else
+    class="flex justify-center items-center px-20 h-full"
   >
-    <li
-      v-for="(group, index) in groupItems.groups"
-      class="bg-base-100 rounded-lg hover:bg-base-content/20 origin-to intersect:motion-preset-slide-down intersect:motion-ease-spring-bouncier intersect:motion-delay ease-in-out shadow"
-      :class="{
-        'bg-base-content/20 outline outline-accent hover:bg-base-content/20':
-          selectedItems.has(group.id),
-      }"
-      :style="{ '--motion-delay': `${50 * index}ms` }"
-      :key="group.id"
-      v-on-long-press="[
-        onLongPressCallbackHook,
-        {
-          delay: 1000,
-        },
-      ]"
-    >
-      <HaexPassMobileMenuGroup
-        :group
-        @click="onClickGroupAsync"
-        class="px-4 py-2"
-      />
-    </li>
-    <li
-      v-for="item in groupItems.items"
-      :key="item.id"
-    >
-      <HaexPassMobileMenuItem :item />
-    </li>
-  </ul>
+    <UiIconNoData class="text-primary size-24 shrink-0" />
+    <!-- <p>{{ t('empty') }}</p> -->
+  </div>
 </template>
 
 <script setup lang="ts">
-import type {
-  SelectHaexPasswordsGroups,
-  SelectHaexPasswordsItems,
-} from '~~/src-tauri/database/schemas/vault'
-
 import { vOnLongPress } from '@vueuse/components'
+import type { IPasswordMenuItem } from './types'
 
 defineProps<{
-  groupItems: {
-    items: SelectHaexPasswordsItems[]
-    groups: SelectHaexPasswordsGroups[]
-  }
+  menuItems: IPasswordMenuItem[]
 }>()
 
-const selectedItems = ref<Set<string>>(new Set())
-const longPressedHook = shallowRef(false)
+defineEmits(['add'])
+const selectedItems = defineModel<Set<IPasswordMenuItem>>('selectedItems', {
+  default: new Set(),
+})
+
+const currentSelectedItem = ref<IPasswordMenuItem | null>()
+
+const longPressedHook = ref(false)
 
 const onLongPressCallbackHook = (_: PointerEvent) => {
   longPressedHook.value = true
 }
 
+watch(longPressedHook, () => {
+  if (!longPressedHook.value) selectedItems.value.clear()
+})
+
+watch(selectedItems, () => {
+  if (!selectedItems.value.size) longPressedHook.value = false
+})
+
 const localePath = useLocalePath()
-const onClickGroupAsync = async (group: SelectHaexPasswordsGroups) => {
-  if (longPressedHook.value) {
-    if (selectedItems.value.has(group.id)) {
-      selectedItems.value.delete(group.id)
+const { ctrl } = useMagicKeys()
+
+const onClickItemAsync = async (item: IPasswordMenuItem) => {
+  currentSelectedItem.value = null
+
+  if (longPressedHook.value || selectedItems.value.size || ctrl.value) {
+    if (selectedItems.value?.has(item)) {
+      selectedItems.value.delete(item)
     } else {
-      selectedItems.value.add(group.id)
+      selectedItems.value?.add(item)
     }
+
     if (!selectedItems.value.size) longPressedHook.value = false
   } else {
-    await navigateTo(localePath({ name: 'passwordGroupEdit' }))
+    if (item.type === 'group')
+      await navigateTo(
+        localePath({
+          name: 'passwordGroupItems',
+          params: {
+            ...useRouter().currentRoute.value.params,
+            groupId: item.id,
+          },
+        }),
+      )
+    else {
+      await navigateTo(
+        localePath({
+          name: 'passwordItemEdit',
+          params: { ...useRouter().currentRoute.value.params, itemId: item.id },
+        }),
+      )
+    }
   }
 }
 
 const listRef = useTemplateRef('listRef')
-onClickOutside(listRef, () => {
-  selectedItems.value.clear()
-  longPressedHook.value = false
+onClickOutside(listRef, async () => {
+  // needed cause otherwise the unselect is to fast for other processing like "edit selected group"
+  setTimeout(() => {
+    longPressedHook.value = false
+  }, 50)
 })
+
+const { selectedGroupItems } = storeToRefs(usePasswordGroupStore())
 </script>

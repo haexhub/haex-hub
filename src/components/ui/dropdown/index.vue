@@ -1,15 +1,16 @@
 <template>
   <div
-    class="dropdown relative inline-flex"
     :class="offset"
+    class="dropdown relative inline-flex"
   >
     <button
-      :id
-      class="dropdown-toggle"
-      v-bind="$attrs"
-      aria-haspopup="menu"
-      aria-expanded="false"
       :aria-label="label"
+      :id
+      aria-expanded="false"
+      aria-haspopup="menu"
+      class="dropdown-toggle"
+      type="button"
+      v-bind="$attrs"
     >
       <slot name="activator">
         {{ label }}
@@ -20,21 +21,24 @@
     </button>
 
     <ul
-      class="dropdown-menu dropdown-open:opacity-100 hidden min-w-28"
-      role="menu"
-      aria-orientation="vertical"
       :aria-labelledby="id"
+      aria-orientation="vertical"
+      class="dropdown-menu dropdown-open:opacity-100 hidden min-w-28 z-20 shadow shadow-primary"
+      role="menu"
     >
-      <slot name="items">
+      <slot
+        name="items"
+        :items
+      >
         <li
           :is="itemIs"
-          v-for="item in items"
-          class="dropdown-item"
           @click="$emit('select', item)"
+          class="dropdown-item"
+          v-for="item in items"
         >
           <slot
-            name="item"
             :item
+            name="item"
           >
             {{ item }}
           </slot>
@@ -45,6 +49,10 @@
 </template>
 
 <script setup lang="ts" generic="T">
+defineOptions({
+  inheritAttrs: false,
+})
+
 const { itemIs = 'li', offset = '[--offset:0]' } = defineProps<{
   label?: string
   items?: T[]
@@ -52,10 +60,6 @@ const { itemIs = 'li', offset = '[--offset:0]' } = defineProps<{
   activatorClass?: string
   offset?: string
 }>()
-
-defineOptions({
-  inheritAttrs: false,
-})
 
 defineEmits<{ select: [T] }>()
 

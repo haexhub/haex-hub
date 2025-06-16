@@ -1,5 +1,6 @@
 import * as schema from '@/../src-tauri/database/schemas/vault'
 import { invoke } from '@tauri-apps/api/core'
+import { exists } from '@tauri-apps/plugin-fs'
 import { platform } from '@tauri-apps/plugin-os'
 import { eq } from 'drizzle-orm'
 import type { SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy'
@@ -120,8 +121,7 @@ export const useVaultStore = defineStore('vaultStore', () => {
       return vaultId
     } catch (error) {
       console.error('Error openAsync ', error)
-      throw new Error(JSON.stringify(error))
-      return false
+      throw error
     }
   }
 
