@@ -25,7 +25,7 @@
         class="overlay-animation-target overlay-open:duration-300 overlay-open:opacity-100 transition-all ease-out modal-dialog"
       >
         <div class="modal-content justify-between">
-          <div class="modal-header">
+          <div class="modal-header py-0 sm:py-4">
             <div
               v-if="title || $slots.title"
               class="modal-title py-4 break-all"
@@ -49,7 +49,7 @@
             </button>
           </div>
 
-          <div class="modal-body text-sm sm:text-base grow">
+          <div class="modal-body text-sm sm:text-base grow mt-0 pt-0">
             <slot />
           </div>
 

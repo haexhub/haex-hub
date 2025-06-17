@@ -1,6 +1,7 @@
 <template>
   <div>
-    <div class="h-full text-base-content flex bg-base-200 p-4">
+    aaaa
+    <div class="h-full text-base-content flex bg-base-200">
       <HaexExtensionCard
         v-for="extension in extensionStore.availableExtensions"
         v-bind="extension"

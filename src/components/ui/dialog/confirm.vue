@@ -20,13 +20,15 @@
           class="btn-error btn-outline w-full sm:w-auto"
           @click="onAbort"
         >
-          <Icon name="mdi:close" /> {{ abortLabel ?? t('abort') }}
+          <Icon :name="abortIcon || 'mdi:close'" />
+          {{ abortLabel ?? t('abort') }}
         </UiButton>
         <UiButton
           class="btn-primary w-full sm:w-auto"
           @click="onConfirm"
         >
-          <Icon name="mdi:check" /> {{ confirmLabel ?? t('confirm') }}
+          <Icon :name="confirmIcon || 'mdi:check'" />
+          {{ confirmLabel ?? t('confirm') }}
         </UiButton>
       </slot>
     </template>
@@ -34,7 +36,13 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{ confirmLabel?: string; abortLabel?: string; title?: string }>()
+defineProps<{
+  confirmLabel?: string
+  abortLabel?: string
+  title?: string
+  abortIcon?: string
+  confirmIcon?: string
+}>()
 
 const open = defineModel<boolean>('open', { default: false })
 

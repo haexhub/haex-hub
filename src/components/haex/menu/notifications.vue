@@ -6,7 +6,7 @@
       <button
         id="dropdown-scrollable"
         type="button"
-        class="dropdown-toggle btn btn-text btn-circle dropdown-open:bg-base-content/10 size-10"
+        class="dropdown-toggle btn btn-text btn-circle dropdown-open:bg-base-content/10"
         aria-haspopup="menu"
         aria-expanded="false"
         aria-label="Dropdown"

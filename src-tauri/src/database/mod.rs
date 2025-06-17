@@ -88,7 +88,6 @@ pub fn create_encrypted_database(
     } else {
         println!("Datei '{}' existiert nicht.", target.display());
     }
-    //core::copy_file(&resource_path, &path)?;
 
     println!(
         "Öffne unverschlüsselte Datenbank: {}",
@@ -101,8 +100,6 @@ pub fn create_encrypted_database(
             e.to_string()
         )
     })?;
-
-    //let conn = Connection::open(&resource_path)?;
 
     println!("Hänge neue, verschlüsselte Datenbank an unter '{}'", &path);
     // ATTACH DATABASE 'Dateiname' AS Alias KEY 'Passwort';
@@ -124,14 +121,6 @@ pub fn create_encrypted_database(
             return Err(e.to_string()); // Gib den Fehler zurück
         }
     }
-    // sqlcipher_export('Alias') kopiert Schema und Daten von 'main' zur Alias-DB
-    /* conn.execute("SELECT sqlcipher_export('encrypted');", [])
-    .map_err(|e| {
-        format!(
-            "Fehler bei SELECT sqlcipher_export('encrypted'): {}",
-            e.to_string()
-        )
-    })?; */
 
     println!("Löse die verschlüsselte Datenbank vom Handle...");
     conn.execute("DETACH DATABASE encrypted;", [])
@@ -143,27 +132,6 @@ pub fn create_encrypted_database(
         resource_path.as_path().display()
     );
 
-    /* // Neue Datenbank erstellen
-    let conn = Connection::open_with_flags(
-        &path,
-        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE,
-    )
-    .map_err(|e| format!("Fehler beim Erstellen der Datenbank: {}", e.to_string()))?;
-
-    // Datenbank mit dem angegebenen Passwort verschlüsseln
-    conn.pragma_update(None, "key", &key)
-        .map_err(|e| format!("Fehler beim Verschlüsseln der Datenbank: {}", e.to_string()))?;
-
-    println!("Datenbank verschlüsselt mit key {}", &key);
-    // Überprüfen, ob die Datenbank korrekt verschlüsselt wurde
-    let validation_result: Result<i32, _> = conn.query_row("SELECT 1", [], |row| row.get(0));
-    if let Err(e) = validation_result {
-        return Err(format!(
-            "Fehler beim Testen der verschlüsselten Datenbank: {}",
-            e.to_string()
-        ));
-    } */
-
     // 2. VERSUCHEN, EINE SQLCIPHER-SPEZIFISCHE OPERATION AUSZUFÜHREN
     println!("Prüfe SQLCipher-Aktivität mit 'PRAGMA cipher_version;'...");
     match conn.query_row("PRAGMA cipher_version;", [], |row| {
@@ -172,20 +140,6 @@ pub fn create_encrypted_database(
     }) {
         Ok(version) => {
             println!("SQLCipher ist aktiv! Version: {}", version);
-
-            /* // Fahre mit normalen Operationen fort
-            println!("Erstelle Tabelle 'benutzer'...");
-            conn.execute(
-                "CREATE TABLE benutzer (id INTEGER PRIMARY KEY, name TEXT NOT NULL)",
-                [],
-            )
-            .map_err(|e| format!("Fehler beim Verschlüsseln der Datenbank: {}", e.to_string()))?;
-            println!("Füge Benutzer 'Bob' hinzu...");
-            conn.execute("INSERT INTO benutzer (name) VALUES ('Bob')", [])
-                .map_err(|e| {
-                    format!("Fehler beim Verschlüsseln der Datenbank: {}", e.to_string())
-                })?;
-            println!("Benutzer hinzugefügt."); */
         }
         Err(e) => {
             eprintln!("FEHLER: SQLCipher scheint NICHT aktiv zu sein!");
@@ -236,10 +190,7 @@ pub fn create_encrypted_database(
         .map_err(|e| format!("Mutex-Fehler: {}", e.to_string()))?;
     *db = Some(conn);
 
-    Ok(format!(
-        "Verschlüsselte CRDT-Datenbank erstellt unter: {} and password",
-        key
-    ))
+    Ok(format!("Verschlüsselte CRDT-Datenbank erstellt",))
 }
 
 #[tauri::command]
@@ -249,11 +200,11 @@ pub fn open_encrypted_database(
     state: State<'_, DbConnection>,
 ) -> Result<String, String> {
     if !std::path::Path::new(&path).exists() {
-        return Err("Datenbankdatei nicht gefunden".into());
+        return Err("File not found ".into());
     }
 
-    let conn = core::open_and_init_db(&path, &key, false)
-        .map_err(|e| format!("Fehler beim öffnen: {}", e));
+    let conn =
+        core::open_and_init_db(&path, &key, false).map_err(|e| format!("Error during open: {}", e));
     let mut db = state.0.lock().map_err(|e| e.to_string())?;
     *db = Some(conn.unwrap());
 

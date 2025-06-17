@@ -40,9 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { eq } from 'drizzle-orm'
 import type { Locale } from 'vue-i18n'
-import { haexSettings } from '~~/src-tauri/database/schemas/vault'
 
 definePageMeta({
   name: 'settings',
@@ -50,24 +48,19 @@ definePageMeta({
 
 const { t, setLocale } = useI18n()
 
-const { currentVault, currentVaultName } = storeToRefs(useVaultStore())
-const { updateVaultNameAsync } = useVaultSettingsStore()
+const { currentVaultName } = storeToRefs(useVaultStore())
+const { updateVaultNameAsync, updateLocaleAsync, updateThemeAsync } =
+  useVaultSettingsStore()
 
 const onSelectLocaleAsync = async (locale: Locale) => {
-  await currentVault.value?.drizzle
-    .update(haexSettings)
-    .set({ key: 'locale', value: locale })
-    .where(eq(haexSettings.key, 'locale'))
+  await updateLocaleAsync(locale)
   await setLocale(locale)
 }
 
 const { currentTheme } = storeToRefs(useUiStore())
 
 const onSelectThemeAsync = async (theme: ITheme) => {
-  await currentVault.value?.drizzle
-    .update(haexSettings)
-    .set({ key: 'theme', value: theme.name })
-    .where(eq(haexSettings.key, 'theme'))
+  await updateThemeAsync(theme.value)
   currentTheme.value = theme
 }
 
@@ -82,9 +75,7 @@ const onSetVaultNameAsync = async () => {
   }
 }
 
-const { isNotificationAllowed } = storeToRefs(useNotificationStore())
 const { requestNotificationPermissionAsync } = useNotificationStore()
-//const { test } = useLastVaultStore()
 </script>
 
 <i18n lang="yaml">

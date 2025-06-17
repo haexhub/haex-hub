@@ -1,10 +1,10 @@
 <template>
-  <div class="items-center justify-center h-full flex w-full relative">
-    <div class="fixed top-2 right-2">
+  <div class="items-center justify-center flex w-full relative min-h-full">
+    <div class="absolute top-2 right-2">
       <UiDropdownLocale @select="setLocale" />
     </div>
     <div class="flex flex-col justify-center items-center gap-5 max-w-3xl">
-      <UiLogoHaexhub class="bg-primary p-3 size-16 rounded-full" />
+      <UiLogoHaexhub class="bg-primary p-3 size-16 rounded-full shrink-0" />
       <span
         class="flex flex-wrap font-bold text-pretty text-xl gap-2 justify-center"
       >
@@ -98,12 +98,12 @@ await syncLastVaultsAsync()
   "de": {
     "welcome": "Viel Spass mit",
     "lastUsed": "Zuletzt verwendete Vaults",
-    "sponsors": "Powered by"
+    "sponsors": "Supported by"
   },
   "en": {
     "welcome": "Have fun with",
     "lastUsed": "Last used Vaults",
-    "sponsors": "Powered by"
+    "sponsors": "Supported by"
   }
 }
 </i18n>

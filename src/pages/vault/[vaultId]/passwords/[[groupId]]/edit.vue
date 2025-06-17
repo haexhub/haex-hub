@@ -1,5 +1,6 @@
 <template>
   <div>
+    {{ group }}
     <HaexPassGroup
       v-model="group"
       mode="edit"
@@ -43,15 +44,14 @@ const onClose = () => {
 
 const { add } = useSnackbar()
 
+const { updateAsync } = usePasswordGroupStore()
+
 const onSaveAsync = async () => {
   try {
     check.value = true
     if (!group.value) return
 
-    console.log('onSave', errors.value)
     if (errors.value.name.length || errors.value.description.length) return
-
-    const { updateAsync } = usePasswordGroupStore()
 
     await updateAsync(group.value)
 

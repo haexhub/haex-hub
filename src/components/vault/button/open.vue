@@ -28,12 +28,12 @@
     </template>
 
     <UiInputPassword
-      v-model="database.password"
       :check-input="check"
       :rules="vaultDatabaseSchema.password"
+      @keyup.enter="onOpenDatabase"
       autofocus
       prepend-icon="mdi:key-outline"
-      @keyup.enter="onOpenDatabase"
+      v-model="database.password"
     />
   </UiDialogConfirm>
 </template>

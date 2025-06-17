@@ -11,6 +11,7 @@ import {
 export const haexSettings = sqliteTable('haex_settings', {
   id: text().primaryKey(),
   key: text(),
+  type: text(),
   value: text(),
 })
 export type InsertHaexSettings = typeof haexSettings.$inferInsert

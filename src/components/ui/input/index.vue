@@ -73,12 +73,12 @@
 <script setup lang="ts">
 import type { ZodSchema } from 'zod'
 
+const input = defineModel<string | number | undefined | null>({
+  required: true,
+})
+
 const inputRef = useTemplateRef('inputRef')
 defineExpose({ inputRef })
-
-defineOptions({
-  inheritAttrs: false,
-})
 
 const props = defineProps({
   placeholder: {
@@ -129,11 +129,6 @@ const props = defineProps({
   withCopyButton: Boolean,
   autofocus: Boolean,
   read_only: Boolean,
-})
-
-const input = defineModel<string | number | undefined | null>({
-  default: '',
-  required: true,
 })
 
 onMounted(() => {

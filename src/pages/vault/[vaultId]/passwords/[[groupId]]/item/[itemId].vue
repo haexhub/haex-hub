@@ -163,14 +163,16 @@ const { currentItem } = storeToRefs(usePasswordItemStore())
 
 watch(
   currentItem,
-  (newItem) => {
-    item.details = JSON.parse(JSON.stringify(newItem?.details))
-    item.keyValues = JSON.parse(JSON.stringify(newItem?.keyValues))
-    item.history = JSON.parse(JSON.stringify(newItem?.history))
+  () => {
+    console.log('watch currentItem', currentItem.value)
+    if (!currentItem.value) return
+    item.details = JSON.parse(JSON.stringify(currentItem.value?.details))
+    item.keyValues = JSON.parse(JSON.stringify(currentItem.value?.keyValues))
+    item.history = JSON.parse(JSON.stringify(currentItem.value?.history))
     item.keyValuesAdd = []
     item.keyValuesDelete = []
-    item.originalDetails = JSON.stringify(newItem?.details)
-    item.originalKeyValues = JSON.stringify(newItem?.keyValues)
+    item.originalDetails = JSON.stringify(currentItem.value?.details)
+    item.originalKeyValues = JSON.stringify(currentItem.value?.keyValues)
     ignoreChanges.value = false
   },
   { immediate: true },

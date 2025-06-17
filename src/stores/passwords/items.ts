@@ -21,9 +21,7 @@ export const usePasswordItemStore = defineStore('passwordItemStore', () => {
     },
   })
 
-  const currentItem = computedAsync(
-    async () => await readAsync(currentItemId.value),
-  )
+  const currentItem = computedAsync(() => readAsync(currentItemId.value))
 
   return {
     currentItemId,
@@ -178,6 +176,8 @@ const readAsync = async (itemId: string | null) => {
       await currentVault.drizzle.query.haexPasswordsItemDetails.findFirst({
         where: eq(haexPasswordsItemDetails.id, itemId),
       })
+
+    console.log('readAsync details', details)
 
     if (!details) return null
 

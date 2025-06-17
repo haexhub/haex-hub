@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full w-full flex flex-col overflow-hidden">
+  <div class="h-full flex-1 flex flex-col overflow-auto">
     <nav
       class="navbar rounded-b max-sm:shadow border-b border-base-content/25 sm:z-20 relative px-2 py-0 sm:py-2"
     >
@@ -35,13 +35,13 @@
         </NuxtLinkLocale>
       </div>
 
-      <div class="flex items-center gap-4 me-4">
+      <div class="flex items-center gap-x-4">
         <HaexMenuNotifications />
         <HaexMenuMain />
       </div>
     </nav>
 
-    <div class="flex h-full w-full overflow-hidden">
+    <div class="flex h-full w-full overflow-auto">
       <aside
         id="sidebar"
         class="sm:shadow-none transition-all h-full overflow-hidden border-r border-base-300"
