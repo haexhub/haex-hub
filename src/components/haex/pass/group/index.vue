@@ -1,58 +1,60 @@
 <template>
-  <UiCard
-    v-if="group"
-    :title="mode === 'create' ? t('title.create') : t('title.edit')"
-    icon="mdi:folder-plus-outline"
-    @close="$emit('close')"
-  >
-    <form
-      class="flex flex-col gap-4 w-full p-4"
-      @submit.prevent="$emit('submit')"
+  <div class="p-1">
+    <UiCard
+      v-if="group"
+      :title="mode === 'create' ? t('title.create') : t('title.edit')"
+      icon="mdi:folder-plus-outline"
+      @close="$emit('close')"
     >
-      <UiInput
-        :check-input="check"
-        :label="t('name')"
-        :placeholder="t('name')"
-        autofocus
-        v-model="group.name"
-        ref="nameRef"
-      />
-
-      <UiInput
-        v-model="group.description"
-        :check-input="check"
-        :label="t('description')"
-        :placeholder="t('description')"
-      />
-
-      <div class="flex gap-4">
-        <UiSelectIcon
-          v-model="group.icon"
-          default-icon="mdi:folder-outline"
+      <form
+        class="flex flex-col gap-4 w-full p-4"
+        @submit.prevent="$emit('submit')"
+      >
+        <UiInput
+          :check-input="check"
+          :label="t('name')"
+          :placeholder="t('name')"
+          autofocus
+          v-model="group.name"
+          ref="nameRef"
         />
 
-        <UiSelectColor v-model="group.color" />
-      </div>
+        <UiInput
+          v-model="group.description"
+          :check-input="check"
+          :label="t('description')"
+          :placeholder="t('description')"
+        />
 
-      <div class="flex flex-wrap justify-end gap-4">
-        <UiButton
-          class="btn-error btn-outline flex-1"
-          @click="$emit('close')"
-        >
-          {{ t('abort') }}
-          <Icon name="mdi:close" />
-        </UiButton>
+        <div class="flex gap-4">
+          <UiSelectIcon
+            v-model="group.icon"
+            default-icon="mdi:folder-outline"
+          />
 
-        <UiButton
-          class="btn-primary flex-1"
-          @click="$emit('submit')"
-        >
-          {{ mode === 'create' ? t('create') : t('save') }}
-          <Icon name="mdi:check" />
-        </UiButton>
-      </div>
-    </form>
-  </UiCard>
+          <UiSelectColor v-model="group.color" />
+        </div>
+
+        <div class="flex flex-wrap justify-end gap-4">
+          <UiButton
+            class="btn-error btn-outline flex-1"
+            @click="$emit('close')"
+          >
+            {{ t('abort') }}
+            <Icon name="mdi:close" />
+          </UiButton>
+
+          <UiButton
+            class="btn-primary flex-1"
+            @click="$emit('submit')"
+          >
+            {{ mode === 'create' ? t('create') : t('save') }}
+            <Icon name="mdi:check" />
+          </UiButton>
+        </div>
+      </form>
+    </UiCard>
+  </div>
 </template>
 
 <script setup lang="ts">

@@ -1,33 +1,32 @@
 <template>
   <div class="relative h-full">
     <div class="h-full">
-      <div class="h-full overflow-auto p-1 flex flex-col">
+      <div class="h-full overflow-auto flex flex-col">
         <HaexPassGroupBreadcrumbs
           :items="breadCrumbs"
+          class="px-2"
           v-show="breadCrumbs.length"
         />
 
         <HaexPassMobileMenu
-          ref="listRef"
           :menu-items="groupItems"
+          ref="listRef"
           v-model:selected-items="selectedItems"
-          sel
         />
       </div>
 
       <div
-        class="fixed bottom-4 flex justify-between transition-all pointer-events-none right-0 sm:items-center items-end"
+        class="fixed bottom-4 flex justify-between transition-all pointer-events-none right-0 sm:items-center items-end px-8"
         :class="[isVisible ? 'left-15 ' : 'left-0']"
       >
-        <div class="w-full pl-8"></div>
-
+        <div class="w-full"></div>
         <UiButtonAction
-          :menu
           v-if="!inTrashGroup"
+          :menu
         />
 
         <div
-          class="flex flex-col sm:flex-row gap-4 w-full justify-end items-end pr-8"
+          class="flex flex-col sm:flex-row gap-4 w-full justify-end items-end"
         >
           <UiButton
             v-show="selectedItems.size === 1"

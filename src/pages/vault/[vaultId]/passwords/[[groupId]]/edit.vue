@@ -1,6 +1,5 @@
 <template>
   <div>
-    {{ group }}
     <HaexPassGroup
       v-model="group"
       mode="edit"

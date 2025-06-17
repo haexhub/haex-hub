@@ -1,7 +1,7 @@
 <template>
   <div v-if="menuItems?.length">
     <ul
-      class="flex flex-col w-full h-full gap-y-2 *:first:rounded-t-md *:last:rounded-b-md"
+      class="flex flex-col w-full h-full gap-y-2 first:rounded-t-md last:rounded-b-md p-1"
       ref="listRef"
     >
       <li
