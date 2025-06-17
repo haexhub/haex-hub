@@ -1,7 +1,7 @@
 <template>
   <div>
     <HaexPassGroup
-      v-model="currentGroup"
+      v-model="group"
       mode="edit"
       @close="onClose"
       @submit="onSaveAsync"
@@ -10,6 +10,8 @@
 </template>
 
 <script setup lang="ts">
+import type { SelectHaexPasswordsGroups } from '~~/src-tauri/database/schemas/vault'
+
 definePageMeta({
   name: 'passwordGroupEdit',
 })
@@ -20,7 +22,15 @@ const check = ref(false)
 
 const { currentGroup } = storeToRefs(usePasswordGroupStore())
 
-//const group = computed(() => currentGroup.value)
+const group = ref<SelectHaexPasswordsGroups>()
+
+watch(
+  currentGroup,
+  (newGroup) => {
+    group.value = JSON.parse(JSON.stringify(newGroup))
+  },
+  { immediate: true },
+)
 
 const errors = ref({
   name: [],
@@ -36,14 +46,14 @@ const { add } = useSnackbar()
 const onSaveAsync = async () => {
   try {
     check.value = true
-    if (!currentGroup.value) return
+    if (!group.value) return
 
     console.log('onSave', errors.value)
     if (errors.value.name.length || errors.value.description.length) return
 
     const { updateAsync } = usePasswordGroupStore()
 
-    await updateAsync(currentGroup.value)
+    await updateAsync(group.value)
 
     add({ type: 'success', text: t('change.success') })
     onClose()

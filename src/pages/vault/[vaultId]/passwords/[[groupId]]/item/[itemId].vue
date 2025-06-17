@@ -161,16 +161,20 @@ const item = reactive<{
 
 const { currentItem } = storeToRefs(usePasswordItemStore())
 
-watch(currentItem, () => {
-  item.details = JSON.parse(JSON.stringify(currentItem.value?.details))
-  item.keyValues = JSON.parse(JSON.stringify(currentItem.value?.keyValues))
-  item.history = JSON.parse(JSON.stringify(currentItem.value?.history))
-  item.keyValuesAdd = []
-  item.keyValuesDelete = []
-  item.originalDetails = JSON.stringify(currentItem.value?.details)
-  item.originalKeyValues = JSON.stringify(currentItem.value?.keyValues)
-  ignoreChanges.value = false
-})
+watch(
+  currentItem,
+  (newItem) => {
+    item.details = JSON.parse(JSON.stringify(newItem?.details))
+    item.keyValues = JSON.parse(JSON.stringify(newItem?.keyValues))
+    item.history = JSON.parse(JSON.stringify(newItem?.history))
+    item.keyValuesAdd = []
+    item.keyValuesDelete = []
+    item.originalDetails = JSON.stringify(newItem?.details)
+    item.originalKeyValues = JSON.stringify(newItem?.keyValues)
+    ignoreChanges.value = false
+  },
+  { immediate: true },
+)
 
 const { add } = useSnackbar()
 const { deleteAsync, updateAsync } = usePasswordItemStore()

@@ -1,6 +1,6 @@
 <template>
   <UiCard
-    v-if="modelValue"
+    v-if="group"
     :title="mode === 'create' ? t('title.create') : t('title.edit')"
     icon="mdi:folder-plus-outline"
     @close="$emit('close')"
@@ -14,12 +14,12 @@
         :label="t('name')"
         :placeholder="t('name')"
         autofocus
-        v-model="modelValue.name"
+        v-model="group.name"
         ref="nameRef"
       />
 
       <UiInput
-        v-model="modelValue.description"
+        v-model="group.description"
         :check-input="check"
         :label="t('description')"
         :placeholder="t('description')"
@@ -27,11 +27,11 @@
 
       <div class="flex gap-4">
         <UiSelectIcon
-          v-model="modelValue.icon"
+          v-model="group.icon"
           default-icon="mdi:folder-outline"
         />
 
-        <UiSelectColor v-model="modelValue.color" />
+        <UiSelectColor v-model="group.color" />
       </div>
 
       <div class="flex flex-wrap justify-end gap-4">
@@ -58,9 +58,10 @@
 <script setup lang="ts">
 import type { SelectHaexPasswordsGroups } from '~~/src-tauri/database/schemas/vault'
 
-defineModel<SelectHaexPasswordsGroups | null>()
+const group = defineModel<SelectHaexPasswordsGroups | null>()
 defineEmits(['close', 'submit', 'back'])
 defineProps<{ mode: 'create' | 'edit' }>()
+
 const { t } = useI18n()
 
 const check = ref<boolean>(false)

@@ -68,7 +68,7 @@ export const getSingleRouteParam = (
   param: string | string[] | LocationQueryValue | LocationQueryValue[],
 ): string => {
   const _param = Array.isArray(param) ? param.at(0) ?? '' : param ?? ''
-  console.log('getSingleRouteParam found:', _param, param)
+  //console.log('getSingleRouteParam found:', _param, param)
   return decodeURIComponent(_param)
 }
 

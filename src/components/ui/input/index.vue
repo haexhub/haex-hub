@@ -16,23 +16,24 @@
 
         <div class="input-floating grow">
           <input
+            :autofocus
             :id
-            ref="inputRef"
-            v-model="input"
             :name="name ?? id"
             :placeholder="placeholder || label"
-            :type
-            :autofocus
-            class="ps-3"
             :readonly="read_only"
+            :type
+            class="ps-3"
+            ref="inputRef"
+            v-model="input"
           />
           <label
-            class="input-floating-label"
             :for="id"
+            class="input-floating-label"
           >
             {{ label }}
           </label>
         </div>
+        {{ input }}
 
         <Icon
           v-if="appendIcon"
