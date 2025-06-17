@@ -33,7 +33,6 @@
             {{ label }}
           </label>
         </div>
-        {{ input }}
 
         <Icon
           v-if="appendIcon"
