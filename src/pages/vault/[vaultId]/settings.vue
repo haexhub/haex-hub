@@ -36,6 +36,25 @@
         {{ t('notifications.requestPermission') }}
       </UiButton>
     </div>
+
+    <div class="p-2">{{ t('deviceName.label') }}</div>
+    <div>
+      <UiInput
+        v-model="deviceName"
+        :placeholder="t('deviceName.label')"
+      >
+        <template #append>
+          <UiButton
+            class="btn-primary"
+            @click="onUpdateDeviceNameAsync"
+            :tooltip="t('save')"
+            :rules="vaultDeviceNameSchema"
+          >
+            <Icon name="mdi:content-save-outline" />
+          </UiButton>
+        </template>
+      </UiInput>
+    </div>
   </div>
 </template>
 
@@ -76,6 +95,23 @@ const onSetVaultNameAsync = async () => {
 }
 
 const { requestNotificationPermissionAsync } = useNotificationStore()
+
+const { deviceName } = storeToRefs(useDeviceStore())
+const { updateDeviceNameAsync, readDeviceNameAsync } = useDeviceStore()
+
+onMounted(async () => {
+  await readDeviceNameAsync()
+})
+const onUpdateDeviceNameAsync = async () => {
+  const check = vaultDeviceNameSchema.safeParse(deviceName.value)
+  if (!check.success) return
+  try {
+    await updateDeviceNameAsync({ name: deviceName.value })
+    add({ text: t('deviceName.update.success'), type: 'success' })
+  } catch (error) {
+    add({ text: t('deviceName.update.error'), type: 'error' })
+  }
+}
 </script>
 
 <i18n lang="yaml">
@@ -91,6 +127,11 @@ de:
     update:
       success: Vaultname erfolgreich aktualisiert
       error: Vaultname konnte nicht aktualisiert werden
+  deviceName:
+    label: Gerätename
+    update:
+      success: Gerätename wurde erfolgreich aktualisiert
+      error: Gerätename konnte nich aktualisiert werden
 en:
   language: Language
   design: Design
@@ -103,4 +144,9 @@ en:
     update:
       success: Vault Name successfully updated
       error: Vault name could not be updated
+  deviceName:
+    label: Device name
+    update:
+      success: Device name has been successfully updated
+      error: Device name could not be updated
 </i18n>
