@@ -80,7 +80,3 @@ cd haex-vault
 pnpm i
 pnpm tauri dev
 ```
-
-```
-shadcn components: pnpm dlx shadcn-vue@latest add alert-dialog button card dialog dropdown-menu input label menubar navigation-menu popover resizable sheet sonner switch tabs tooltip
-```
