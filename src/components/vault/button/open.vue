@@ -106,7 +106,9 @@ const onLoadDatabase = async () => {
 
 const localePath = useLocalePath()
 
-const { syncLocaleAsync, syncThemeAsync, syncVaultNameAsync } = useVaultStore()
+const { syncLocaleAsync, syncThemeAsync, syncVaultNameAsync } =
+  useVaultSettingsStore()
+
 const onOpenDatabase = async () => {
   try {
     check.value = true

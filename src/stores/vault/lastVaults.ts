@@ -16,7 +16,7 @@ export const useLastVaultStore = defineStore('lastVaultStore', () => {
   const keyName = 'lastVaults'
 
   const getStoreAsync = async () => {
-    return await load(haexVault.lastVaultFileName)
+    return await load(haexVault.lastVaultFileName || 'lastVaults.json')
   }
 
   const syncLastVaultsAsync = async () => {
@@ -45,7 +45,6 @@ export const useLastVaultStore = defineStore('lastVaultStore', () => {
   }
 
   const removeVaultAsync = async (vaultPath: string) => {
-    console.log('remove', vaultPath, lastVaults.value)
     lastVaults.value = lastVaults.value.filter(
       (vault) => vault.path !== vaultPath,
     )
@@ -54,14 +53,11 @@ export const useLastVaultStore = defineStore('lastVaultStore', () => {
 
   const saveLastVaultsAsync = async () => {
     const store = await getStoreAsync()
-    console.log('save lastVaults', keyName, lastVaults.value)
     await store.set(keyName, lastVaults.value)
     await syncLastVaultsAsync()
   }
 
-  const test = async () => console.log('test')
   return {
-    test,
     addVaultAsync,
     syncLastVaultsAsync,
     lastVaults,

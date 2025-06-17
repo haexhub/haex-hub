@@ -84,7 +84,8 @@ export default defineNuxtConfig({
     public: {
       haexVault: {
         lastVaultFileName: 'lastVaults.json',
-        //defaultDatabase: 'src/database/default.db',
+        instanceFileName: 'instance.json',
+        defaultVaultName: 'HaexHub',
       },
     },
   },

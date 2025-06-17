@@ -51,7 +51,7 @@ definePageMeta({
 const { t, setLocale } = useI18n()
 
 const { currentVault, currentVaultName } = storeToRefs(useVaultStore())
-const { updateVaultNameAsync } = useVaultStore()
+const { updateVaultNameAsync } = useVaultSettingsStore()
 
 const onSelectLocaleAsync = async (locale: Locale) => {
   await currentVault.value?.drizzle
