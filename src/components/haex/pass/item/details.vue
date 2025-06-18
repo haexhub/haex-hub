@@ -1,6 +1,9 @@
 <template>
   <div class="h-full overflow-scroll">
-    <div class="flex flex-col gap-4 w-full p-4">
+    <form
+      class="flex flex-col gap-4 w-full p-4"
+      @submit.prevent="$emit('submit')"
+    >
       <UiInput
         v-show="!read_only || itemDetails.title"
         :check-input="check"
@@ -11,6 +14,7 @@
         autofocus
         ref="titleRef"
         v-model.trim="itemDetails.title"
+        @keyup.enter="$emit('submit')"
       />
 
       <UiInput
@@ -66,7 +70,7 @@
         @keyup.enter.stop
         class="h-52"
       />
-    </div>
+    </form>
   </div>
 </template>
 
@@ -79,6 +83,7 @@ defineProps<{
   withCopyButton?: boolean
 }>()
 
+defineEmits(['submit'])
 const { t } = useI18n()
 
 const itemDetails = defineModel<SelectHaexPasswordsItemDetails>({
@@ -89,10 +94,10 @@ const preventClose = defineModel<boolean>('preventClose')
 
 const check = defineModel<boolean>('check-input', { default: false })
 
-onKeyStroke('escape', (e) => {
+/* onKeyStroke('escape', (e) => {
   e.stopPropagation()
   e.stopImmediatePropagation()
-})
+}) */
 
 const titleRef = useTemplateRef('titleRef')
 onStartTyping(() => {

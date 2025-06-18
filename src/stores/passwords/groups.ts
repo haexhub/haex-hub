@@ -128,7 +128,7 @@ const addGroupAsync = async (group: Partial<InsertHaexPasswordsGroups>) => {
     name: group.name,
     order: group.order,
   }
-  await currentVault.drizzle.insert(haexPasswordsGroups).values(newGroup)
+  await currentVault.drizzle?.insert(haexPasswordsGroups).values(newGroup)
   await syncGroupItemsAsync()
   return newGroup
 }
@@ -138,7 +138,7 @@ const readGroupAsync = async (groupId: string) => {
 
   return (
     await currentVault.drizzle
-      .select()
+      ?.select()
       .from(haexPasswordsGroups)
       .where(eq(haexPasswordsGroups.id, groupId))
   ).at(0)
@@ -166,12 +166,12 @@ const readGroupItemsAsync = async (
 
   if (groupId) {
     return currentVault.drizzle
-      .select()
+      ?.select()
       .from(haexPasswordsGroupItems)
       .where(eq(haexPasswordsGroupItems.groupId, groupId))
   } else {
     return currentVault.drizzle
-      .select()
+      ?.select()
       .from(haexPasswordsGroupItems)
       .where(isNull(haexPasswordsGroupItems.groupId))
   }
@@ -198,7 +198,7 @@ const getByParentIdAsync = async (
     console.log('getByParentIdAsync', parentId)
     if (parentId) {
       const groups = await currentVault.drizzle
-        .select()
+        ?.select()
         .from(haexPasswordsGroups)
         .where(eq(haexPasswordsGroups.parentId, parentId))
         .orderBy(sql`${haexPasswordsGroups.order} nulls last`)
@@ -206,7 +206,7 @@ const getByParentIdAsync = async (
       return groups
     } else {
       const groups = await currentVault.drizzle
-        .select()
+        ?.select()
         .from(haexPasswordsGroups)
         .where(isNull(haexPasswordsGroups.parentId))
         .orderBy(sql`${haexPasswordsGroups.order} nulls last`)
@@ -238,10 +238,20 @@ const updateAsync = async (group: InsertHaexPasswordsGroups) => {
   const { currentVault } = storeToRefs(useVaultStore())
   if (!group.id) return
 
+  const newGroup: InsertHaexPasswordsGroups = {
+    id: group.id,
+    color: group.color,
+    description: group.description,
+    icon: group.icon,
+    name: group.name,
+    order: group.order,
+    parentId: group.parentId,
+  }
+
   return currentVault.value.drizzle
     .update(haexPasswordsGroups)
-    .set(group)
-    .where(eq(haexPasswordsGroups.id, group.id))
+    .set(newGroup)
+    .where(eq(haexPasswordsGroups.id, newGroup.id))
 }
 
 const navigateToGroupItemsAsync = (groupId: string) => {

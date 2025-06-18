@@ -1,5 +1,5 @@
 <template>
-  <div class="card">
+  <div class="card min-w-56">
     <slot name="image" />
 
     <div

@@ -4,6 +4,7 @@
       :history="item.history"
       :read_only
       @close="onClose"
+      @submit="onUpdateAsync"
       v-model:details="item.details"
       v-model:key-values-add="item.keyValuesAdd"
       v-model:key-values-delete="item.keyValuesDelete"
@@ -14,7 +15,7 @@
       class="fixed bottom-4 flex justify-between transition-all pointer-events-none right-0 sm:items-center items-end"
       :class="[isVisible ? 'left-15 ' : 'left-0']"
     >
-      <div class="flex items-center justify-center w-full">
+      <div class="flex items-center justify-center flex-1">
         <UiTooltip :tooltip="t('abort')">
           <UiButton
             class="btn-accent btn-square"
@@ -71,7 +72,7 @@
         </UiButton>
       </UiTooltip>
 
-      <div class="flex items-center justify-center w-full">
+      <div class="flex items-center justify-center flex-1">
         <UiTooltip :tooltip="t('delete')">
           <UiButton
             class="btn-square btn-error"

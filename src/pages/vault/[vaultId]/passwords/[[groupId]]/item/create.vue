@@ -4,15 +4,16 @@
       :default-icon="currentGroup?.icon"
       :history="item.history"
       @close="onClose"
+      @submit="onCreateAsync"
       v-model:details="item.details"
       v-model:key-values-add="item.keyValuesAdd"
     />
 
     <div
-      class="fixed bottom-4 flex justify-between transition-all pointer-events-none right-15 sm:items-center items-end"
+      class="fixed bottom-4 flex justify-between transition-all pointer-events-none right-0 sm:items-center items-end"
       :class="[isVisible ? 'left-15 ' : 'left-0']"
     >
-      <div class="flex items-center justify-center w-full">
+      <div class="flex items-center justify-center flex-1">
         <UiTooltip :tooltip="t('abort')">
           <UiButton
             class="btn-error btn-square"
@@ -33,7 +34,7 @@
           />
         </UiButton>
       </UiTooltip>
-      <div class="flex items-center justify-center w-full"></div>
+      <div class="flex items-center justify-center flex-1"></div>
     </div>
   </div>
 </template>

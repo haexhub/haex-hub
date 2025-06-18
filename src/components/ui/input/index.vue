@@ -22,9 +22,10 @@
             :placeholder="placeholder || label"
             :readonly="read_only"
             :type
-            class="ps-3"
+            class="ps-2"
             ref="inputRef"
             v-model="input"
+            @keyup="(e) => $emit('keyup', e)"
           />
           <label
             :for="id"
@@ -79,6 +80,11 @@ const input = defineModel<string | number | undefined | null>({
 
 const inputRef = useTemplateRef('inputRef')
 defineExpose({ inputRef })
+
+const emit = defineEmits<{
+  error: [string[]]
+  keyup: [KeyboardEvent]
+}>()
 
 const props = defineProps({
   placeholder: {
@@ -147,8 +153,6 @@ watch(
     checkInput()
   },
 )
-
-const emit = defineEmits(['error'])
 
 const checkInput = () => {
   if (props.rules) {

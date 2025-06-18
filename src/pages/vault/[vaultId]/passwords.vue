@@ -1,5 +1,5 @@
 <template>
-  <div class="p-2 h-full">
+  <div class="p-2 min-h-full">
     <NuxtPage />
   </div>
 </template>

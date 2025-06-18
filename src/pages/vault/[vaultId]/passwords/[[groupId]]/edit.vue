@@ -1,5 +1,6 @@
 <template>
   <div>
+    currentGroup{{ currentGroup }}
     <HaexPassGroup
       v-model="group"
       mode="edit"
@@ -26,8 +27,8 @@ const group = ref<SelectHaexPasswordsGroups>()
 
 watch(
   currentGroup,
-  (newGroup) => {
-    group.value = JSON.parse(JSON.stringify(newGroup))
+  () => {
+    group.value = JSON.parse(JSON.stringify(currentGroup.value))
   },
   { immediate: true },
 )
@@ -43,7 +44,7 @@ const onClose = () => {
 
 const { add } = useSnackbar()
 
-const { updateAsync } = usePasswordGroupStore()
+const { updateAsync, syncGroupItemsAsync } = usePasswordGroupStore()
 
 const onSaveAsync = async () => {
   try {
@@ -53,7 +54,7 @@ const onSaveAsync = async () => {
     if (errors.value.name.length || errors.value.description.length) return
 
     await updateAsync(group.value)
-
+    syncGroupItemsAsync()
     add({ type: 'success', text: t('change.success') })
     onClose()
   } catch (error) {

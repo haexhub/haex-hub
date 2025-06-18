@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center gap-4 relative">
+  <div class="flex flex-wrap items-center gap-4 relative">
     <UiButton
       :style="{ 'background-color': model }"
       :class="[textColorClass]"

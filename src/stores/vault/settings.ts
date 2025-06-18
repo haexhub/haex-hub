@@ -121,12 +121,14 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
   const readDeviceNameAsync = async (id: string) => {
     const { currentVault } = useVaultStore()
 
-    const deviceName = await currentVault.drizzle.query.haexSettings.findFirst({
-      where: and(
-        eq(schema.haexSettings.type, VaultSettingsTypeEnum.deviceName),
-        eq(schema.haexSettings.key, id),
-      ),
-    })
+    const deviceName = await currentVault.drizzle?.query.haexSettings.findFirst(
+      {
+        where: and(
+          eq(schema.haexSettings.type, VaultSettingsTypeEnum.deviceName),
+          eq(schema.haexSettings.key, id),
+        ),
+      },
+    )
     console.log('readDeviceNameAsync', deviceName)
     return deviceName
   }
@@ -146,7 +148,7 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
       return
     }
 
-    return currentVault.drizzle.insert(schema.haexSettings).values({
+    return currentVault.drizzle?.insert(schema.haexSettings).values({
       id: crypto.randomUUID(),
       type: VaultSettingsTypeEnum.deviceName,
       key: deviceId,
@@ -167,7 +169,7 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
     if (!isNameOk.success) return
 
     return currentVault.drizzle
-      .update(schema.haexSettings)
+      ?.update(schema.haexSettings)
       .set({
         value: deviceName,
       })

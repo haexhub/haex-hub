@@ -5,6 +5,7 @@
       :title="mode === 'create' ? t('title.create') : t('title.edit')"
       icon="mdi:folder-plus-outline"
       @close="$emit('close')"
+      body-class="px-0"
     >
       <form
         class="flex flex-col gap-4 w-full p-4"
@@ -17,6 +18,7 @@
           autofocus
           v-model="group.name"
           ref="nameRef"
+          @keyup.enter="$emit('submit')"
         />
 
         <UiInput
@@ -24,9 +26,10 @@
           :check-input="check"
           :label="t('description')"
           :placeholder="t('description')"
+          @keyup.enter="$emit('submit')"
         />
 
-        <div class="flex gap-4">
+        <div class="flex flex-wrap gap-4">
           <UiSelectIcon
             v-model="group.icon"
             default-icon="mdi:folder-outline"

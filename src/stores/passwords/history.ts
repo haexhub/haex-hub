@@ -15,7 +15,7 @@ const getAsync = async (itemId: string | null) => {
     const { currentVault } = useVaultStore()
 
     const history = await currentVault.drizzle
-      .select()
+      ?.select()
       .from(haexPasswordsItemHistory)
       .where(eq(haexPasswordsItemHistory.itemId, itemId))
 

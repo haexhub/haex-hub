@@ -78,6 +78,7 @@
               :read_only
               :defaultIcon
               v-model:prevent-close="preventClose"
+              @submit="$emit('submit')"
             />
           </div>
 
@@ -127,6 +128,7 @@ const emit = defineEmits<{
   close: [void]
   addKeyValue: [void]
   removeKeyValue: [string]
+  submit: [void]
 }>()
 
 const read_only = defineModel<boolean>('read_only', { default: false })
