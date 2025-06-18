@@ -81,11 +81,11 @@ const selectedItems = ref<Set<IPasswordMenuItem>>(new Set())
 const { menu } = storeToRefs(usePasswordsActionMenuStore())
 
 const {
-  currentGroupItems,
   breadCrumbs,
-  selectedGroupItems,
   currentGroupId,
+  currentGroupItems,
   inTrashGroup,
+  selectedGroupItems,
 } = storeToRefs(usePasswordGroupStore())
 const { insertGroupItemsAsync } = usePasswordGroupStore()
 
@@ -94,19 +94,19 @@ const groupItems = computed<IPasswordMenuItem[]>(() => {
 
   items.push(
     ...currentGroupItems.value.groups.map<IPasswordMenuItem>((group) => ({
-      name: group.name,
-      id: group.id,
-      icon: group.icon,
-      type: 'group',
       color: group.color,
+      icon: group.icon,
+      id: group.id,
+      name: group.name,
+      type: 'group',
     })),
   )
 
   items.push(
     ...currentGroupItems.value.items.map<IPasswordMenuItem>((item) => ({
-      name: item.title,
-      id: item.id,
       icon: item.icon,
+      id: item.id,
+      name: item.title,
       type: 'item',
     })),
   )
@@ -117,7 +117,7 @@ const { isVisible } = storeToRefs(useSidebarStore())
 
 const onEditAsync = async () => {
   const item = selectedItems.value.values().next().value
-  console.log('onEditAsync', item)
+
   if (item?.type === 'group')
     await navigateTo(
       useLocalePath()({
