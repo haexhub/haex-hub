@@ -71,6 +71,7 @@
 <script setup lang="ts">
 import type { IPasswordMenuItem } from '~/components/haex/pass/mobile/menu/types'
 import { useMagicKeys } from '@vueuse/core'
+import Fuse from 'fuse.js'
 
 definePageMeta({
   name: 'passwordGroupItems',
@@ -103,47 +104,43 @@ const { search } = storeToRefs(useSearchStore())
 
 const groupItems = computed<IPasswordMenuItem[]>(() => {
   const menuItems: IPasswordMenuItem[] = []
+  const filteredGroups = search.value
+    ? new Fuse(groups.value, {
+        keys: ['name', 'description'],
+        findAllMatches: true,
+      })
+        .search(search.value)
+        .map((match) => match.item)
+    : groups.value.filter((group) => group.parentId == currentGroupId.value)
+
+  const filteredItems = search.value
+    ? new Fuse(items.value, {
+        keys: ['title', 'note', 'password', 'tags', 'url', 'username'],
+      })
+        .search(search.value)
+        .map((match) => match.item)
+    : items.value.filter(
+        (item) =>
+          item.haex_passwords_group_items.groupId == currentGroupId.value,
+      )
 
   menuItems.push(
-    ...groups.value
-      .filter((group) => {
-        if (!search.value) return group.parentId == currentGroupId.value
-
-        return (
-          group.name?.includes(search.value) ||
-          group.description?.includes(search.value)
-        )
-      })
-      .map<IPasswordMenuItem>((group) => ({
-        color: group.color,
-        icon: group.icon,
-        id: group.id,
-        name: group.name,
-        type: 'group',
-      })),
+    ...filteredGroups.map<IPasswordMenuItem>((group) => ({
+      color: group.color,
+      icon: group.icon,
+      id: group.id,
+      name: group.name,
+      type: 'group',
+    })),
   )
 
   menuItems.push(
-    ...items.value
-      .filter((item) => {
-        if (!search.value)
-          return item.haex_passwords_group_items.groupId == currentGroupId.value
-
-        return (
-          item.haex_passwords_item_details.title?.includes(search.value) ||
-          item.haex_passwords_item_details.note?.includes(search.value) ||
-          item.haex_passwords_item_details.password?.includes(search.value) ||
-          item.haex_passwords_item_details.tags?.includes(search.value) ||
-          item.haex_passwords_item_details.url?.includes(search.value) ||
-          item.haex_passwords_item_details.username?.includes(search.value)
-        )
-      })
-      .map<IPasswordMenuItem>((item) => ({
-        icon: item.haex_passwords_item_details.icon,
-        id: item.haex_passwords_item_details.id,
-        name: item.haex_passwords_item_details.title,
-        type: 'item',
-      })),
+    ...filteredItems.map<IPasswordMenuItem>((item) => ({
+      icon: item.haex_passwords_item_details.icon,
+      id: item.haex_passwords_item_details.id,
+      name: item.haex_passwords_item_details.title,
+      type: 'item',
+    })),
   )
 
   return menuItems
@@ -208,7 +205,6 @@ const onPasteAsync = async () => {
 }
 onKeyStroke('v', async (event) => {
   if (event.ctrlKey) {
-    event.preventDefault()
     await onPasteAsync()
   }
 })
@@ -221,6 +217,7 @@ watch(escape, () => {
 onKeyStroke('a', (event) => {
   if (event.ctrlKey) {
     event.preventDefault()
+    event.stopImmediatePropagation()
     selectedItems.value = new Set(groupItems.value)
   }
 })

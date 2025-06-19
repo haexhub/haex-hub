@@ -1,5 +1,5 @@
 export const useSearchStore = defineStore('searchStore', () => {
-  const search = ref()
+  const search = ref('')
 
   return {
     search,

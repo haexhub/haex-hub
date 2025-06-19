@@ -28,13 +28,13 @@ export const usePasswordGroupStore = defineStore('passwordGroupStore', () => {
     currentGroupId.value ? readGroupAsync(currentGroupId.value) : null,
   )
 
-  const currentGroupItems = reactive<{
+  /* const currentGroupItems = reactive<{
     items: SelectHaexPasswordsItemDetails[]
     groups: SelectHaexPasswordsGroups[]
   }>({
     items: [],
     groups: [],
-  })
+  }) */
 
   const selectedGroupItems = ref<IPasswordMenuItem[]>()
 
@@ -57,19 +57,15 @@ export const usePasswordGroupStore = defineStore('passwordGroupStore', () => {
 
   const syncGroupItemsAsync = async (currentGroupId?: string | null) => {
     const { addNotificationAsync } = useNotificationStore()
-    const { readByGroupIdAsync } = usePasswordItemStore()
+    const { readByGroupIdAsync, syncItemsAsync } = usePasswordItemStore()
 
     groups.value = await readGroupsAsync()
+    await syncItemsAsync()
     currentGroup.value = groups.value?.find(
       (group) => group.id === currentGroupId,
     )
-    console.log(
-      'syncGroupItemsAsync',
-      groups.value,
-      currentGroup.value,
-      currentGroupId,
-    )
-    try {
+
+    /* try {
       currentGroupItems.groups =
         (await getByParentIdAsync(currentGroupId)) ?? []
       currentGroupItems.items = (await readByGroupIdAsync(currentGroupId)) ?? []
@@ -81,7 +77,7 @@ export const usePasswordGroupStore = defineStore('passwordGroupStore', () => {
         type: 'log',
         text: JSON.stringify(error),
       })
-    }
+    } */
   }
 
   watch(currentGroupId, () => syncGroupItemsAsync(currentGroupId.value), {
@@ -98,7 +94,7 @@ export const usePasswordGroupStore = defineStore('passwordGroupStore', () => {
     createTrashIfNotExistsAsync,
     currentGroup,
     currentGroupId,
-    currentGroupItems,
+    // currentGroupItems,
     deleteGroupAsync,
     getChildGroupsRecursiveAsync,
     groups,

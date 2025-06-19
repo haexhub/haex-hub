@@ -176,12 +176,6 @@ const checkInput = () => {
 const { copy, copied } = useClipboard()
 
 const { t } = useI18n()
-
-onKeyStroke('a', (event) => {
-  if (event.ctrlKey) {
-    event.stopImmediatePropagation()
-  }
-})
 </script>
 
 <i18n lang="yaml">
