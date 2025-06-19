@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="menuItems?.length"
-    class="h-full"
+    class="flex-1"
   >
     <ul
       class="flex flex-col w-full h-full gap-y-2 first:rounded-t-md last:rounded-b-md p-1"
@@ -43,10 +43,9 @@
   </div>
   <div
     v-else
-    class="flex justify-center items-center px-20 flex-1"
+    class="flex justify-center items-center px-20 flex-1 my-auto"
   >
     <UiIconNoData class="text-primary size-24 shrink-0" />
-    <!-- <p>{{ t('empty') }}</p> -->
   </div>
 </template>
 

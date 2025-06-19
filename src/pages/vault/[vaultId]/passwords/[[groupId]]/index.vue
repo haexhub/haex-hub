@@ -6,7 +6,7 @@
         class="px-2 sticky -top-2 z-10 bg-base-200"
         v-show="breadCrumbs.length"
       />
-      <div class="flex-1 overflow-auto py-1">
+      <div class="flex-1 py-1 flex">
         <HaexPassMobileMenu
           :menu-items="groupItems"
           ref="listRef"
