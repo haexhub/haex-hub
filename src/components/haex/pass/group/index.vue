@@ -2,7 +2,7 @@
   <div class="p-1">
     <UiCard
       v-if="group"
-      :title="mode === 'create' ? t('title.create') : t('title.edit')"
+      :title="mode === 'edit' ? t('title.edit') : t('title.create')"
       icon="mdi:folder-plus-outline"
       @close="$emit('close')"
       body-class="px-0"
@@ -12,9 +12,9 @@
         @submit.prevent="$emit('submit')"
       >
         <UiInput
-          :check-input="check"
           :label="t('name')"
           :placeholder="t('name')"
+          :read_only
           autofocus
           v-model="group.name"
           ref="nameRef"
@@ -23,9 +23,9 @@
 
         <UiInput
           v-model="group.description"
-          :check-input="check"
           :label="t('description')"
           :placeholder="t('description')"
+          :read_only
           @keyup.enter="$emit('submit')"
         />
 
@@ -33,12 +33,16 @@
           <UiSelectIcon
             v-model="group.icon"
             default-icon="mdi:folder-outline"
+            :read_only
           />
 
-          <UiSelectColor v-model="group.color" />
+          <UiSelectColor
+            v-model="group.color"
+            :read_only
+          />
         </div>
 
-        <div class="flex flex-wrap justify-end gap-4">
+        <!-- <div class="flex flex-wrap justify-end gap-4">
           <UiButton
             class="btn-error btn-outline flex-1"
             @click="$emit('close')"
@@ -54,7 +58,7 @@
             {{ mode === 'create' ? t('create') : t('save') }}
             <Icon name="mdi:check" />
           </UiButton>
-        </div>
+        </div> -->
       </form>
     </UiCard>
   </div>
@@ -64,12 +68,13 @@
 import type { SelectHaexPasswordsGroups } from '~~/src-tauri/database/schemas/vault'
 
 const group = defineModel<SelectHaexPasswordsGroups | null>()
-defineEmits(['close', 'submit', 'back'])
-defineProps<{ mode: 'create' | 'edit' }>()
+const { read_only = false } = defineProps<{
+  read_only?: boolean
+  mode: 'create' | 'edit'
+}>()
+defineEmits(['close', 'submit'])
 
 const { t } = useI18n()
-
-const check = ref<boolean>(false)
 
 const nameRef = useTemplateRef('nameRef')
 onStartTyping(() => {

@@ -8,6 +8,7 @@
     :rules
     :type="type"
     :with-copy-button
+    @keyup="(e) => $emit('keyup', e)"
   >
     <template #append>
       <slot name="append" />
@@ -36,6 +37,10 @@ defineProps<{
   placeholder?: string
   rules?: ZodSchema
   withCopyButton?: boolean
+}>()
+
+defineEmits<{
+  keyup: [KeyboardEvent]
 }>()
 
 const type = ref<'password' | 'text'>('password')

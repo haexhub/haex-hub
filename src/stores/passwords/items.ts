@@ -6,6 +6,7 @@ import {
   haexPasswordsItemKeyValues,
   type InsertHaexPasswordsItemDetails,
   type InserthaexPasswordsItemKeyValues,
+  type SelectHaexPasswordsGroupItems,
   type SelectHaexPasswordsGroups,
   type SelectHaexPasswordsItemDetails,
   type SelectHaexPasswordsItemKeyValues,
@@ -23,6 +24,25 @@ export const usePasswordItemStore = defineStore('passwordItemStore', () => {
 
   const currentItem = computedAsync(() => readAsync(currentItemId.value))
 
+  const items = ref<
+    {
+      haex_passwords_item_details: SelectHaexPasswordsItemDetails
+      haex_passwords_group_items: SelectHaexPasswordsGroupItems
+    }[]
+  >([])
+
+  const syncItemsAsync = async () => {
+    const { currentVault } = useVaultStore()
+
+    items.value = await currentVault.drizzle
+      .select()
+      .from(haexPasswordsItemDetails)
+      .innerJoin(
+        haexPasswordsGroupItems,
+        eq(haexPasswordsItemDetails.id, haexPasswordsGroupItems.itemId),
+      )
+  }
+
   return {
     currentItemId,
     currentItem,
@@ -31,9 +51,11 @@ export const usePasswordItemStore = defineStore('passwordItemStore', () => {
     addKeyValuesAsync,
     deleteAsync,
     deleteKeyValueAsync,
+    items,
     readByGroupIdAsync,
     readAsync,
     readKeyValuesAsync,
+    syncItemsAsync,
     updateAsync,
   }
 })

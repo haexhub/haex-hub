@@ -1,16 +1,16 @@
-/* import de from '@/stores/sidebar/de.json';
-import en from '@/stores/sidebar/en.json'; */
+import passwordActionMenuDe from '@/stores/passwords/actionMenu/de.json'
+import passwordActionMenuEn from '@/stores/passwords/actionMenu/en.json'
 
 export default defineI18nConfig(() => {
   return {
     legacy: false,
     messages: {
       de: {
-        //sidebar: de,
+        passwordActionMenu: passwordActionMenuDe,
       },
       en: {
-        //sidebar: en,
+        passwordActionMenu: passwordActionMenuEn,
       },
     },
-  };
-});
+  }
+})

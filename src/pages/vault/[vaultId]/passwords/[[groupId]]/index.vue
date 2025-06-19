@@ -1,12 +1,12 @@
 <template>
   <div class="h-full relative">
-    <div class="h-full">
+    <div class="h-full flex flex-col">
       <HaexPassGroupBreadcrumbs
         :items="breadCrumbs"
-        class="px-2 z-10 bg-base-200"
+        class="px-2"
         v-show="breadCrumbs.length"
       />
-      <div class="h-full overflow-auto flex flex-col">
+      <div class="flex-1 overflow-auto">
         <HaexPassMobileMenu
           :menu-items="groupItems"
           ref="listRef"
@@ -76,40 +76,77 @@ definePageMeta({
   name: 'passwordGroupItems',
 })
 
+const { t } = useI18n()
+const { add } = useSnackbar()
+
 const selectedItems = ref<Set<IPasswordMenuItem>>(new Set())
 const { menu } = storeToRefs(usePasswordsActionMenuStore())
+
+const { syncItemsAsync } = usePasswordItemStore()
+const { syncGroupItemsAsync } = usePasswordGroupStore()
+onMounted(async () => {
+  try {
+    await Promise.allSettled([syncItemsAsync(), syncGroupItemsAsync()])
+  } catch (error) {}
+})
 
 const {
   breadCrumbs,
   currentGroupId,
-  currentGroupItems,
   inTrashGroup,
   selectedGroupItems,
+  groups,
 } = storeToRefs(usePasswordGroupStore())
-const { insertGroupItemsAsync } = usePasswordGroupStore()
+
+const { items } = storeToRefs(usePasswordItemStore())
+const { search } = storeToRefs(useSearchStore())
 
 const groupItems = computed<IPasswordMenuItem[]>(() => {
-  const items: IPasswordMenuItem[] = []
+  const menuItems: IPasswordMenuItem[] = []
 
-  items.push(
-    ...currentGroupItems.value.groups.map<IPasswordMenuItem>((group) => ({
-      color: group.color,
-      icon: group.icon,
-      id: group.id,
-      name: group.name,
-      type: 'group',
-    })),
+  menuItems.push(
+    ...groups.value
+      .filter((group) => {
+        if (!search.value) return group.parentId == currentGroupId.value
+
+        return (
+          group.name?.includes(search.value) ||
+          group.description?.includes(search.value)
+        )
+      })
+      .map<IPasswordMenuItem>((group) => ({
+        color: group.color,
+        icon: group.icon,
+        id: group.id,
+        name: group.name,
+        type: 'group',
+      })),
   )
 
-  items.push(
-    ...currentGroupItems.value.items.map<IPasswordMenuItem>((item) => ({
-      icon: item.icon,
-      id: item.id,
-      name: item.title,
-      type: 'item',
-    })),
+  menuItems.push(
+    ...items.value
+      .filter((item) => {
+        if (!search.value)
+          return item.haex_passwords_group_items.groupId == currentGroupId.value
+
+        return (
+          item.haex_passwords_item_details.title?.includes(search.value) ||
+          item.haex_passwords_item_details.note?.includes(search.value) ||
+          item.haex_passwords_item_details.password?.includes(search.value) ||
+          item.haex_passwords_item_details.tags?.includes(search.value) ||
+          item.haex_passwords_item_details.url?.includes(search.value) ||
+          item.haex_passwords_item_details.username?.includes(search.value)
+        )
+      })
+      .map<IPasswordMenuItem>((item) => ({
+        icon: item.haex_passwords_item_details.icon,
+        id: item.haex_passwords_item_details.id,
+        name: item.haex_passwords_item_details.title,
+        type: 'item',
+      })),
   )
-  return items
+
+  return menuItems
 })
 
 const { isVisible } = storeToRefs(useSidebarStore())
@@ -150,8 +187,7 @@ onKeyStroke('x', (event) => {
   }
 })
 
-const { t } = useI18n()
-const { add } = useSnackbar()
+const { insertGroupItemsAsync } = usePasswordGroupStore()
 
 const onPasteAsync = async () => {
   if (!selectedGroupItems.value?.length) return
@@ -190,7 +226,8 @@ onKeyStroke('a', (event) => {
 })
 
 const { deleteAsync } = usePasswordItemStore()
-const { deleteGroupAsync, syncGroupItemsAsync } = usePasswordGroupStore()
+const { deleteGroupAsync } = usePasswordGroupStore()
+
 const onDeleteAsync = async () => {
   for (const item of selectedItems.value) {
     if (item.type === 'group') {

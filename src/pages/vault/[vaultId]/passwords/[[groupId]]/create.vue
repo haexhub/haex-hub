@@ -1,10 +1,28 @@
 <template>
   <div>
+    {{ currentGroupId }}
     <HaexPassGroup
       v-model="group"
       mode="create"
       @close="onClose"
       @submit="createAsync"
+    />
+
+    <HaexPassMenuBottom
+      @close="onClose"
+      @save="createAsync"
+      show-close-button
+      show-save-button
+      :has-changes
+    >
+    </HaexPassMenuBottom>
+
+    <HaexPassDialogUnsavedChanges
+      :has-changes
+      @abort="showUnsavedChangesDialog = false"
+      @confirm="onConfirmIgnoreChanges"
+      v-model:ignore-changes="ignoreChanges"
+      v-model:open="showUnsavedChangesDialog"
     />
   </div>
 </template>
@@ -34,7 +52,14 @@ const errors = ref({
   description: [],
 })
 
+const ignoreChanges = ref(false)
+
 const onClose = () => {
+  if (showUnsavedChangesDialog.value) return
+
+  if (hasChanges.value && !ignoreChanges.value) {
+    return (showUnsavedChangesDialog.value = true)
+  }
   useRouter().back()
 }
 
@@ -45,11 +70,11 @@ const createAsync = async () => {
 
     const newGroup = await addGroupAsync(group.value)
 
-    console.log('newGroup', newGroup)
     if (!newGroup.id) {
       return
     }
 
+    ignoreChanges.value = true
     await navigateTo(
       useLocalePath()({
         name: 'passwordGroupItems',
@@ -64,5 +89,21 @@ const createAsync = async () => {
   } catch (error) {
     console.log(error)
   }
+}
+
+const hasChanges = computed(() => {
+  return !!(
+    group.value.color ||
+    group.value.description ||
+    group.value.icon ||
+    group.value.name
+  )
+})
+
+const showUnsavedChangesDialog = ref(false)
+const onConfirmIgnoreChanges = () => {
+  showUnsavedChangesDialog.value = false
+  ignoreChanges.value = true
+  onClose()
 }
 </script>

@@ -13,53 +13,55 @@
     </slot>
   </button>
 
-  <Teleport to="body">
-    <div
-      :id
-      ref="modalRef"
-      class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden modal-middle p-0 xs:p-2 --prevent-on-load-init pointer-events-auto max-w-none"
-      role="dialog"
-      tabindex="-1"
-    >
+  <div class="hidden">
+    <Teleport to="body">
       <div
-        class="overlay-animation-target overlay-open:duration-300 overlay-open:opacity-100 transition-all ease-out modal-dialog"
+        :id
+        ref="modalRef"
+        class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden modal-middle p-0 xs:p-2 --prevent-on-load-init pointer-events-auto max-w-none"
+        role="dialog"
+        tabindex="-1"
       >
-        <div class="modal-content justify-between">
-          <div class="modal-header py-0 sm:py-4">
-            <div
-              v-if="title || $slots.title"
-              class="modal-title py-4 break-all"
-            >
-              <slot name="title">
-                {{ title }}
-              </slot>
+        <div
+          class="overlay-animation-target overlay-open:duration-300 overlay-open:opacity-100 transition-all ease-out modal-dialog"
+        >
+          <div class="modal-content justify-between">
+            <div class="modal-header py-0 sm:py-4">
+              <div
+                v-if="title || $slots.title"
+                class="modal-title py-4 break-all"
+              >
+                <slot name="title">
+                  {{ title }}
+                </slot>
+              </div>
+
+              <button
+                type="button"
+                class="btn btn-text btn-circle btn-sm absolute end-3 top-3"
+                :aria-label="t('close')"
+                tabindex="1"
+                @click="open = false"
+              >
+                <Icon
+                  name="mdi:close"
+                  size="18"
+                />
+              </button>
             </div>
 
-            <button
-              type="button"
-              class="btn btn-text btn-circle btn-sm absolute end-3 top-3"
-              :aria-label="t('close')"
-              tabindex="1"
-              @click="open = false"
-            >
-              <Icon
-                name="mdi:close"
-                size="18"
-              />
-            </button>
-          </div>
+            <div class="modal-body text-sm sm:text-base grow mt-0 pt-0">
+              <slot />
+            </div>
 
-          <div class="modal-body text-sm sm:text-base grow mt-0 pt-0">
-            <slot />
-          </div>
-
-          <div class="modal-footer flex-col sm:flex-row">
-            <slot name="buttons" />
+            <div class="modal-footer flex-col sm:flex-row">
+              <slot name="buttons" />
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </Teleport>
+    </Teleport>
+  </div>
 </template>
 
 <script setup lang="ts">

@@ -3,7 +3,7 @@
     <HaexPassItem
       :history="item.history"
       :read_only
-      @close="onClose"
+      @close="onClose()"
       @submit="onUpdateAsync"
       v-model:details="item.details"
       v-model:key-values-add="item.keyValuesAdd"
@@ -11,7 +11,7 @@
       v-model:key-values="item.keyValues"
     />
 
-    <div
+    <!-- <div
       class="fixed bottom-4 flex justify-between transition-all pointer-events-none right-0 sm:items-center items-end"
       :class="[isVisible ? 'left-15 ' : 'left-0']"
     >
@@ -85,27 +85,35 @@
           </UiButton>
         </UiTooltip>
       </div>
-    </div>
+    </div> -->
 
-    <UiDialogConfirm
+    <HaexPassMenuBottom
+      :show-edit-button="read_only && !hasChanges"
+      :show-readonly-button="!read_only && !hasChanges"
+      :show-save-button="!read_only && hasChanges"
+      @close="onClose"
+      @delete="showConfirmDeleteDialog = true"
+      @edit="read_only = false"
+      @readonly="read_only = true"
+      @save="onUpdateAsync"
+      show-close-button
+      show-delete-button
+    >
+    </HaexPassMenuBottom>
+
+    <HaexPassDialogDeleteItem
       v-model:open="showConfirmDeleteDialog"
-      :confirm-label="t('dialog.delete.label')"
-      :title="t('dialog.delete.title')"
       @abort="showConfirmDeleteDialog = false"
       @confirm="deleteItemAsync"
     >
-      {{ t('dialog.delete.question') }}
-    </UiDialogConfirm>
+    </HaexPassDialogDeleteItem>
 
-    <UiDialogConfirm
-      v-model:open="showUnsavedChangesDialog"
-      :confirm-label="t('dialog.unsavedChanges.label')"
-      :title="t('dialog.unsavedChanges.title')"
+    <HaexPassDialogUnsavedChanges
+      :has-changes="hasChanges"
       @abort="showUnsavedChangesDialog = false"
       @confirm="onConfirmIgnoreChanges"
-    >
-      {{ t('dialog.unsavedChanges.question') }}
-    </UiDialogConfirm>
+      v-model:open="showUnsavedChangesDialog"
+    />
   </div>
 </template>
 
@@ -126,7 +134,6 @@ defineProps({
   withCopyButton: Boolean,
 })
 
-const { isVisible } = storeToRefs(useSidebarStore())
 const read_only = ref(true)
 const showConfirmDeleteDialog = ref(false)
 const { t } = useI18n()
@@ -165,7 +172,6 @@ const { currentItem } = storeToRefs(usePasswordItemStore())
 watch(
   currentItem,
   () => {
-    console.log('watch currentItem', currentItem.value)
     if (!currentItem.value) return
     item.details = JSON.parse(JSON.stringify(currentItem.value?.details))
     item.keyValues = JSON.parse(JSON.stringify(currentItem.value?.keyValues))
@@ -174,15 +180,14 @@ watch(
     item.keyValuesDelete = []
     item.originalDetails = JSON.stringify(currentItem.value?.details)
     item.originalKeyValues = JSON.stringify(currentItem.value?.keyValues)
-    ignoreChanges.value = false
   },
   { immediate: true },
 )
 
 const { add } = useSnackbar()
 const { deleteAsync, updateAsync } = usePasswordItemStore()
-const { syncGroupItemsAsync, trashId } = usePasswordGroupStore()
-const { currentGroupId } = storeToRefs(usePasswordGroupStore())
+const { syncGroupItemsAsync } = usePasswordGroupStore()
+const { currentGroupId, inTrashGroup } = storeToRefs(usePasswordGroupStore())
 
 const onUpdateAsync = async () => {
   try {
@@ -195,31 +200,29 @@ const onUpdateAsync = async () => {
     })
     if (newId) add({ type: 'success', text: t('success.update') })
     syncGroupItemsAsync(currentGroupId.value)
-    ignoreChanges.value = true
-    onClose()
+    onClose(true)
   } catch (error) {
     add({ type: 'error', text: t('error.update') })
   }
 }
 
-const onClose = () => {
+const onClose = (ignoreChanges?: boolean) => {
   if (showConfirmDeleteDialog.value || showUnsavedChangesDialog.value) return
 
-  if (hasChanges.value && !ignoreChanges.value)
+  if (hasChanges.value && !ignoreChanges)
     return (showUnsavedChangesDialog.value = true)
 
-  ignoreChanges.value = false
   read_only.value = true
   useRouter().back()
 }
 
 const deleteItemAsync = async () => {
   try {
-    await deleteAsync(item.details.id, currentGroupId.value === trashId)
+    await deleteAsync(item.details.id, inTrashGroup.value)
     showConfirmDeleteDialog.value = false
     add({ type: 'success', text: t('success.delete') })
-    syncGroupItemsAsync(currentGroupId.value)
-    onClose()
+    await syncGroupItemsAsync(currentGroupId.value)
+    onClose(true)
   } catch (errro) {
     add({
       type: 'error',
@@ -239,22 +242,14 @@ const hasChanges = computed(
 )
 
 const showUnsavedChangesDialog = ref(false)
-const ignoreChanges = ref(false)
-
 const onConfirmIgnoreChanges = () => {
-  ignoreChanges.value = true
   showUnsavedChangesDialog.value = false
-  onClose()
+  onClose(true)
 }
 </script>
 
 <i18n lang="yaml">
 de:
-  save: Speichern
-  abort: Abbrechen
-  edit: Bearbeiten
-  noEdit: Lesemodus
-  delete: Löschen
   success:
     update: Eintrag erfolgreich aktualisiert
     delete: Eintrag wurde gelöscht
@@ -266,21 +261,7 @@ de:
     keyValue: Extra
     history: Verlauf
 
-  dialog:
-    delete:
-      title: Eintrag löschen
-      question: Soll der Eintrag wirklich gelöscht werden?
-      label: Löschen
-    unsavedChanges:
-      title: Nicht gespeicherte Änderungen
-      question: Sollen die Änderungen verworfen werden?
-      label: Verwerfen
 en:
-  save: Save
-  abort: Abort
-  edit: Edit
-  noEdit: Read Mode
-  delete: Delete
   success:
     update: Entry successfully updated
     delete: Entry successfully removed
@@ -291,14 +272,4 @@ en:
     details: Details
     keyValue: Extra
     history: History
-
-  dialog:
-    delete:
-      title: Delete Entry
-      question: Should the entry really be deleted?
-      label: Delete
-    unsavedChanges:
-      title: Unsaved changes
-      question: Should the changes be discarded?
-      label: discard
 </i18n>

@@ -1,5 +1,5 @@
 <template>
-  <div class="breadcrumbs sticky top-0">
+  <div class="breadcrumbs">
     <ul>
       <li>
         <NuxtLinkLocale :to="{ name: 'passwordGroupItems' }">

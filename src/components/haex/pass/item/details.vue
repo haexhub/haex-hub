@@ -25,6 +25,7 @@
         :with-copy-button
         :read_only
         v-model.trim="itemDetails.username"
+        @keyup.enter="$emit('submit')"
       />
 
       <UiInputPassword
@@ -33,6 +34,7 @@
         :read_only
         :with-copy-button
         v-model.trim="itemDetails.password"
+        @keyup.enter="$emit('submit')"
       >
         <template #append>
           <UiDialogPasswordGenerator
@@ -51,6 +53,7 @@
         :read_only
         :with-copy-button
         v-model="itemDetails.url"
+        @keyup.enter="$emit('submit')"
       />
 
       <UiSelectIcon

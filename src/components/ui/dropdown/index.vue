@@ -32,7 +32,7 @@
       >
         <li
           :is="itemIs"
-          @click="$emit('select', item)"
+          @click="read_only ? '' : $emit('select', item)"
           class="dropdown-item"
           v-for="item in items"
         >
@@ -59,6 +59,7 @@ const { itemIs = 'li', offset = '[--offset:0]' } = defineProps<{
   itemIs?: string
   activatorClass?: string
   offset?: string
+  read_only?: boolean
 }>()
 
 defineEmits<{ select: [T] }>()

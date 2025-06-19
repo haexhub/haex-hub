@@ -1,11 +1,43 @@
 <template>
   <div>
-    currentGroup{{ currentGroup }}
     <HaexPassGroup
-      v-model="group"
-      mode="edit"
+      :read_only
       @close="onClose"
       @submit="onSaveAsync"
+      mode="edit"
+      v-model="group"
+    />
+
+    <HaexPassMenuBottom
+      :show-edit-button="read_only && !hasChanges"
+      :show-readonly-button="!read_only && !hasChanges"
+      :show-save-button="hasChanges"
+      :has-changes
+      @close="onClose()"
+      @delete="showConfirmDeleteDialog = true"
+      @edit="read_only = false"
+      @readonly="read_only = true"
+      @save="onSaveAsync"
+      show-close-button
+      show-delete-button
+    >
+    </HaexPassMenuBottom>
+
+    <HaexPassDialogDeleteItem
+      v-model:open="showConfirmDeleteDialog"
+      @abort="showConfirmDeleteDialog = false"
+      @confirm="onDeleteAsync"
+      :item-name="group.name"
+      :final="inTrashGroup"
+    >
+    </HaexPassDialogDeleteItem>
+
+    <HaexPassDialogUnsavedChanges
+      :has-changes="hasChanges"
+      v-model:ignore-changes="ignoreChanges"
+      @abort="showUnsavedChangesDialog = false"
+      @confirm="onConfirmIgnoreChanges"
+      v-model:open="showUnsavedChangesDialog"
     />
   </div>
 </template>
@@ -19,47 +51,112 @@ definePageMeta({
 
 const { t } = useI18n()
 
-const check = ref(false)
+const { currentGroup, inTrashGroup, currentGroupId } = storeToRefs(
+  usePasswordGroupStore(),
+)
 
-const { currentGroup } = storeToRefs(usePasswordGroupStore())
+const group = ref<SelectHaexPasswordsGroups>({
+  color: null,
+  createdAt: null,
+  description: null,
+  icon: null,
+  id: '',
+  name: null,
+  order: null,
+  parentId: null,
+  updateAt: null,
+})
 
-const group = ref<SelectHaexPasswordsGroups>()
+const original = ref<string>('')
+const ignoreChanges = ref(false)
 
+const { readGroupAsync } = usePasswordGroupStore()
 watch(
-  currentGroup,
-  () => {
-    group.value = JSON.parse(JSON.stringify(currentGroup.value))
+  currentGroupId,
+  async () => {
+    if (!currentGroupId.value) return
+    ignoreChanges.value = false
+    try {
+      const foundGroup = await readGroupAsync(currentGroupId.value)
+      if (foundGroup) {
+        original.value = JSON.stringify(foundGroup)
+        group.value = foundGroup
+      }
+    } catch (error) {
+      console.error(error)
+    }
   },
   { immediate: true },
 )
+/* watch(
+  currentGroup,
+  (n, o) => {
+    console.log('currentGroup', currentGroup.value, n, o)
+    original.value = JSON.stringify(currentGroup.value)
+    group.value = JSON.parse(original.value)
+    ignoreChanges.value = false
+  },
+  { immediate: true },
+) */
 
-const errors = ref({
-  name: [],
-  description: [],
-})
+const read_only = ref(true)
+
+const hasChanges = computed(
+  () => JSON.stringify(group.value) !== original.value,
+)
 
 const onClose = () => {
+  if (showConfirmDeleteDialog.value || showUnsavedChangesDialog.value) return
+
+  read_only.value = true
   useRouter().back()
 }
 
 const { add } = useSnackbar()
 
-const { updateAsync, syncGroupItemsAsync } = usePasswordGroupStore()
+const { updateAsync, syncGroupItemsAsync, deleteGroupAsync } =
+  usePasswordGroupStore()
 
 const onSaveAsync = async () => {
   try {
-    check.value = true
     if (!group.value) return
 
-    if (errors.value.name.length || errors.value.description.length) return
-
+    ignoreChanges.value = true
     await updateAsync(group.value)
-    syncGroupItemsAsync()
+    await syncGroupItemsAsync(group.value.id)
     add({ type: 'success', text: t('change.success') })
     onClose()
   } catch (error) {
     add({ type: 'error', text: t('change.error') })
     console.log(error)
+  }
+}
+
+const showConfirmDeleteDialog = ref(false)
+const showUnsavedChangesDialog = ref(false)
+const onConfirmIgnoreChanges = () => {
+  showUnsavedChangesDialog.value = false
+  onClose()
+}
+
+const onDeleteAsync = async () => {
+  try {
+    const parentId = group.value.parentId
+    await deleteGroupAsync(group.value.id, inTrashGroup.value)
+    await syncGroupItemsAsync(parentId)
+    showConfirmDeleteDialog.value = false
+    ignoreChanges.value = true
+    await navigateTo(
+      useLocalePath()({
+        name: 'passwordGroupItems',
+        params: {
+          ...useRouter().currentRoute.value.params,
+          groupId: parentId,
+        },
+      }),
+    )
+  } catch (error) {
+    console.error(error)
   }
 }
 </script>

@@ -9,7 +9,15 @@
       v-model:key-values-add="item.keyValuesAdd"
     />
 
-    <div
+    <HaexPassMenuBottom
+      @close="onClose"
+      @save="onCreateAsync"
+      show-close-button
+      show-save-button
+    >
+    </HaexPassMenuBottom>
+
+    <!-- <div
       class="fixed bottom-4 flex justify-between transition-all pointer-events-none right-0 sm:items-center items-end"
       :class="[isVisible ? 'left-15 ' : 'left-0']"
     >
@@ -35,7 +43,7 @@
         </UiButton>
       </UiTooltip>
       <div class="flex items-center justify-center flex-1"></div>
-    </div>
+    </div> -->
   </div>
 </template>
 

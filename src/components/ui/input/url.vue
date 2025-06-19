@@ -8,6 +8,7 @@
     :rules
     :with-copy-button
     v-model.trim="value"
+    @keyup="(e) => $emit('keyup', e)"
   >
     <template #append>
       <UiButton
@@ -38,6 +39,10 @@ defineProps({
   withCopyButton: Boolean,
   read_only: Boolean,
 })
+
+defineEmits<{
+  keyup: [KeyboardEvent]
+}>()
 </script>
 
 <i18n lang="json">

@@ -1,7 +1,7 @@
 <template>
   <div class="p-1">
     <UiCard
-      body-class="rounded overflow-auto px-0 h-full"
+      body-class="rounded overflow-auto p-0 h-full"
       @close="onClose"
     >
       <div class="">

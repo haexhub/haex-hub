@@ -3,6 +3,7 @@
     :items="icons"
     class="btn"
     @select="(newIcon) => (iconName = newIcon)"
+    :read_only
   >
     <template #activator>
       <Icon :name="iconName ? iconName : defaultIcon || icons.at(0)" />
@@ -13,7 +14,7 @@
         <li
           class="dropdown-item"
           v-for="item in items"
-          @click="iconName = item"
+          @click="read_only ? '' : (iconName = item)"
         >
           <Icon
             :name="item"
@@ -73,5 +74,5 @@ const icons = [
 
 const iconName = defineModel<string | undefined | null>()
 
-defineProps<{ defaultIcon?: string }>()
+defineProps<{ defaultIcon?: string; read_only?: boolean }>()
 </script>

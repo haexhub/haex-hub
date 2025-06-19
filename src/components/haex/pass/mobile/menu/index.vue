@@ -1,5 +1,8 @@
 <template>
-  <div v-if="menuItems?.length">
+  <div
+    v-if="menuItems?.length"
+    class="h-full"
+  >
     <ul
       class="flex flex-col w-full h-full gap-y-2 first:rounded-t-md last:rounded-b-md p-1"
       ref="listRef"
@@ -40,7 +43,7 @@
   </div>
   <div
     v-else
-    class="flex justify-center items-center px-20 h-full"
+    class="flex justify-center items-center px-20 flex-1 bg-red-100"
   >
     <UiIconNoData class="text-primary size-24 shrink-0" />
     <!-- <p>{{ t('empty') }}</p> -->
@@ -78,6 +81,7 @@ watch(selectedItems, () => {
 
 const localePath = useLocalePath()
 const { ctrl } = useMagicKeys()
+const { search } = storeToRefs(useSearchStore())
 
 const onClickItemAsync = async (item: IPasswordMenuItem) => {
   currentSelectedItem.value = null
@@ -91,6 +95,7 @@ const onClickItemAsync = async (item: IPasswordMenuItem) => {
 
     if (!selectedItems.value.size) longPressedHook.value = false
   } else {
+    search.value = ''
     if (item.type === 'group')
       await navigateTo(
         localePath({

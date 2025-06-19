@@ -35,7 +35,25 @@
         </NuxtLinkLocale>
       </div>
 
+      <div></div>
+
       <div class="flex items-center gap-x-4">
+        <div class="flex items-center">
+          <UiInput
+            v-model="search"
+            :label="t('search.label')"
+            class=""
+          >
+            <template #append>
+              <UiButton class="btn-square btn-primary">
+                <Icon
+                  name="mdi:magnify"
+                  class="size-full p-1"
+                />
+              </UiButton>
+            </template>
+          </UiInput>
+        </div>
         <HaexMenuNotifications />
         <HaexMenuMain />
       </div>
@@ -78,26 +96,34 @@ const { t } = useI18n()
 
 const { currentVaultName } = storeToRefs(useVaultStore())
 
-const { menu, isVisible } = storeToRefs(useSidebarStore())
-
 const { extensionLinks } = storeToRefs(useExtensionsStore())
 
+const { menu, isVisible } = storeToRefs(useSidebarStore())
 const toogleSidebar = () => {
   isVisible.value = !isVisible.value
 }
+
+const { search } = storeToRefs(useSearchStore())
 </script>
 
 <i18n lang="yaml">
 de:
   vault:
     close: Vault schließen
+
   sidebar:
     close: Sidebar ausblenden
     show: Sidebar anzeigen
+
+  search:
+    label: Suche
 en:
   vault:
     close: Close vault
   sidebar:
     close: close sidebar
     show: show sidebar
+
+  search:
+    label: Search
 </i18n>
