@@ -1,12 +1,12 @@
 <template>
-  <div class="h-full relative">
-    <div class="h-full flex flex-col">
+  <div class="h-full">
+    <div class="min-h-full flex flex-col">
       <HaexPassGroupBreadcrumbs
         :items="breadCrumbs"
-        class="px-2"
+        class="px-2 sticky top-0 z-10 bg-base-200"
         v-show="breadCrumbs.length"
       />
-      <div class="flex-1 overflow-auto">
+      <div class="flex-1 overflow-auto py-1">
         <HaexPassMobileMenu
           :menu-items="groupItems"
           ref="listRef"
