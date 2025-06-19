@@ -7,7 +7,7 @@
         <button
           ref="sidebarToogleRef"
           type="button"
-          class="btn btn-text btn-square me-2 z-50"
+          class="btn btn-text btn-square me-2 z-30"
           aria-haspopup="dialog"
           aria-expanded="false"
           aria-controls="sidebar"

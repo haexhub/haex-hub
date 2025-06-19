@@ -110,6 +110,7 @@
 
     <HaexPassDialogUnsavedChanges
       :has-changes="hasChanges"
+      v-model:ignore-changes="ignoreChanges"
       @abort="showUnsavedChangesDialog = false"
       @confirm="onConfirmIgnoreChanges"
       v-model:open="showUnsavedChangesDialog"
@@ -189,6 +190,7 @@ const { deleteAsync, updateAsync } = usePasswordItemStore()
 const { syncGroupItemsAsync } = usePasswordGroupStore()
 const { currentGroupId, inTrashGroup } = storeToRefs(usePasswordGroupStore())
 
+const ignoreChanges = ref(false)
 const onUpdateAsync = async () => {
   try {
     const newId = await updateAsync({
@@ -200,16 +202,17 @@ const onUpdateAsync = async () => {
     })
     if (newId) add({ type: 'success', text: t('success.update') })
     syncGroupItemsAsync(currentGroupId.value)
-    onClose(true)
+    ignoreChanges.value = true
+    onClose()
   } catch (error) {
     add({ type: 'error', text: t('error.update') })
   }
 }
 
-const onClose = (ignoreChanges?: boolean) => {
+const onClose = () => {
   if (showConfirmDeleteDialog.value || showUnsavedChangesDialog.value) return
 
-  if (hasChanges.value && !ignoreChanges)
+  if (hasChanges.value && !ignoreChanges.value)
     return (showUnsavedChangesDialog.value = true)
 
   read_only.value = true
@@ -222,7 +225,7 @@ const deleteItemAsync = async () => {
     showConfirmDeleteDialog.value = false
     add({ type: 'success', text: t('success.delete') })
     await syncGroupItemsAsync(currentGroupId.value)
-    onClose(true)
+    onClose()
   } catch (errro) {
     add({
       type: 'error',
@@ -244,7 +247,8 @@ const hasChanges = computed(
 const showUnsavedChangesDialog = ref(false)
 const onConfirmIgnoreChanges = () => {
   showUnsavedChangesDialog.value = false
-  onClose(true)
+  ignoreChanges.value = true
+  onClose()
 }
 </script>
 

@@ -95,7 +95,6 @@ const onClickItemAsync = async (item: IPasswordMenuItem) => {
 
     if (!selectedItems.value.size) longPressedHook.value = false
   } else {
-    search.value = ''
     if (item.type === 'group')
       await navigateTo(
         localePath({
@@ -114,6 +113,7 @@ const onClickItemAsync = async (item: IPasswordMenuItem) => {
         }),
       )
     }
+    search.value = ''
   }
 }
 

@@ -11,13 +11,10 @@
       </slot>
 
       <span
-        class="tooltip-content tooltip-shown:opacity-100 tooltip-shown:visible z-40 pointer-events-none"
+        class="tooltip-content tooltip-shown:opacity-100 tooltip-shown:visible pointer-events-none z-50"
         role="tooltip"
       >
-        <span
-          class="tooltip-body"
-          v-bind="$attrs"
-        >
+        <span class="tooltip-body">
           {{ tooltip }}
         </span>
       </span>
@@ -56,9 +53,5 @@ const props = defineProps({
     type: String as PropType<'focus' | 'hover' | 'click'>,
     default: 'hover',
   },
-})
-
-defineOptions({
-  inheritAttrs: false,
 })
 </script>
