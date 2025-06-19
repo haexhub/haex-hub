@@ -42,16 +42,9 @@
           <UiInput
             v-model="search"
             :label="t('search.label')"
-            class=""
+            with-clear-button
+            prepend-icon="mdi:magnify"
           >
-            <template #append>
-              <UiButton class="btn-square btn-primary">
-                <Icon
-                  name="mdi:magnify"
-                  class="size-full p-1"
-                />
-              </UiButton>
-            </template>
           </UiInput>
         </div>
         <HaexMenuNotifications />

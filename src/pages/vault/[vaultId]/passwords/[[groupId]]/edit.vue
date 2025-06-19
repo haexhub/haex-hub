@@ -51,9 +51,7 @@ definePageMeta({
 
 const { t } = useI18n()
 
-const { currentGroup, inTrashGroup, currentGroupId } = storeToRefs(
-  usePasswordGroupStore(),
-)
+const { inTrashGroup, currentGroupId } = storeToRefs(usePasswordGroupStore())
 
 const group = ref<SelectHaexPasswordsGroups>({
   color: null,
@@ -99,7 +97,7 @@ watch(
   { immediate: true },
 ) */
 
-const read_only = ref(true)
+const read_only = ref(false)
 
 const hasChanges = computed(
   () => JSON.stringify(group.value) !== original.value,

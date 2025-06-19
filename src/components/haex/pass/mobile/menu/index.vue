@@ -43,7 +43,7 @@
   </div>
   <div
     v-else
-    class="flex justify-center items-center px-20 flex-1 bg-red-100"
+    class="flex justify-center items-center px-20 flex-1"
   >
     <UiIconNoData class="text-primary size-24 shrink-0" />
     <!-- <p>{{ t('empty') }}</p> -->

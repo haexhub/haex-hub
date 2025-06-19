@@ -18,7 +18,10 @@ export const usePasswordsActionMenuStore = defineStore(
         icon: 'mdi:folder-plus-outline',
         to: {
           name: 'passwordGroupCreate',
-          params: { groupId: usePasswordGroupStore().currentGroupId },
+          params: {
+            ...useRouter().currentRoute.value.params,
+            groupId: usePasswordGroupStore().currentGroupId,
+          },
           query: {
             ...useRouter().currentRoute.value.query,
           },
@@ -29,7 +32,10 @@ export const usePasswordsActionMenuStore = defineStore(
         icon: 'mdi:key-plus',
         to: {
           name: 'passwordItemCreate',
-          params: { groupId: usePasswordGroupStore().currentGroupId },
+          params: {
+            ...useRouter().currentRoute.value.params,
+            groupId: usePasswordGroupStore().currentGroupId,
+          },
           query: {
             ...useRouter().currentRoute.value.query,
           },

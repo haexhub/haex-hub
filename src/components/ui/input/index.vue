@@ -25,7 +25,7 @@
             class="ps-2"
             ref="inputRef"
             v-model="input"
-            @keyup="(e) => $emit('keyup', e)"
+            @keyup="(e:KeyboardEvent) => $emit('keyup', e)"
           />
           <label
             :for="id"
@@ -42,10 +42,15 @@
         />
       </div>
 
-      <slot
-        name="append"
-        class="h-auto"
-      />
+      <UiButton
+        v-if="withClearButton"
+        class="btn-outline btn-square"
+        @click="input = ''"
+      >
+        <Icon name="mdi:close" />
+      </UiButton>
+
+      <slot name="append" />
 
       <UiButton
         v-if="withCopyButton"
@@ -133,6 +138,7 @@ const props = defineProps({
   rules: Object as PropType<ZodSchema>,
   checkInput: Boolean,
   withCopyButton: Boolean,
+  withClearButton: Boolean,
   autofocus: Boolean,
   read_only: Boolean,
 })
@@ -170,6 +176,12 @@ const checkInput = () => {
 const { copy, copied } = useClipboard()
 
 const { t } = useI18n()
+
+onKeyStroke('a', (event) => {
+  if (event.ctrlKey) {
+    event.stopImmediatePropagation()
+  }
+})
 </script>
 
 <i18n lang="yaml">
