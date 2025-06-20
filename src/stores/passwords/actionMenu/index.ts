@@ -5,16 +5,18 @@ import en from './en.json'
 export const usePasswordsActionMenuStore = defineStore(
   'passwordsActionMenuStore',
   () => {
-    const { t } = useI18n({
+    const { t } =
+      useI18n()
+      /* {
       messages: {
         de: { passwordActionMenu: de },
         en: { passwordActionMenu: en },
       },
-    })
+    } */
 
     const menu = computed<IActionMenuItem[]>(() => [
       {
-        label: t('passwordActionMenu.group.create'),
+        label: 'passwordActionMenu.group.create',
         icon: 'mdi:folder-plus-outline',
         to: {
           name: 'passwordGroupCreate',
@@ -28,7 +30,7 @@ export const usePasswordsActionMenuStore = defineStore(
         },
       },
       {
-        label: t('passwordActionMenu.entry.create'),
+        label: 'passwordActionMenu.entry.create',
         icon: 'mdi:key-plus',
         to: {
           name: 'passwordItemCreate',

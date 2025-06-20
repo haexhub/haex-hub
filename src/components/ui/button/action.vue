@@ -37,7 +37,7 @@
               :name="link.icon"
               class="me-3"
             />
-            {{ link.label }}
+            {{ te(link.label) ? t(link.label) : link.label }}
           </NuxtLinkLocale>
 
           <button
@@ -72,6 +72,8 @@ defineProps({
 })
 
 const id = useId()
+
+const { t, te } = useI18n()
 </script>
 
 <style lang="css" scoped>

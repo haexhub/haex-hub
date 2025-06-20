@@ -6,10 +6,10 @@ export default defineI18nConfig(() => {
     legacy: false,
     messages: {
       de: {
-        //passwordActionMenu: passwordActionMenuDe,
+        passwordActionMenu: passwordActionMenuDe,
       },
       en: {
-        //passwordActionMenu: passwordActionMenuEn,
+        passwordActionMenu: passwordActionMenuEn,
       },
     },
   }
