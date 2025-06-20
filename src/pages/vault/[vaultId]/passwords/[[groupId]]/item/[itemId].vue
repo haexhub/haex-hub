@@ -1,5 +1,11 @@
 <template>
   <div>
+    <div class="flex flex-col">
+      <p>
+        {{ item.originalDetails }}
+      </p>
+      {{ item.details }}
+    </div>
     <HaexPassItem
       :history="item.history"
       :read_only
@@ -11,83 +17,8 @@
       v-model:key-values="item.keyValues"
     />
 
-    <!-- <div
-      class="fixed bottom-4 flex justify-between transition-all pointer-events-none right-0 sm:items-center items-end"
-      :class="[isVisible ? 'left-15 ' : 'left-0']"
-    >
-      <div class="flex items-center justify-center flex-1">
-        <UiTooltip :tooltip="t('abort')">
-          <UiButton
-            class="btn-accent btn-square"
-            @click="onClose"
-          >
-            <Icon name="mdi:close" />
-          </UiButton>
-        </UiTooltip>
-      </div>
-
-      <UiTooltip
-        v-show="read_only && !hasChanges"
-        :tooltip="t('edit')"
-      >
-        <UiButton
-          class="btn-xl btn-square btn-primary"
-          @click="read_only = false"
-        >
-          <Icon
-            name="mdi:pencil-outline"
-            class="size-11 shrink-0"
-          />
-        </UiButton>
-      </UiTooltip>
-
-      <UiTooltip
-        v-show="!read_only && !hasChanges"
-        :tooltip="t('noEdit')"
-      >
-        <UiButton
-          class="btn-xl btn-square btn-primary"
-          @click="read_only = true"
-        >
-          <Icon
-            name="mdi:pencil-off-outline"
-            class="size-11 shrink-0"
-          />
-        </UiButton>
-      </UiTooltip>
-
-      <UiTooltip
-        :tooltip="t('save')"
-        v-show="!read_only && hasChanges"
-      >
-        <UiButton
-          class="btn-xl btn-square btn-primary motion-duration-2000"
-          :class="{ 'motion-preset-pulse-sm': hasChanges }"
-          @click="onUpdateAsync"
-        >
-          <Icon
-            name="mdi:content-save-outline"
-            class="size-11 shrink-0"
-          />
-        </UiButton>
-      </UiTooltip>
-
-      <div class="flex items-center justify-center flex-1">
-        <UiTooltip :tooltip="t('delete')">
-          <UiButton
-            class="btn-square btn-error"
-            @click="showConfirmDeleteDialog = true"
-          >
-            <Icon
-              name="mdi:trash-outline"
-              class="shrink-0"
-            />
-          </UiButton>
-        </UiTooltip>
-      </div>
-    </div> -->
-
     <HaexPassMenuBottom
+      :has-changes
       :show-edit-button="read_only && !hasChanges"
       :show-readonly-button="!read_only && !hasChanges"
       :show-save-button="!read_only && hasChanges"
@@ -119,6 +50,7 @@
 </template>
 
 <script setup lang="ts">
+import { usePasswordGroup } from '~/components/haex/pass/group/composables'
 import type {
   SelectHaexPasswordsItemDetails,
   SelectHaexPasswordsItemHistory,
@@ -145,8 +77,8 @@ const item = reactive<{
   keyValues: SelectHaexPasswordsItemKeyValues[]
   keyValuesAdd: SelectHaexPasswordsItemKeyValues[]
   keyValuesDelete: SelectHaexPasswordsItemKeyValues[]
-  originalDetails: string | null
-  originalKeyValues: string | null
+  originalDetails: SelectHaexPasswordsItemDetails | null
+  originalKeyValues: SelectHaexPasswordsItemKeyValues[] | null
 }>({
   details: {
     id: '',
@@ -164,7 +96,18 @@ const item = reactive<{
   history: [],
   keyValuesAdd: [],
   keyValuesDelete: [],
-  originalDetails: null,
+  originalDetails: {
+    id: '',
+    createdAt: null,
+    icon: null,
+    note: null,
+    password: null,
+    tags: null,
+    title: null,
+    updateAt: null,
+    url: null,
+    username: null,
+  },
   originalKeyValues: null,
 })
 
@@ -179,8 +122,12 @@ watch(
     item.history = JSON.parse(JSON.stringify(currentItem.value?.history))
     item.keyValuesAdd = []
     item.keyValuesDelete = []
-    item.originalDetails = JSON.stringify(currentItem.value?.details)
-    item.originalKeyValues = JSON.stringify(currentItem.value?.keyValues)
+    item.originalDetails = JSON.parse(
+      JSON.stringify(currentItem.value?.details),
+    )
+    item.originalKeyValues = JSON.parse(
+      JSON.stringify(currentItem.value?.keyValues),
+    )
   },
   { immediate: true },
 )
@@ -201,7 +148,7 @@ const onUpdateAsync = async () => {
       keyValuesDelete: item.keyValuesDelete,
     })
     if (newId) add({ type: 'success', text: t('success.update') })
-    syncGroupItemsAsync(currentGroupId.value)
+    syncGroupItemsAsync()
     ignoreChanges.value = true
     onClose()
   } catch (error) {
@@ -224,7 +171,7 @@ const deleteItemAsync = async () => {
     await deleteAsync(item.details.id, inTrashGroup.value)
     showConfirmDeleteDialog.value = false
     add({ type: 'success', text: t('success.delete') })
-    await syncGroupItemsAsync(currentGroupId.value)
+    await syncGroupItemsAsync()
     onClose()
   } catch (errro) {
     add({
@@ -234,11 +181,12 @@ const deleteItemAsync = async () => {
   }
 }
 
+const { areItemsEqual } = usePasswordGroup()
 const hasChanges = computed(
   () =>
     !!(
-      item.originalDetails !== JSON.stringify(item.details) ||
-      item.originalKeyValues !== JSON.stringify(item.keyValues) ||
+      !areItemsEqual(item.originalDetails, item.details) ||
+      !areItemsEqual(item.originalKeyValues, item.keyValues) ||
       item.keyValuesAdd.length ||
       item.keyValuesDelete.length
     ),

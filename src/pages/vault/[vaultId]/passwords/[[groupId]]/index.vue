@@ -194,7 +194,7 @@ const onPasteAsync = async () => {
       [...selectedGroupItems.value],
       currentGroupId.value,
     )
-    await syncGroupItemsAsync(currentGroupId.value)
+    await syncGroupItemsAsync()
     selectedGroupItems.value = []
     selectedItems.value.clear()
   } catch (error) {
@@ -235,7 +235,7 @@ const onDeleteAsync = async () => {
     }
   }
   selectedItems.value.clear()
-  await syncGroupItemsAsync(currentGroupId.value)
+  await syncGroupItemsAsync()
 }
 const keys = useMagicKeys()
 watch(keys.delete, async () => {

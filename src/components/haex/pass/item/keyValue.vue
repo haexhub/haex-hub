@@ -52,7 +52,7 @@
         class="btn-primary btn-outline flex-1-1 min-w-40"
       >
         <Icon name="mdi:plus" />
-        <p class="hidden sm:inline-flex">{{ t('add') }}</p>
+        <p class="hidden sm:inline-block">{{ t('add') }}</p>
       </UiButton>
     </div>
   </div>

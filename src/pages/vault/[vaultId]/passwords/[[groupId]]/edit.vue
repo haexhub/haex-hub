@@ -77,7 +77,7 @@ watch(
     try {
       const foundGroup = await readGroupAsync(currentGroupId.value)
       if (foundGroup) {
-        original.value = JSON.stringify(foundGroup)
+        original.value = JSON.parse(JSON.stringify(foundGroup))
         group.value = foundGroup
       }
     } catch (error) {
@@ -86,22 +86,11 @@ watch(
   },
   { immediate: true },
 )
-/* watch(
-  currentGroup,
-  (n, o) => {
-    console.log('currentGroup', currentGroup.value, n, o)
-    original.value = JSON.stringify(currentGroup.value)
-    group.value = JSON.parse(original.value)
-    ignoreChanges.value = false
-  },
-  { immediate: true },
-) */
 
 const read_only = ref(false)
 
-const hasChanges = computed(
-  () => JSON.stringify(group.value) !== original.value,
-)
+const { areItemsEqual } = usePasswordGroup()
+const hasChanges = computed(() => !!!areItemsEqual(group.value, original.value))
 
 const onClose = () => {
   if (showConfirmDeleteDialog.value || showUnsavedChangesDialog.value) return
@@ -121,7 +110,7 @@ const onSaveAsync = async () => {
 
     ignoreChanges.value = true
     await updateAsync(group.value)
-    await syncGroupItemsAsync(group.value.id)
+    await syncGroupItemsAsync()
     add({ type: 'success', text: t('change.success') })
     onClose()
   } catch (error) {
@@ -141,7 +130,7 @@ const onDeleteAsync = async () => {
   try {
     const parentId = group.value.parentId
     await deleteGroupAsync(group.value.id, inTrashGroup.value)
-    await syncGroupItemsAsync(parentId)
+    await syncGroupItemsAsync()
     showConfirmDeleteDialog.value = false
     ignoreChanges.value = true
     await navigateTo(

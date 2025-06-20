@@ -6,7 +6,6 @@ import {
   type InsertHaexPasswordsGroups,
   type SelectHaexPasswordsGroupItems,
   type SelectHaexPasswordsGroups,
-  type SelectHaexPasswordsItemDetails,
 } from '~~/src-tauri/database/schemas/vault'
 
 export const trashId = 'trash'
@@ -28,14 +27,6 @@ export const usePasswordGroupStore = defineStore('passwordGroupStore', () => {
     currentGroupId.value ? readGroupAsync(currentGroupId.value) : null,
   )
 
-  /* const currentGroupItems = reactive<{
-    items: SelectHaexPasswordsItemDetails[]
-    groups: SelectHaexPasswordsGroups[]
-  }>({
-    items: [],
-    groups: [],
-  }) */
-
   const selectedGroupItems = ref<IPasswordMenuItem[]>()
 
   const breadCrumbs = computed(() => getParentChain(currentGroupId.value))
@@ -55,15 +46,14 @@ export const usePasswordGroupStore = defineStore('passwordGroupStore', () => {
     return chain.reverse()
   }
 
-  const syncGroupItemsAsync = async (currentGroupId?: string | null) => {
-    const { addNotificationAsync } = useNotificationStore()
-    const { readByGroupIdAsync, syncItemsAsync } = usePasswordItemStore()
+  const syncGroupItemsAsync = async () => {
+    const { syncItemsAsync } = usePasswordItemStore()
 
     groups.value = await readGroupsAsync()
     await syncItemsAsync()
-    currentGroup.value = groups.value?.find(
+    /* currentGroup.value = groups.value?.find(
       (group) => group.id === currentGroupId,
-    )
+    ) */
 
     /* try {
       currentGroupItems.groups =
@@ -80,7 +70,7 @@ export const usePasswordGroupStore = defineStore('passwordGroupStore', () => {
     } */
   }
 
-  watch(currentGroupId, () => syncGroupItemsAsync(currentGroupId.value), {
+  watch(currentGroupId, () => syncGroupItemsAsync(), {
     immediate: true,
   })
 
@@ -90,6 +80,7 @@ export const usePasswordGroupStore = defineStore('passwordGroupStore', () => {
 
   return {
     addGroupAsync,
+    areGroupsEqual,
     breadCrumbs,
     createTrashIfNotExistsAsync,
     currentGroup,
@@ -131,13 +122,11 @@ const addGroupAsync = async (group: Partial<InsertHaexPasswordsGroups>) => {
 
 const readGroupAsync = async (groupId: string) => {
   const { currentVault } = useVaultStore()
-
-  return (
-    await currentVault.drizzle
-      ?.select()
-      .from(haexPasswordsGroups)
-      .where(eq(haexPasswordsGroups.id, groupId))
-  ).at(0)
+  const group = await currentVault.drizzle.query.haexPasswordsGroups.findFirst({
+    where: eq(haexPasswordsGroups.id, groupId),
+  })
+  console.log('readGroupAsync', groupId, group)
+  return group
 }
 
 const readGroupsAsync = async (filter?: { parentId?: string | null }) => {
@@ -274,8 +263,6 @@ const insertGroupItemsAsync = async (
 
   const targetGroup = groups.find((group) => group.id === groupdId)
 
-  console.log('insertGroupItemsAsync', items, targetGroup)
-
   for (const item of items) {
     if (item.type === 'group') {
       const updateGroup = groups.find((group) => group.id === item.id)
@@ -297,7 +284,7 @@ const insertGroupItemsAsync = async (
           .where(eq(haexPasswordsGroupItems.itemId, item.id))
     }
   }
-  return syncGroupItemsAsync(targetGroup?.id)
+  return syncGroupItemsAsync()
 }
 
 const createTrashIfNotExistsAsync = async () => {
@@ -339,4 +326,21 @@ const deleteGroupAsync = async (groupId: string, final: boolean = false) => {
     if (await createTrashIfNotExistsAsync())
       await updateAsync({ id: groupId, parentId: trashId })
   }
+}
+
+const areGroupsEqual = (
+  groupA: unknown | unknown[] | null,
+  groupB: unknown | unknown[] | null,
+) => {
+  if (groupA === null && groupB === null) return true
+
+  if (Array.isArray(groupA) && Array.isArray(groupB)) {
+    console.log('compare object arrays', groupA, groupB)
+    if (groupA.length === groupB.length) return true
+
+    return groupA.some((group, index) => {
+      return areObjectsEqual(group, groupA[index])
+    })
+  }
+  return areObjectsEqual(groupA, groupB)
 }

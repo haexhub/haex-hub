@@ -1,5 +1,6 @@
 <template>
   <div>
+    {{ currentGroup?.id }} {{ currentGroupId }}
     <HaexPassItem
       :default-icon="currentGroup?.icon"
       :history="item.history"
@@ -10,6 +11,7 @@
     />
 
     <HaexPassMenuBottom
+      :has-changes
       @close="onClose"
       @save="onCreateAsync"
       show-close-button
@@ -17,33 +19,13 @@
     >
     </HaexPassMenuBottom>
 
-    <!-- <div
-      class="fixed bottom-4 flex justify-between transition-all pointer-events-none right-0 sm:items-center items-end"
-      :class="[isVisible ? 'left-15 ' : 'left-0']"
-    >
-      <div class="flex items-center justify-center flex-1">
-        <UiTooltip :tooltip="t('abort')">
-          <UiButton
-            class="btn-error btn-square"
-            @click="onClose"
-          >
-            <Icon name="mdi:close" />
-          </UiButton>
-        </UiTooltip>
-      </div>
-      <UiTooltip :tooltip="t('create')">
-        <UiButton
-          class="btn-xl btn-square btn-primary"
-          @click="onCreateAsync"
-        >
-          <Icon
-            name="mdi:content-save-outline"
-            class="size-11 shrink-0"
-          />
-        </UiButton>
-      </UiTooltip>
-      <div class="flex items-center justify-center flex-1"></div>
-    </div> -->
+    <HaexPassDialogUnsavedChanges
+      :has-changes="hasChanges"
+      v-model:ignore-changes="ignoreChanges"
+      @abort="showUnsavedChangesDialog = false"
+      @confirm="onConfirmIgnoreChanges"
+      v-model:open="showUnsavedChangesDialog"
+    />
   </div>
 </template>
 
@@ -64,17 +46,14 @@ defineProps({
   withCopyButton: Boolean,
 })
 
-const { isVisible } = storeToRefs(useSidebarStore())
-
 const { t } = useI18n()
 
 const item = reactive<{
   details: SelectHaexPasswordsItemDetails
   history: SelectHaexPasswordsItemHistory[]
   keyValuesAdd: SelectHaexPasswordsItemKeyValues[]
-  keyValuesDelete: SelectHaexPasswordsItemKeyValues[]
-  originalDetails: string | null
-  originalKeyValues: string | null
+  originalDetails: SelectHaexPasswordsItemDetails
+  originalKeyValuesAdd: []
 }>({
   details: {
     id: '',
@@ -90,13 +69,23 @@ const item = reactive<{
   },
   history: [],
   keyValuesAdd: [],
-  keyValuesDelete: [],
-  originalDetails: null,
-  originalKeyValues: null,
+  originalDetails: {
+    id: '',
+    createdAt: null,
+    icon: null,
+    note: null,
+    password: null,
+    tags: null,
+    title: null,
+    updateAt: null,
+    url: null,
+    username: null,
+  },
+  originalKeyValuesAdd: [],
 })
 
 const { add } = useSnackbar()
-const { currentGroup } = storeToRefs(usePasswordGroupStore())
+const { currentGroup, currentGroupId } = storeToRefs(usePasswordGroupStore())
 const { syncGroupItemsAsync } = usePasswordGroupStore()
 const { addAsync } = usePasswordItemStore()
 
@@ -107,9 +96,11 @@ const onCreateAsync = async () => {
       item.keyValuesAdd,
       currentGroup.value,
     )
+
     if (newId) {
+      ignoreChanges.value = true
       add({ type: 'success', text: t('success') })
-      syncGroupItemsAsync(currentGroup.value?.id)
+      await syncGroupItemsAsync()
       onClose()
     }
   } catch (error) {
@@ -117,7 +108,32 @@ const onCreateAsync = async () => {
   }
 }
 
-const onClose = () => useRouter().back()
+const ignoreChanges = ref(false)
+
+const onClose = () => {
+  if (showUnsavedChangesDialog.value) return
+
+  if (hasChanges.value && !ignoreChanges.value)
+    return (showUnsavedChangesDialog.value = true)
+
+  useRouter().back()
+}
+
+const { areItemsEqual } = usePasswordGroup()
+const hasChanges = computed(
+  () =>
+    !!(
+      !areItemsEqual(item.originalDetails, item.details) ||
+      item.keyValuesAdd.length
+    ),
+)
+
+const showUnsavedChangesDialog = ref(false)
+const onConfirmIgnoreChanges = () => {
+  showUnsavedChangesDialog.value = false
+  ignoreChanges.value = true
+  onClose()
+}
 </script>
 
 <i18n lang="yaml">

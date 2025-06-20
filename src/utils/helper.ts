@@ -155,3 +155,78 @@ export const getContrastingTextColor = (
   // Ein Wert > 186 wird oft als "hell" genug für schwarzen Text angesehen.
   return luminance > 186 ? 'black' : 'white'
 }
+
+/**
+ * Eine "Type Guard"-Funktion, die prüft, ob ein Wert ein Objekt (aber nicht null) ist.
+ * Wenn sie `true` zurückgibt, weiß TypeScript, dass der Wert sicher als Objekt behandelt werden kann.
+ * @param value Der zu prüfende Wert vom Typ `unknown`.
+ * @returns {boolean} `true`, wenn der Wert ein Objekt ist.
+ */
+export const isObject = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null
+}
+
+/**
+ * Führt einen typsicheren, tiefen Vergleich (deep comparison) von zwei Werten durch.
+ * Gibt `true` zurück, wenn die Werte als gleich angesehen werden.
+ *
+ * @param valueA Der erste Wert für den Vergleich.
+ * @param valueB Der zweite Wert für den Vergleich.
+ * @returns {boolean} `true`, wenn die Werte gleich sind, andernfalls `false`.
+ */
+export const areObjectsEqual = (valueA: unknown, valueB: unknown): boolean => {
+  console.log('areObjectsEqual', valueA, valueB)
+  // 1. Schneller Check für exakt die gleiche Referenz oder primitive Gleichheit
+  if (valueA === valueB) {
+    return true
+  }
+
+  // DEINE SONDERREGEL: Behandle `null` und einen leeren String `""` als gleichwertig.
+  const areNullAndEmptyString =
+    (valueA === null && valueB === '') || (valueA === '' && valueB === null)
+
+  if (areNullAndEmptyString) {
+    return true
+  }
+
+  // 2. Nutzen der Type Guard: Wenn beide Werte keine Objekte sind,
+  // und die vorherigen Checks fehlschlugen, sind sie ungleich.
+  if (!isObject(valueA) || !isObject(valueB)) {
+    console.log('areObjectsEqual no objects', valueA, valueB)
+    return false
+  }
+
+  // Ab hier weiß TypeScript dank der Type Guard, dass valueA und valueB Objekte sind.
+
+  // 3. Holen der Schlüssel und Vergleich der Anzahl
+  const keysA = Object.keys(valueA)
+  const keysB = Object.keys(valueB)
+
+  if (keysA.length !== keysB.length) {
+    console.log('areObjectsEqual length')
+    return false
+  }
+
+  // 4. Iteration über alle Schlüssel und rekursiver Vergleich der Werte
+  for (const key of keysA) {
+    // Prüfen, ob der Schlüssel auch im zweiten Objekt überhaupt existiert
+    if (!keysB.includes(key)) {
+      console.log('areObjectsEqual keys')
+      return false
+    }
+
+    // Die Werte der Schlüssel sind wieder `unknown`, daher nutzen wir Rekursion.
+    const nestedValueA = valueA[key]
+    const nestedValueB = valueB[key]
+
+    // Wenn der rekursive Aufruf für einen der Werte `false` zurückgibt,
+    // sind die gesamten Objekte ungleich.
+    if (!areObjectsEqual(nestedValueA, nestedValueB)) {
+      console.log('areObjectsEqual nested')
+      return false
+    }
+  }
+
+  // 5. Wenn die Schleife durchläuft, sind die Objekte gleich
+  return true
+}
