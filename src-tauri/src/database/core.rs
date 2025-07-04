@@ -6,8 +6,8 @@ use rusqlite::{
     Connection, OpenFlags, ToSql,
 };
 use serde_json::Value as JsonValue;
-use std::fs;
 use std::path::Path;
+use std::{fs, path::PathBuf};
 use tauri::State;
 // --- Hilfsfunktion: Konvertiert JSON Value zu etwas, das rusqlite versteht ---
 // Diese Funktion ist etwas knifflig wegen Ownership und Lifetimes.
@@ -67,32 +67,10 @@ pub async fn execute(
     Ok(affected_rows)
 }
 
-/// Führt SQL-Schreiboperationen (INSERT, UPDATE, DELETE, CREATE) ohne Berechtigungsprüfung aus
-/* pub async fn execute(
-    sql: &str,
-    params: &[String],
-    state: &State<'_, DbConnection>,
-) -> Result<String, String> {
-    let db = state.0.lock().map_err(|e| format!("Mutex-Fehler: {}", e))?;
-    let conn = db.as_ref().ok_or("Keine Datenbankverbindung vorhanden")?;
-
-    let rows_affected = conn
-        .execute(sql, rusqlite::params_from_iter(params.iter()))
-        .map_err(|e| format!("SQL-Ausführungsfehler: {}", e))?;
-
-    let last_id = conn.last_insert_rowid();
-
-    Ok(serde_json::to_string(&json!({
-        "rows_affected": rows_affected,
-        "last_insert_id": last_id
-    }))
-    .map_err(|e| format!("JSON-Serialisierungsfehler: {}", e))?)
-} */
-
 #[tauri::command]
 pub async fn select(
     sql: String,
-    params: Vec<JsonValue>, // Parameter als JSON Values empfangen
+    params: Vec<JsonValue>,
     state: &State<'_, DbConnection>,
 ) -> Result<Vec<Vec<JsonValue>>, String> {
     // Ergebnis als Vec<RowObject>
@@ -182,45 +160,6 @@ pub async fn select(
     Ok(result_vec)
 }
 
-/// Führt SQL-Leseoperationen (SELECT) ohne Berechtigungsprüfung aus
-/* pub async fn select(
-    sql: &str,
-    params: &[String],
-    state: &State<'_, DbConnection>,
-) -> Result<Vec<Vec<Option<String>>>, String> {
-    let db = state.0.lock().map_err(|e| format!("Mutex-Fehler: {}", e))?;
-    let conn = db.as_ref().ok_or("Keine Datenbankverbindung vorhanden")?;
-
-    let mut stmt = conn
-        .prepare(sql)
-        .map_err(|e| format!("SQL-Vorbereitungsfehler: {}", e))?;
-    let columns = stmt.column_count();
-    let mut rows = stmt
-        .query(rusqlite::params_from_iter(params.iter()))
-        .map_err(|e| format!("SQL-Abfragefehler: {}", e))?;
-
-    let mut result = Vec::new();
-    while let Some(row) = rows
-        .next()
-        .map_err(|e| format!("Zeilenabruffehler: {}", e))?
-    {
-        let mut row_data = Vec::new();
-        for i in 0..columns {
-            let value = row
-                .get(i)
-                .map_err(|e| format!("Datentypfehler in Spalte {}: {}", i, e))?;
-            row_data.push(value);
-        }
-        /* println!(
-            "Select Row Data: {}",
-            &row_data.clone().join("").to_string()
-        ); */
-        result.push(row_data);
-    }
-
-    Ok(result)
-} */
-
 /// Öffnet und initialisiert eine Datenbank mit Verschlüsselung
 pub fn open_and_init_db(path: &str, key: &str, create: bool) -> Result<Connection, String> {
     let flags = if create {
@@ -235,6 +174,16 @@ pub fn open_and_init_db(path: &str, key: &str, create: bool) -> Result<Connectio
 
     conn.execute_batch("SELECT count(*) from haex_extensions")
         .map_err(|e| e.to_string())?;
+
+    let journal_mode: String = conn
+        .query_row("PRAGMA journal_mode=WAL;", [], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+
+    if journal_mode.eq_ignore_ascii_case("wal") {
+        println!("WAL mode successfully enabled.");
+    } else {
+        eprintln!("Failed to enable WAL mode.");
+    }
 
     Ok(conn)
 }

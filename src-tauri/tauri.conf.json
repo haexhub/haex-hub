@@ -55,6 +55,21 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": ["database/vault.db"]
+    "resources": ["database/vault.db", "resources/"],
+
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false,
+        "files": {}
+      },
+      "deb": {
+        "files": {}
+      },
+      "rpm": {
+        "epoch": 0,
+        "files": {},
+        "release": "1"
+      }
+    }
   }
 }

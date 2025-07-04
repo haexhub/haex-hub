@@ -3,6 +3,8 @@ import { invoke } from '@tauri-apps/api/core'
 import { platform } from '@tauri-apps/plugin-os'
 import * as schema from '@/../src-tauri/database/schemas/vault'
 import type { SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy'
+import { isTable, sql } from 'drizzle-orm'
+import { getTableConfig } from 'drizzle-orm/sqlite-core'
 
 interface IVault {
   name: string
@@ -63,7 +65,7 @@ export const useVaultStore = defineStore('vaultStore', () => {
 
               // If the query is a SELECT, use the select method
               if (isSelectQuery(sql)) {
-                console.log('sql_select', sql, params)
+                console.log('sql_select', sql, params, method)
                 rows = await invoke<unknown[]>('sql_select', {
                   sql,
                   params,
@@ -72,7 +74,7 @@ export const useVaultStore = defineStore('vaultStore', () => {
                   return []
                 })
               } else {
-                console.log('sql_execute', sql, params)
+                console.log('sql_execute', sql, params, method)
                 // Otherwise, use the execute method
                 rows = await invoke<unknown[]>('sql_execute', {
                   sql,
@@ -95,7 +97,6 @@ export const useVaultStore = defineStore('vaultStore', () => {
 
       const { addVaultAsync } = useLastVaultStore()
       await addVaultAsync({ path })
-
       return vaultId
     } catch (error) {
       console.error('Error openAsync ', error)
@@ -145,6 +146,21 @@ const getVaultIdAsync = async (path: string) => {
 }
 
 const isSelectQuery = (sql: string) => {
+  console.log('check isSelectQuery', sql)
   const selectRegex = /^\s*SELECT\b/i
   return selectRegex.test(sql)
 }
+
+/* const trackAllHaexTablesAsync = async (vaultId: string) => {
+  const { openVaults } = useVaultStore()
+  const promises = Object.values(schema)
+    .filter(isTable)
+    .map((table) => {
+      const stmt = `SELECT crsql_as_crr('${getTableConfig(table).name}');`
+      console.log('track table', getTableConfig(table).name)
+
+      return openVaults?.[vaultId]?.drizzle.run(sql`${stmt}`.getSQL())
+    })
+
+  await Promise.allSettled(promises)
+} */

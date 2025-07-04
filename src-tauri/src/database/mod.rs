@@ -5,10 +5,13 @@ use rusqlite::Connection;
 use serde_json::Value as JsonValue;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::str::FromStr;
+use std::sync::{Arc, Mutex};
 use tauri::{path::BaseDirectory, AppHandle, Manager, State, Wry};
 
-pub struct DbConnection(pub Mutex<Option<Connection>>);
+use crate::database::core::open_and_init_db;
+pub struct HlcService(pub Mutex<uhlc::HLC>);
+pub struct DbConnection(pub Arc<Mutex<Option<Connection>>>);
 
 #[tauri::command]
 pub async fn sql_select(
@@ -145,50 +148,21 @@ pub fn create_encrypted_database(
             eprintln!("FEHLER: SQLCipher scheint NICHT aktiv zu sein!");
             eprintln!("Der Befehl 'PRAGMA cipher_version;' schlug fehl: {}", e);
             eprintln!("Die Datenbank wurde wahrscheinlich NICHT verschlüsselt.");
-            // Optional: Hier die Verbindung schließen oder weitere Aktionen unterlassen
-            // return Err(e); // Beende das Programm mit dem Fehler
         }
     }
 
-    /* // Kopieren der Ressourcen-Datenbank zum Zielpfad
-    core::copy_file(&resource_path, &path)?;
+    println!("resource_path: {}", resource_path.display());
 
-    // Öffnen der kopierten Datenbank ohne Verschlüsselung
-    let conn = Connection::open(&path).map_err(|e| {
-        format!(
-            "Fehler beim Öffnen der kopierten Datenbank: {}",
-            e.to_string()
-        )
-    })?;
+    conn.close().unwrap();
 
-    // Verschlüsseln der Datenbank mit dem angegebenen Schlüssel
-    conn.pragma_update(None, "key", &key)
-        .map_err(|e| format!("Fehler beim Verschlüsseln der Datenbank: {}", e.to_string()))?;
+    let new_conn = open_and_init_db(&path, &key, false)?;
 
-    // Schließen der Verbindung, um sicherzustellen, dass Änderungen gespeichert werden
-    drop(conn);
-
-    // Öffnen der verschlüsselten Datenbank mit dem Schlüssel
-    let encrypted_conn = core::open_and_init_db(&path, &key, false)
-        .map_err(|e| format!("Fehler beim Öffnen der verschlüsselten Datenbank: {}", e))?;
-
-    // Überprüfen, ob die Datenbank korrekt verschlüsselt wurde, indem wir eine einfache Abfrage ausführen
-    let validation_result: Result<i32, _> =
-        encrypted_conn.query_row("SELECT 1", [], |row| row.get(0));
-
-    if let Err(e) = validation_result {
-        return Err(format!(
-            "Fehler beim Testen der verschlüsselten Datenbank: {}",
-            e.to_string()
-        ));
-    }
-    */
     // Aktualisieren der Datenbankverbindung im State
     let mut db = state
         .0
         .lock()
         .map_err(|e| format!("Mutex-Fehler: {}", e.to_string()))?;
-    *db = Some(conn);
+    *db = Some(new_conn);
 
     Ok(format!("Verschlüsselte CRDT-Datenbank erstellt",))
 }
@@ -205,6 +179,7 @@ pub fn open_encrypted_database(
 
     let conn =
         core::open_and_init_db(&path, &key, false).map_err(|e| format!("Error during open: {}", e));
+
     let mut db = state.0.lock().map_err(|e| e.to_string())?;
     *db = Some(conn.unwrap());
 
@@ -515,4 +490,121 @@ pub fn create_encrypted_database_new(
         "Verschlüsselte Datenbank erfolgreich erstellt, geprüft und im State gespeichert unter: {}",
         final_encrypted_db_path.display()
     ))
+}
+
+fn get_target_triple() -> Result<String, String> {
+    let target_triple = if cfg!(target_os = "linux") {
+        if cfg!(target_arch = "x86_64") {
+            "x86_64-unknown-linux-gnu".to_string()
+        } else if cfg!(target_arch = "aarch64") {
+            "aarch64-unknown-linux-gnu".to_string()
+        } else {
+            return Err(format!(
+                "Unbekannte Linux-Architektur: {}",
+                std::env::consts::ARCH
+            ));
+        }
+    } else if cfg!(target_os = "macos") {
+        if cfg!(target_arch = "x86_64") {
+            "x86_64-apple-darwin".to_string()
+        } else if cfg!(target_arch = "aarch64") {
+            "aarch64-apple-darwin".to_string()
+        } else {
+            return Err(format!(
+                "Unbekannte macOS-Architektur: {}",
+                std::env::consts::ARCH
+            ));
+        }
+    } else if cfg!(target_os = "windows") {
+        if cfg!(target_arch = "x86_64") {
+            "x86_64-pc-windows-msvc".to_string()
+        } else if cfg!(target_arch = "x86") {
+            "i686-pc-windows-msvc".to_string()
+        } else {
+            return Err(format!(
+                "Unbekannte Windows-Architektur: {}",
+                std::env::consts::ARCH
+            ));
+        }
+    } else if cfg!(target_os = "android") {
+        if cfg!(target_arch = "aarch64") {
+            "aarch64-linux-android".to_string()
+        } else {
+            return Err(format!(
+                "Unbekannte Android-Architektur: {}",
+                std::env::consts::ARCH
+            ));
+        }
+    } else if cfg!(target_os = "ios") {
+        if cfg!(target_arch = "aarch64") {
+            "aarch64-apple-ios".to_string()
+        } else {
+            return Err(format!(
+                "Unbekannte iOS-Architektur: {}",
+                std::env::consts::ARCH
+            ));
+        }
+    } else {
+        return Err("Unbekanntes Zielsystem".to_string());
+    };
+    Ok(target_triple)
+}
+
+fn get_crsqlite_path(app_handle: AppHandle) -> Result<PathBuf, String> {
+    // Laden der cr-sqlite Erweiterung
+    let target_triple = get_target_triple()?;
+
+    println!("target_triple: {}", target_triple);
+
+    let crsqlite_path = app_handle
+        .path()
+        .resource_dir()
+        .map_err(|e| format!("Fehler beim Ermitteln des Ressourcenverzeichnisses: {}", e))?
+        .join(format!("crsqlite-{}", target_triple));
+
+    println!("crsqlite_path: {}", crsqlite_path.display());
+    Ok(crsqlite_path)
+}
+
+#[tauri::command]
+pub fn get_hlc_timestamp(state: tauri::State<HlcService>) -> String {
+    let hlc = state.0.lock().unwrap();
+    hlc.new_timestamp().to_string()
+}
+
+#[tauri::command]
+pub fn update_hlc_from_remote(
+    remote_timestamp_str: String,
+    state: tauri::State<HlcService>,
+) -> Result<(), String> {
+    let remote_ts =
+        uhlc::Timestamp::from_str(&remote_timestamp_str).map_err(|e| e.cause.to_string())?;
+
+    let hlc = state.0.lock().unwrap();
+    hlc.update_with_timestamp(&remote_ts)
+        .map_err(|e| format!("HLC update failed: {:?}", e))
+}
+
+#[derive(Debug, Clone)]
+struct SqlTableInfo {
+    cid: u32,
+    name: String,
+    r#type: String,
+    notnull: bool,
+    dflt_value: Option<String>,
+    pk: u8,
+}
+
+#[tauri::command]
+pub async fn create_crdt_trigger_for_table(
+    state: &State<'_, DbConnection>,
+    table_name: String,
+) -> Result<Vec<Vec<JsonValue>>, String> {
+    let stmt = format!(
+        "SELECT cid, name, type, notnull, dflt_value, pk from pragma_table_info('{}')",
+        table_name
+    );
+
+    let table_info = core::select(stmt, vec![], state).await;
+    Ok(table_info.unwrap())
 }

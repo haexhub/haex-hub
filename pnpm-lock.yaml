@@ -56,6 +56,9 @@ importers:
       '@tauri-apps/plugin-store':
         specifier: ^2.2.0
         version: 2.2.1
+      '@vlcn.io/crsqlite':
+        specifier: ^0.16.3
+        version: 0.16.3
       '@vueuse/components':
         specifier: ^13.3.0
         version: 13.4.0(vue@3.5.17(typescript@5.8.3))
@@ -1937,6 +1940,9 @@ packages:
     peerDependencies:
       vite: ^5.0.0 || ^6.0.0
       vue: ^3.2.25
+
+  '@vlcn.io/crsqlite@0.16.3':
+    resolution: {integrity: sha512-1rKylRr2LyW5kwh/a6ZFmvt7kFK+aKLGkz9+O1w9EFVdH11SMUg6MfvxTfoczKCyb3/E5qvdOk2NDW/Zin6OjQ==}
 
   '@volar/language-core@2.4.14':
     resolution: {integrity: sha512-X6beusV0DvuVseaOEy7GoagS4rYHgDHnTrdOj5jeUb49fW5ceQyP9Ej5rBhqgz2wJggl+2fDbbojq1XKaxDi6w==}
@@ -7301,6 +7307,8 @@ snapshots:
     dependencies:
       vite: 6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0)
       vue: 3.5.17(typescript@5.8.3)
+
+  '@vlcn.io/crsqlite@0.16.3': {}
 
   '@volar/language-core@2.4.14':
     dependencies:

@@ -5,7 +5,7 @@ mod models;
 
 use database::DbConnection;
 use models::ExtensionState;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -42,7 +42,7 @@ pub fn run() {
                 }
             }
         })
-        .manage(DbConnection(Mutex::new(None)))
+        .manage(DbConnection(Arc::new(Mutex::new(None))))
         .manage(ExtensionState::default())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
@@ -58,6 +58,8 @@ pub fn run() {
             database::sql_execute,
             database::sql_select,
             database::test,
+            database::get_hlc_timestamp,
+            database::update_hlc_from_remote,
             extension::copy_directory,
             extension::database::extension_sql_execute,
             extension::database::extension_sql_select,
