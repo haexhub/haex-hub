@@ -9,25 +9,25 @@ importers:
   .:
     dependencies:
       '@libsql/client':
-        specifier: ^0.15.8
+        specifier: ^0.15.9
         version: 0.15.9
       '@nuxt/eslint':
         specifier: 1.4.1
         version: 1.4.1(@typescript-eslint/utils@8.34.1(eslint@9.29.0(jiti@2.4.2))(typescript@5.8.3))(@vue/compiler-sfc@3.5.17)(eslint@9.29.0(jiti@2.4.2))(magicast@0.3.5)(typescript@5.8.3)(vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))
       '@nuxt/icon':
-        specifier: ^1.13.0
+        specifier: ^1.14.0
         version: 1.14.0(magicast@0.3.5)(vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))(vue@3.5.17(typescript@5.8.3))
       '@nuxt/image':
         specifier: 1.10.0
-        version: 1.10.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9)))(ioredis@5.6.1)(magicast@0.3.5)
+        version: 1.10.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9)))(ioredis@5.6.1)(magicast@0.3.5)
       '@nuxtjs/i18n':
         specifier: ^9.5.5
         version: 9.5.5(@vue/compiler-dom@3.5.17)(eslint@9.29.0(jiti@2.4.2))(magicast@0.3.5)(rollup@4.44.0)(vue@3.5.17(typescript@5.8.3))
       '@pinia/nuxt':
-        specifier: ^0.11.0
+        specifier: ^0.11.1
         version: 0.11.1(magicast@0.3.5)(pinia@3.0.3(typescript@5.8.3)(vue@3.5.17(typescript@5.8.3)))
       '@tailwindcss/vite':
-        specifier: ^4.1.8
+        specifier: ^4.1.10
         version: 4.1.10(vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))
       '@tauri-apps/api':
         specifier: ^2.5.0
@@ -42,37 +42,37 @@ importers:
         specifier: ~2.4.4
         version: 2.4.4
       '@tauri-apps/plugin-notification':
-        specifier: ~2.2.2
+        specifier: ~2.2.3
         version: 2.2.3
       '@tauri-apps/plugin-opener':
-        specifier: ^2.2.7
+        specifier: ^2.3.0
         version: 2.3.0
       '@tauri-apps/plugin-os':
-        specifier: ^2.2.1
+        specifier: ^2.2.2
         version: 2.2.2
       '@tauri-apps/plugin-sql':
-        specifier: ~2.2.0
+        specifier: ~2.2.1
         version: 2.2.1
       '@tauri-apps/plugin-store':
-        specifier: ^2.2.0
+        specifier: ^2.2.1
         version: 2.2.1
       '@vlcn.io/crsqlite':
         specifier: ^0.16.3
         version: 0.16.3
       '@vueuse/components':
-        specifier: ^13.3.0
+        specifier: ^13.4.0
         version: 13.4.0(vue@3.5.17(typescript@5.8.3))
       '@vueuse/core':
-        specifier: ^13.3.0
+        specifier: ^13.4.0
         version: 13.4.0(vue@3.5.17(typescript@5.8.3))
       '@vueuse/nuxt':
-        specifier: ^13.3.0
-        version: 13.4.0(magicast@0.3.5)(nuxt@3.17.5(@libsql/client@0.15.9)(@parcel/watcher@2.5.1)(@types/node@24.0.3)(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9)))(drizzle-orm@0.43.1(@libsql/client@0.15.9))(eslint@9.29.0(jiti@2.4.2))(ioredis@5.6.1)(lightningcss@1.30.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.44.0)(terser@5.43.1)(typescript@5.8.3)(vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))(vue-tsc@2.2.10(typescript@5.8.3))(yaml@2.8.0))(vue@3.5.17(typescript@5.8.3))
+        specifier: ^13.4.0
+        version: 13.4.0(magicast@0.3.5)(nuxt@3.17.5(@libsql/client@0.15.9)(@parcel/watcher@2.5.1)(@types/node@24.0.3)(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9)))(drizzle-orm@0.44.2(@libsql/client@0.15.9))(eslint@9.29.0(jiti@2.4.2))(ioredis@5.6.1)(lightningcss@1.30.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.44.0)(terser@5.43.1)(typescript@5.8.3)(vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))(vue-tsc@2.2.10(typescript@5.8.3))(yaml@2.8.0))(vue@3.5.17(typescript@5.8.3))
       drizzle-orm:
-        specifier: ^0.43.1
-        version: 0.43.1(@libsql/client@0.15.9)
+        specifier: ^0.44.2
+        version: 0.44.2(@libsql/client@0.15.9)
       eslint:
-        specifier: ^9.28.0
+        specifier: ^9.29.0
         version: 9.29.0(jiti@2.4.2)
       flyonui:
         specifier: ^2.2.0
@@ -81,45 +81,45 @@ importers:
         specifier: ^7.1.0
         version: 7.1.0
       nuxt:
-        specifier: ^3.17.4
-        version: 3.17.5(@libsql/client@0.15.9)(@parcel/watcher@2.5.1)(@types/node@24.0.3)(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9)))(drizzle-orm@0.43.1(@libsql/client@0.15.9))(eslint@9.29.0(jiti@2.4.2))(ioredis@5.6.1)(lightningcss@1.30.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.44.0)(terser@5.43.1)(typescript@5.8.3)(vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))(vue-tsc@2.2.10(typescript@5.8.3))(yaml@2.8.0)
+        specifier: ^3.17.5
+        version: 3.17.5(@libsql/client@0.15.9)(@parcel/watcher@2.5.1)(@types/node@24.0.3)(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9)))(drizzle-orm@0.44.2(@libsql/client@0.15.9))(eslint@9.29.0(jiti@2.4.2))(ioredis@5.6.1)(lightningcss@1.30.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.44.0)(terser@5.43.1)(typescript@5.8.3)(vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))(vue-tsc@2.2.10(typescript@5.8.3))(yaml@2.8.0)
       nuxt-snackbar:
         specifier: 1.3.0
         version: 1.3.0(magicast@0.3.5)(vue@3.5.17(typescript@5.8.3))
       nuxt-zod-i18n:
-        specifier: ^1.11.5
+        specifier: ^1.12.0
         version: 1.12.0(magicast@0.3.5)(typescript@5.8.3)
       tailwindcss:
-        specifier: ^4.1.8
+        specifier: ^4.1.10
         version: 4.1.10
       tailwindcss-intersect:
         specifier: ^2.2.0
         version: 2.2.0(tailwindcss@4.1.10)
       tailwindcss-motion:
-        specifier: ^1.1.0
+        specifier: ^1.1.1
         version: 1.1.1(tailwindcss@4.1.10)
       vue:
-        specifier: ^3.5.16
+        specifier: ^3.5.17
         version: 3.5.17(typescript@5.8.3)
-      vue-router:
-        specifier: ^4.5.1
-        version: 4.5.1(vue@3.5.17(typescript@5.8.3))
       zod:
-        specifier: ^3.25.42
+        specifier: ^3.25.67
         version: 3.25.67
     devDependencies:
       '@iconify/json':
-        specifier: ^2.2.343
-        version: 2.2.350
+        specifier: ^2.2.351
+        version: 2.2.355
       '@iconify/tailwind4':
         specifier: ^1.0.6
         version: 1.0.6(tailwindcss@4.1.10)
       '@tauri-apps/cli':
         specifier: ^2.5.0
         version: 2.5.0
+      '@vue/compiler-sfc':
+        specifier: ^3.5.17
+        version: 3.5.17
       drizzle-kit:
-        specifier: ^0.31.1
-        version: 0.31.1
+        specifier: ^0.31.2
+        version: 0.31.4
       globals:
         specifier: ^16.2.0
         version: 16.2.0
@@ -687,8 +687,8 @@ packages:
   '@iconify/collections@1.0.560':
     resolution: {integrity: sha512-sXm0Io67deUIqWmaSGb+JJ4Y9DJvgT/seaQlCOHUuHhs3qcPuLY6WMlfoUSmmXV5yHFhZprRZEs1np2BZ/BCJw==}
 
-  '@iconify/json@2.2.350':
-    resolution: {integrity: sha512-ywxrku6FYmZ8PsZ7ZzwaMNErqfP9CG5/g93QMDy9FqYGx0a/XgZ/q0PFpd0IrgjSiByJis5X4oJTKMpu91whGQ==}
+  '@iconify/json@2.2.355':
+    resolution: {integrity: sha512-ZWL7HwY80E6wb6pMSsUWip/Gzg/reGUqDvYp3JzmpsOlbTgGZxrJ7rFh7CYpuPVkz2keQ7y2oI1xEpNWwl0/xQ==}
 
   '@iconify/tailwind4@1.0.6':
     resolution: {integrity: sha512-43ZXe+bC7CuE2LCgROdqbQeFYJi/J7L/k1UpSy8KDQlWVsWxPzLSWbWhlJx4uRYLOh1NRyw02YlDOgzBOFNd+A==}
@@ -2705,12 +2705,12 @@ packages:
     resolution: {integrity: sha512-m/C+AwOAr9/W1UOIZUo232ejMNnJAJtYQjUbHoNTBNTJSvqzzDh7vnrei3o3r3m9blf6ZoDkvcw0VmozNRFJxg==}
     engines: {node: '>=12'}
 
-  drizzle-kit@0.31.1:
-    resolution: {integrity: sha512-PUjYKWtzOzPtdtQlTHQG3qfv4Y0XT8+Eas6UbxCmxTj7qgMf+39dDujf1BP1I+qqZtw9uzwTh8jYtkMuCq+B0Q==}
+  drizzle-kit@0.31.4:
+    resolution: {integrity: sha512-tCPWVZWZqWVx2XUsVpJRnH9Mx0ClVOf5YUHerZ5so1OKSlqww4zy1R5ksEdGRcO3tM3zj0PYN6V48TbQCL1RfA==}
     hasBin: true
 
-  drizzle-orm@0.43.1:
-    resolution: {integrity: sha512-dUcDaZtE/zN4RV/xqGrVSMpnEczxd5cIaoDeor7Zst9wOe/HzC/7eAaulywWGYXdDEc9oBPMjayVEDg0ziTLJA==}
+  drizzle-orm@0.44.2:
+    resolution: {integrity: sha512-zGAqBzWWkVSFjZpwPOrmCrgO++1kZ5H/rZ4qTGeGOe18iXGVJWf3WPfHOVwFIbmi8kHjfJstC6rJomzGx8g/dQ==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -2726,6 +2726,7 @@ packages:
       '@types/better-sqlite3': '*'
       '@types/pg': '*'
       '@types/sql.js': '*'
+      '@upstash/redis': '>=1.34.7'
       '@vercel/postgres': '>=0.8.0'
       '@xata.io/client': '*'
       better-sqlite3: '>=7'
@@ -2768,6 +2769,8 @@ packages:
       '@types/pg':
         optional: true
       '@types/sql.js':
+        optional: true
+      '@upstash/redis':
         optional: true
       '@vercel/postgres':
         optional: true
@@ -3589,6 +3592,7 @@ packages:
 
   libsql@0.5.13:
     resolution: {integrity: sha512-5Bwoa/CqzgkTwySgqHA5TsaUDRrdLIbdM4egdPcaAnqO3aC+qAgS6BwdzuZwARA5digXwiskogZ8H7Yy4XfdOg==}
+    cpu: [x64, arm64, wasm32, arm]
     os: [darwin, linux, win32]
 
   lightningcss-darwin-arm64@1.30.1:
@@ -5855,7 +5859,7 @@ snapshots:
     dependencies:
       '@iconify/types': 2.0.0
 
-  '@iconify/json@2.2.350':
+  '@iconify/json@2.2.355':
     dependencies:
       '@iconify/types': 2.0.0
       pathe: 1.1.2
@@ -6405,7 +6409,7 @@ snapshots:
       - vite
       - vue
 
-  '@nuxt/image@1.10.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9)))(ioredis@5.6.1)(magicast@0.3.5)':
+  '@nuxt/image@1.10.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9)))(ioredis@5.6.1)(magicast@0.3.5)':
     dependencies:
       '@nuxt/kit': 3.17.5(magicast@0.3.5)
       consola: 3.4.2
@@ -6418,7 +6422,7 @@ snapshots:
       std-env: 3.9.0
       ufo: 1.6.1
     optionalDependencies:
-      ipx: 2.1.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9)))(ioredis@5.6.1)
+      ipx: 2.1.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9)))(ioredis@5.6.1)
     transitivePeerDependencies:
       - '@azure/app-configuration'
       - '@azure/cosmos'
@@ -7481,13 +7485,13 @@ snapshots:
 
   '@vueuse/metadata@13.4.0': {}
 
-  '@vueuse/nuxt@13.4.0(magicast@0.3.5)(nuxt@3.17.5(@libsql/client@0.15.9)(@parcel/watcher@2.5.1)(@types/node@24.0.3)(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9)))(drizzle-orm@0.43.1(@libsql/client@0.15.9))(eslint@9.29.0(jiti@2.4.2))(ioredis@5.6.1)(lightningcss@1.30.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.44.0)(terser@5.43.1)(typescript@5.8.3)(vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))(vue-tsc@2.2.10(typescript@5.8.3))(yaml@2.8.0))(vue@3.5.17(typescript@5.8.3))':
+  '@vueuse/nuxt@13.4.0(magicast@0.3.5)(nuxt@3.17.5(@libsql/client@0.15.9)(@parcel/watcher@2.5.1)(@types/node@24.0.3)(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9)))(drizzle-orm@0.44.2(@libsql/client@0.15.9))(eslint@9.29.0(jiti@2.4.2))(ioredis@5.6.1)(lightningcss@1.30.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.44.0)(terser@5.43.1)(typescript@5.8.3)(vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))(vue-tsc@2.2.10(typescript@5.8.3))(yaml@2.8.0))(vue@3.5.17(typescript@5.8.3))':
     dependencies:
       '@nuxt/kit': 3.17.5(magicast@0.3.5)
       '@vueuse/core': 13.4.0(vue@3.5.17(typescript@5.8.3))
       '@vueuse/metadata': 13.4.0
       local-pkg: 1.1.1
-      nuxt: 3.17.5(@libsql/client@0.15.9)(@parcel/watcher@2.5.1)(@types/node@24.0.3)(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9)))(drizzle-orm@0.43.1(@libsql/client@0.15.9))(eslint@9.29.0(jiti@2.4.2))(ioredis@5.6.1)(lightningcss@1.30.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.44.0)(terser@5.43.1)(typescript@5.8.3)(vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))(vue-tsc@2.2.10(typescript@5.8.3))(yaml@2.8.0)
+      nuxt: 3.17.5(@libsql/client@0.15.9)(@parcel/watcher@2.5.1)(@types/node@24.0.3)(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9)))(drizzle-orm@0.44.2(@libsql/client@0.15.9))(eslint@9.29.0(jiti@2.4.2))(ioredis@5.6.1)(lightningcss@1.30.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.44.0)(terser@5.43.1)(typescript@5.8.3)(vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))(vue-tsc@2.2.10(typescript@5.8.3))(yaml@2.8.0)
       vue: 3.5.17(typescript@5.8.3)
     transitivePeerDependencies:
       - magicast
@@ -7990,10 +7994,10 @@ snapshots:
 
   data-uri-to-buffer@4.0.1: {}
 
-  db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9)):
+  db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9)):
     optionalDependencies:
       '@libsql/client': 0.15.9
-      drizzle-orm: 0.43.1(@libsql/client@0.15.9)
+      drizzle-orm: 0.44.2(@libsql/client@0.15.9)
 
   de-indent@1.0.2: {}
 
@@ -8128,7 +8132,7 @@ snapshots:
 
   dotenv@16.5.0: {}
 
-  drizzle-kit@0.31.1:
+  drizzle-kit@0.31.4:
     dependencies:
       '@drizzle-team/brocli': 0.10.2
       '@esbuild-kit/esm-loader': 2.6.5
@@ -8137,7 +8141,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.43.1(@libsql/client@0.15.9):
+  drizzle-orm@0.44.2(@libsql/client@0.15.9):
     optionalDependencies:
       '@libsql/client': 0.15.9
 
@@ -8805,7 +8809,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  ipx@2.1.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9)))(ioredis@5.6.1):
+  ipx@2.1.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9)))(ioredis@5.6.1):
     dependencies:
       '@fastify/accept-negotiator': 1.1.0
       citty: 0.1.6
@@ -8821,7 +8825,7 @@ snapshots:
       sharp: 0.32.6
       svgo: 3.3.2
       ufo: 1.6.1
-      unstorage: 1.16.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9)))(ioredis@5.6.1)
+      unstorage: 1.16.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9)))(ioredis@5.6.1)
       xss: 1.0.15
     transitivePeerDependencies:
       - '@azure/app-configuration'
@@ -9269,7 +9273,7 @@ snapshots:
       p-wait-for: 5.0.2
       qs: 6.14.0
 
-  nitropack@2.11.12(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9)):
+  nitropack@2.11.12(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9)):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.4.0
       '@netlify/functions': 3.1.10(rollup@4.44.0)
@@ -9291,7 +9295,7 @@ snapshots:
       cookie-es: 2.0.0
       croner: 9.1.0
       crossws: 0.3.5
-      db0: 0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9))
+      db0: 0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9))
       defu: 6.1.4
       destr: 2.0.5
       dot-prop: 9.0.0
@@ -9337,7 +9341,7 @@ snapshots:
       unenv: 2.0.0-rc.17
       unimport: 5.0.1
       unplugin-utils: 0.2.4
-      unstorage: 1.16.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9)))(ioredis@5.6.1)
+      unstorage: 1.16.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9)))(ioredis@5.6.1)
       untyped: 2.0.0
       unwasm: 0.3.9
       youch: 4.1.0-beta.8
@@ -9457,7 +9461,7 @@ snapshots:
       - magicast
       - typescript
 
-  nuxt@3.17.5(@libsql/client@0.15.9)(@parcel/watcher@2.5.1)(@types/node@24.0.3)(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9)))(drizzle-orm@0.43.1(@libsql/client@0.15.9))(eslint@9.29.0(jiti@2.4.2))(ioredis@5.6.1)(lightningcss@1.30.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.44.0)(terser@5.43.1)(typescript@5.8.3)(vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))(vue-tsc@2.2.10(typescript@5.8.3))(yaml@2.8.0):
+  nuxt@3.17.5(@libsql/client@0.15.9)(@parcel/watcher@2.5.1)(@types/node@24.0.3)(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9)))(drizzle-orm@0.44.2(@libsql/client@0.15.9))(eslint@9.29.0(jiti@2.4.2))(ioredis@5.6.1)(lightningcss@1.30.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.44.0)(terser@5.43.1)(typescript@5.8.3)(vite@6.3.5(@types/node@24.0.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))(vue-tsc@2.2.10(typescript@5.8.3))(yaml@2.8.0):
     dependencies:
       '@nuxt/cli': 3.25.1(magicast@0.3.5)
       '@nuxt/devalue': 2.0.2
@@ -9492,7 +9496,7 @@ snapshots:
       mlly: 1.7.4
       mocked-exports: 0.1.1
       nanotar: 0.2.0
-      nitropack: 2.11.12(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9))
+      nitropack: 2.11.12(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9))
       nypm: 0.6.0
       ofetch: 1.4.1
       ohash: 2.0.11
@@ -9514,7 +9518,7 @@ snapshots:
       unimport: 5.0.1
       unplugin: 2.3.5
       unplugin-vue-router: 0.12.0(vue-router@4.5.1(vue@3.5.17(typescript@5.8.3)))(vue@3.5.17(typescript@5.8.3))
-      unstorage: 1.16.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9)))(ioredis@5.6.1)
+      unstorage: 1.16.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9)))(ioredis@5.6.1)
       untyped: 2.0.0
       vue: 3.5.17(typescript@5.8.3)
       vue-bundle-renderer: 2.1.1
@@ -10696,7 +10700,7 @@ snapshots:
       '@unrs/resolver-binding-win32-ia32-msvc': 1.9.0
       '@unrs/resolver-binding-win32-x64-msvc': 1.9.0
 
-  unstorage@1.16.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9)))(ioredis@5.6.1):
+  unstorage@1.16.0(db0@0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9)))(ioredis@5.6.1):
     dependencies:
       anymatch: 3.1.3
       chokidar: 4.0.3
@@ -10707,7 +10711,7 @@ snapshots:
       ofetch: 1.4.1
       ufo: 1.6.1
     optionalDependencies:
-      db0: 0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.43.1(@libsql/client@0.15.9))
+      db0: 0.3.2(@libsql/client@0.15.9)(drizzle-orm@0.44.2(@libsql/client@0.15.9))
       ioredis: 5.6.1
 
   untun@0.1.3:
