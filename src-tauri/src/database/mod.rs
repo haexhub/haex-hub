@@ -3,6 +3,7 @@ pub mod core;
 
 use rusqlite::Connection;
 use serde_json::Value as JsonValue;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -58,9 +59,14 @@ pub fn create_encrypted_database(
         app_handle.path().resource_dir()
     );
 
+    /* let resource_path = app_handle
+    .path()
+    .resolve("database/vault.db", BaseDirectory::Resource)
+    .map_err(|e| format!("Fehler beim Auflösen des Ressourcenpfads: {}", e))?; */
+
     let resource_path = app_handle
         .path()
-        .resolve("database/vault.db", BaseDirectory::Resource)
+        .resolve("temp_vault.db", BaseDirectory::AppLocalData)
         .map_err(|e| format!("Fehler beim Auflösen des Ressourcenpfads: {}", e))?;
 
     // Prüfen, ob die Ressourcendatei existiert
@@ -72,12 +78,16 @@ pub fn create_encrypted_database(
     }
 
     // Sicherstellen, dass das Zielverzeichnis existiert
-    if let Some(parent) = Path::new(&path).parent() {
+    /* if let Some(parent) = Path::new(&path).parent() {
         if !parent.exists() {
-            std::fs::create_dir_all(parent)
-                .map_err(|e| format!("Fehler beim Erstellen des Zielverzeichnisses: {}", e))?;
+            std::fs::create_dir_all(parent).map_err(|e| {
+                format!(
+                    "Fehler beim Erstellen des Zielverzeichnisses: {}\n mit Fehler {}",
+                    path, e
+                )
+            })?;
         }
-    }
+    } */
 
     let target = Path::new(&path);
     if target.exists() & target.is_file() {
@@ -167,14 +177,23 @@ pub fn create_encrypted_database(
     Ok(format!("Verschlüsselte CRDT-Datenbank erstellt",))
 }
 
+use tauri_plugin_dialog::{Dialog, DialogExt, MessageDialogKind};
 #[tauri::command]
 pub fn open_encrypted_database(
+    app_handle: AppHandle,
     path: String,
     key: String,
     state: State<'_, DbConnection>,
 ) -> Result<String, String> {
+    /* let vault_path = app_handle
+    .path()
+    .resolve(format!("vaults/{}", path), BaseDirectory::AppLocalData)
+    .map_err(|e| format!("Fehler {}", e))?
+    .into_os_string()
+    .into_string()
+    .unwrap(); */
     if !std::path::Path::new(&path).exists() {
-        return Err("File not found ".into());
+        return Err(format!("File not found {}", path).into());
     }
 
     let conn =

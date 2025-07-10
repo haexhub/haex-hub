@@ -6,8 +6,8 @@ use rusqlite::{
     Connection, OpenFlags, ToSql,
 };
 use serde_json::Value as JsonValue;
+use std::fs;
 use std::path::Path;
-use std::{fs, path::PathBuf};
 use tauri::State;
 // --- Hilfsfunktion: Konvertiert JSON Value zu etwas, das rusqlite versteht ---
 // Diese Funktion ist etwas knifflig wegen Ownership und Lifetimes.
@@ -168,7 +168,13 @@ pub fn open_and_init_db(path: &str, key: &str, create: bool) -> Result<Connectio
         OpenFlags::SQLITE_OPEN_READ_WRITE
     };
 
-    let conn = Connection::open_with_flags(path, flags).map_err(|e| e.to_string())?;
+    let conn = Connection::open_with_flags(path, flags).map_err(|e| {
+        format!(
+            "Dateiii gibt es nicht: {}. Habe nach {} gesucht",
+            e.to_string(),
+            path
+        )
+    })?;
     conn.pragma_update(None, "key", key)
         .map_err(|e| e.to_string())?;
 

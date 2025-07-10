@@ -1,3 +1,4 @@
+import { platform } from '@tauri-apps/plugin-os'
 import type { LocationQueryValue, RouteLocationRawI18n } from 'vue-router'
 
 export const bytesToBase64DataUrlAsync = async (
@@ -67,7 +68,7 @@ export const readableFileSize = (sizeInByte: number | string = 0) => {
 export const getSingleRouteParam = (
   param: string | string[] | LocationQueryValue | LocationQueryValue[],
 ): string => {
-  const _param = Array.isArray(param) ? param.at(0) ?? '' : param ?? ''
+  const _param = Array.isArray(param) ? (param.at(0) ?? '') : (param ?? '')
   //console.log('getSingleRouteParam found:', _param, param)
   return decodeURIComponent(_param)
 }
@@ -229,4 +230,9 @@ export const areObjectsEqual = (valueA: unknown, valueB: unknown): boolean => {
 
   // 5. Wenn die Schleife durchläuft, sind die Objekte gleich
   return true
+}
+
+export const getFileName = (fullPath: string) => {
+  const seperator = platform() === 'windows' ? '\\' : '/'
+  return fullPath.split(seperator).pop()
 }

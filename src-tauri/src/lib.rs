@@ -1,4 +1,5 @@
 //mod browser;
+mod android_storage;
 mod database;
 mod extension;
 mod models;
@@ -44,13 +45,15 @@ pub fn run() {
         })
         .manage(DbConnection(Arc::new(Mutex::new(None))))
         .manage(ExtensionState::default())
-        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_persisted_scope::init())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_android_fs::init())
         //.plugin(tauri_plugin_sql::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             database::create_encrypted_database,
@@ -63,6 +66,9 @@ pub fn run() {
             extension::copy_directory,
             extension::database::extension_sql_execute,
             extension::database::extension_sql_select,
+            android_storage::request_storage_permission,
+            android_storage::has_storage_permission,
+            android_storage::get_external_storage_paths,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -21,6 +21,9 @@
           v-model:open="passwordPromptOpen"
           :path="vaultPath"
         />
+
+        <UiButton @click="requesty()">Storage Request</UiButton>
+        res: {{ res }}
       </div>
 
       <div
@@ -41,7 +44,7 @@
           >
             <button
               class="link link-accent flex items-center no-underline justify-between text-nowrap text-sm md:text-base shrink w-full py-2 px-4"
-              @click=";(passwordPromptOpen = true), (vaultPath = vault.path)"
+              @click=";((passwordPromptOpen = true), (vaultPath = vault.path))"
             >
               <span class="block md:hidden">
                 {{ vault.name }}
@@ -91,6 +94,18 @@ const { syncLastVaultsAsync, removeVaultAsync } = useLastVaultStore()
 const { lastVaults } = storeToRefs(useLastVaultStore())
 
 await syncLastVaultsAsync()
+
+const res = ref()
+
+const storage = useAndroidStorage()
+const requesty = async () => {
+  try {
+    res.value = await storage.requestStoragePermission()
+    res.value += ' wat the fuk'
+  } catch (error) {
+    res.value = error
+  }
+}
 </script>
 
 <i18n lang="json">

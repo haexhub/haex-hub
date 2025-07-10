@@ -69,6 +69,9 @@ import { save } from '@tauri-apps/plugin-dialog'
 import { onKeyStroke } from '@vueuse/core'
 import { useVaultStore } from '~/stores/vault'
 import { vaultDatabaseSchema } from './schema'
+import { BaseDirectory, readFile, writeFile } from '@tauri-apps/plugin-fs'
+import { resolveResource } from '@tauri-apps/api/path'
+//import { convertFileSrc } from "@tauri-apps/api/tauri";
 
 onKeyStroke('Enter', (e) => {
   e.preventDefault()
@@ -123,10 +126,20 @@ const onCreateAsync = async () => {
 
   open.value = false
   try {
+    const template_vault_path = await resolveResource('database/vault.db')
+
+    const template_vault = await readFile(template_vault_path)
+
     database.path = await save({
       defaultPath: database.name.endsWith('.db')
         ? database.name
         : `${database.name}.db`,
+    })
+
+    if (!database.path) return
+
+    await writeFile('temp_vault.db', template_vault, {
+      baseDir: BaseDirectory.AppLocalData,
     })
 
     console.log('data', database)
@@ -146,7 +159,7 @@ const onCreateAsync = async () => {
     }
   } catch (error) {
     console.error(error)
-    add({ type: 'error', text: JSON.stringify(error) })
+    add({ type: 'error', text: `${error}` })
   }
 }
 

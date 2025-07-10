@@ -55,7 +55,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": ["database/vault.db", "resources/"],
+    "resources": ["database/vault.db"],
 
     "linux": {
       "appimage": {

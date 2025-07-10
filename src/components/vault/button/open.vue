@@ -18,7 +18,7 @@
           <UiTextGradient>HaexVault</UiTextGradient>
         </template>
       </i18n-t>
-
+      Path1: {{ test }}
       <div class="text-sm">{{ props.path ?? database.path }}</div>
     </template>
 
@@ -41,6 +41,15 @@
 <script setup lang="ts">
 import { open as openVault } from '@tauri-apps/plugin-dialog'
 import { vaultDatabaseSchema } from './schema'
+import {
+  BaseDirectory,
+  copyFile,
+  mkdir,
+  exists,
+  readFile,
+  writeFile,
+  stat,
+} from '@tauri-apps/plugin-fs'
 
 const { t } = useI18n()
 
@@ -96,6 +105,7 @@ const onLoadDatabase = async () => {
       ],
     })
 
+    console.log('onLoadDatabase', database.path)
     if (!database.path) return
 
     open.value = true
@@ -118,13 +128,17 @@ const onOpenDatabase = async () => {
       database.password,
     )
 
-    if (!pathCheck.success || !passwordCheck.success || !path) {
+    /* if (!pathCheck.success || !passwordCheck.success || !path) {
       add({
         type: 'error',
         text: `Params falsch. Path: ${pathCheck.error} | Password: ${passwordCheck.error}`,
       })
       return
-    }
+    } */
+
+    //const vaultName = await copyDatabaseInAppDirectoryAsync(path)
+
+    //if (!vaultName) return
 
     const vaultId = await openAsync({
       path,
@@ -159,6 +173,31 @@ const onOpenDatabase = async () => {
   }
 }
 
+const test = ref()
+const copyDatabaseInAppDirectoryAsync = async (source: string) => {
+  const vaultName = getFileName(source)
+  const vaultsDirExists = await exists('vaults', {
+    baseDir: BaseDirectory.AppLocalData,
+  })
+  //convertFileSrc
+  if (!vaultsDirExists) {
+    await mkdir('vaults', {
+      baseDir: BaseDirectory.AppLocalData,
+    })
+  }
+
+  test.value = `source: ${source} - target: vaults/${vaultName}`
+  console.log('copyDatabaseInAppDirectoryAsync', `vaults/${vaultName}`)
+
+  const sourceFile = await readFile(source)
+  await writeFile(`vaults/HaexVault.db`, sourceFile, {
+    baseDir: BaseDirectory.AppLocalData,
+  })
+  /* await copyFile(source, `vaults/HaexVault.db`, {
+    toPathBaseDir: BaseDirectory.AppLocalData,
+  }) */
+  return vaultName
+}
 const onAbort = () => {
   initDatabase()
   open.value = false

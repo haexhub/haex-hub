@@ -19,8 +19,17 @@
     "fs:allow-appdata-read-recursive",
     "fs:allow-appdata-write-recursive",
     "fs:allow-read-file",
+    "fs:allow-read-dir",
     "fs:allow-resource-read-recursive",
+    "fs:allow-resource-write-recursive",
+    "fs:allow-download-read-recursive",
+    "fs:allow-download-write-recursive",
     "fs:default",
+    "android-fs:default",
+    {
+      "identifier": "fs:scope",
+      "allow": [{ "path": "**" }]
+    },
     "http:allow-fetch-send",
     "http:allow-fetch",
     "http:default",

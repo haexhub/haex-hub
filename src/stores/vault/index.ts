@@ -51,8 +51,8 @@ export const useVaultStore = defineStore('vaultStore', () => {
       if (result !== 'success') throw new Error(result)
 
       const vaultId = await getVaultIdAsync(path)
-      const seperator = platform() === 'windows' ? '\\' : '/'
-      const fileName = path.split(seperator).pop()
+
+      const fileName = getFileName(path)
 
       openVaults.value = {
         ...openVaults.value,
