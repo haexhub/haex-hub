@@ -1,8 +1,10 @@
 // In src-tauri/src/trigger_manager.rs -> impl<'a> TriggerManager<'a>
 
 // In einem neuen Modul, z.B. src-tauri/src/trigger_manager.rs
-use crate::sql_proxy::ColumnInfo;
-use rusqlite::{Result, Transaction};
+use crate::crdt::proxy::ColumnInfo;
+use rusqlite::{params, Connection, Result, Transaction};
+use std::sync::{Arc, Mutex};
+use tauri::AppHandle;
 
 pub struct TriggerManager<'a> {
     tx: &'a Transaction<'a>,
@@ -94,7 +96,7 @@ impl<'a> TriggerManager<'a> {
         )).collect::<Vec<_>>().join("\n");
 
         // Erstellt die Logik für den Soft-Delete
-        let delete_logic = format!(
+        let soft_delete_logic = format!(
             r#"
             -- Protokolliere den Soft-Delete
             INSERT INTO crdt_log (hlc_timestamp, op_type, table_name, row_pk)
@@ -117,7 +119,7 @@ impl<'a> TriggerManager<'a> {
             FOR EACH ROW
             BEGIN
                 {column_updates}
-                {delete_logic}
+                {soft_delete_logic}
             END;"
         )
     }

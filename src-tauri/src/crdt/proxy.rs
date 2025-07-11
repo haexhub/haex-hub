@@ -1,7 +1,6 @@
 // In src-tauri/src/sql_proxy.rs
 
 use rusqlite::Connection;
-use sqlparser::ast::Statement;
 use sqlparser::ast::{ColumnDef, DataType, Expr, Ident, Query, Statement, TableWithJoins, Value};
 use sqlparser::dialect::SQLiteDialect;
 use sqlparser::parser::Parser;
@@ -9,11 +8,9 @@ use sqlparser::visit_mut::{self, VisitorMut};
 use std::ops::ControlFlow;
 
 // Der Name der Tombstone-Spalte als Konstante, um "Magic Strings" zu vermeiden.
-pub const TOMBSTONE_COLUMN_NAME: &str = "tombstone";
-const EXCLUDED_TABLES: &[&str] = &["crdt_log"];
+pub const TOMBSTONE_COLUMN_NAME: &str = "haex_tombstone";
+const EXCLUDED_TABLES: &[&str] = &["haex_crdt_log"];
 
-// Die Hauptstruktur unseres Proxys.
-// Sie ist zustandslos, da wir uns gegen einen Schema-Cache entschieden haben.
 pub struct SqlProxy;
 
 impl SqlProxy {

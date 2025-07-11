@@ -1,5 +1,6 @@
 //mod browser;
 mod android_storage;
+mod crdt;
 mod database;
 mod extension;
 mod models;
@@ -44,6 +45,7 @@ pub fn run() {
             }
         })
         .manage(DbConnection(Arc::new(Mutex::new(None))))
+        .manage(database::HlcService(Mutex::new(uhlc::HLC::default())))
         .manage(ExtensionState::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -61,7 +63,6 @@ pub fn run() {
             database::sql_execute,
             database::sql_select,
             database::test,
-            database::get_hlc_timestamp,
             database::update_hlc_from_remote,
             extension::copy_directory,
             extension::database::extension_sql_execute,

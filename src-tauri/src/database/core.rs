@@ -1,4 +1,5 @@
 // database/core.rs
+use crate::crdt::hlc;
 use crate::database::DbConnection;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use rusqlite::{
@@ -6,8 +7,6 @@ use rusqlite::{
     Connection, OpenFlags, ToSql,
 };
 use serde_json::Value as JsonValue;
-use std::fs;
-use std::path::Path;
 use tauri::State;
 // --- Hilfsfunktion: Konvertiert JSON Value zu etwas, das rusqlite versteht ---
 // Diese Funktion ist etwas knifflig wegen Ownership und Lifetimes.
@@ -39,8 +38,6 @@ fn json_to_rusqlite_value(json_val: &JsonValue) -> Result<RusqliteValue, String>
     }
 }
 
-// --- Tauri Command für INSERT/UPDATE/DELETE ---
-#[tauri::command]
 pub async fn execute(
     sql: String,
     params: Vec<JsonValue>,
@@ -67,7 +64,6 @@ pub async fn execute(
     Ok(affected_rows)
 }
 
-#[tauri::command]
 pub async fn select(
     sql: String,
     params: Vec<JsonValue>,
@@ -192,32 +188,6 @@ pub fn open_and_init_db(path: &str, key: &str, create: bool) -> Result<Connectio
     }
 
     Ok(conn)
-}
-
-/// Kopiert eine Datei von einem Pfad zu einem anderen
-pub fn copy_file<S: AsRef<Path>, T: AsRef<Path>>(
-    source_path: S,
-    target_path: T,
-) -> Result<(), String> {
-    let source = source_path.as_ref();
-    let target = target_path.as_ref();
-
-    // Check if source file exists
-    if !source.exists() {
-        return Err(format!("Source file '{}' does not exist", source.display()));
-    }
-
-    // Check if source is a file (not a directory)
-    if !source.is_file() {
-        return Err(format!("Source '{}' is not a file", source.display()));
-    }
-
-    // Copy the file and preserve metadata (permissions, timestamps)
-    fs::copy(source, target)
-        .map(|_| ())
-        .map_err(|e| format!("Failed to copy file: {}", e))?;
-
-    Ok(())
 }
 
 // Hilfsfunktionen für SQL-Parsing
