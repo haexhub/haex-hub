@@ -13,6 +13,7 @@ export const haexSettings = sqliteTable('haex_settings', {
   key: text(),
   type: text(),
   value: text(),
+  haex_tombstone: integer({ mode: 'boolean' }),
 })
 export type InsertHaexSettings = typeof haexSettings.$inferInsert
 export type SelectHaexSettings = typeof haexSettings.$inferSelect
@@ -25,6 +26,7 @@ export const haexExtensions = sqliteTable('haex_extensions', {
   name: text(),
   url: text(),
   version: text(),
+  haex_tombstone: integer({ mode: 'boolean' }),
 })
 export type InsertHaexExtensions = typeof haexExtensions.$inferInsert
 export type SelectHaexExtensions = typeof haexExtensions.$inferSelect
@@ -43,6 +45,7 @@ export const haexExtensionsPermissions = sqliteTable(
     updateAt: integer('updated_at', { mode: 'timestamp' }).$onUpdate(
       () => new Date(),
     ),
+    haex_tombstone: integer({ mode: 'boolean' }),
   },
   (table) => [
     unique().on(table.extensionId, table.resource, table.operation, table.path),
@@ -66,6 +69,7 @@ export const haexNotifications = sqliteTable('haex_notifications', {
   type: text({
     enum: ['error', 'success', 'warning', 'info', 'log'],
   }).notNull(),
+  haex_tombstone: integer({ mode: 'boolean' }),
 })
 export type InsertHaexNotifications = typeof haexNotifications.$inferInsert
 export type SelectHaexNotifications = typeof haexNotifications.$inferSelect
@@ -85,6 +89,7 @@ export const haexPasswordsItemDetails = sqliteTable(
     updateAt: integer('updated_at', { mode: 'timestamp' }).$onUpdate(
       () => new Date(),
     ),
+    haex_tombstone: integer({ mode: 'boolean' }),
   },
 )
 export type InsertHaexPasswordsItemDetails =
@@ -104,6 +109,7 @@ export const haexPasswordsItemKeyValues = sqliteTable(
     updateAt: integer('updated_at', { mode: 'timestamp' }).$onUpdate(
       () => new Date(),
     ),
+    haex_tombstone: integer({ mode: 'boolean' }),
   },
 )
 export type InserthaexPasswordsItemKeyValues =
@@ -123,6 +129,7 @@ export const haexPasswordsItemHistory = sqliteTable(
     oldValue: text('old_value'),
     newValue: text('new_value'),
     createdAt: text('created_at').default(sql`(CURRENT_TIMESTAMP)`),
+    haex_tombstone: integer({ mode: 'boolean' }),
   },
 )
 export type InserthaexPasswordsItemHistory =
@@ -144,6 +151,7 @@ export const haexPasswordsGroups = sqliteTable('haex_passwords_groups', {
   updateAt: integer('updated_at', { mode: 'timestamp' }).$onUpdate(
     () => new Date(),
   ),
+  haex_tombstone: integer({ mode: 'boolean' }),
 })
 export type InsertHaexPasswordsGroups = typeof haexPasswordsGroups.$inferInsert
 export type SelectHaexPasswordsGroups = typeof haexPasswordsGroups.$inferSelect
@@ -157,6 +165,7 @@ export const haexPasswordsGroupItems = sqliteTable(
     itemId: text('item_id').references(
       (): AnySQLiteColumn => haexPasswordsItemDetails.id,
     ),
+    haex_tombstone: integer({ mode: 'boolean' }),
   },
   (table) => [primaryKey({ columns: [table.itemId, table.groupId] })],
 )

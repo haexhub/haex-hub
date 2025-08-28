@@ -44,8 +44,9 @@ tauri-plugin-store = "2.3"
 tauri-plugin-http = "2.5"
 tauri-plugin-notification = "2.3"
 tauri-plugin-persisted-scope = "2.0.0"
-tauri-plugin-android-fs = "9.5.0" 
+tauri-plugin-android-fs = "9.5.0"
 uuid = { version = "1.17.0", features = ["v4"] }
+ts-rs = "11.0.1"
+thiserror = "2.0.12"
+
 #tauri-plugin-sql = { version = "2", features = ["sqlite"] }
-
-

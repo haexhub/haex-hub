@@ -1,15 +1,47 @@
-// In src-tauri/src/sql_proxy.rs
+// In src-tauri/src/crdt/proxy.rs
 
-use rusqlite::Connection;
-use sqlparser::ast::{ColumnDef, DataType, Expr, Ident, Query, Statement, TableWithJoins, Value};
+use crate::crdt::hlc::HlcService;
+use crate::crdt::trigger::{HLC_TIMESTAMP_COLUMN, TOMBSTONE_COLUMN};
+use serde::{Deserialize, Serialize};
+use sqlparser::ast::{
+    Assignment, AssignmentTarget, BinaryOperator, ColumnDef, DataType, Expr, Ident, Insert,
+    ObjectName, ObjectNamePart, SelectItem, SetExpr, Statement, TableFactor, TableObject,
+    TableWithJoins, UpdateTableFromKind, Value, ValueWithSpan,
+};
 use sqlparser::dialect::SQLiteDialect;
 use sqlparser::parser::Parser;
-use sqlparser::visit_mut::{self, VisitorMut};
-use std::ops::ControlFlow;
+use std::collections::HashSet;
+use ts_rs::TS;
+use uhlc::Timestamp;
 
-// Der Name der Tombstone-Spalte als Konstante, um "Magic Strings" zu vermeiden.
-pub const TOMBSTONE_COLUMN_NAME: &str = "haex_tombstone";
-const EXCLUDED_TABLES: &[&str] = &["haex_crdt_log"];
+#[derive(Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(tag = "type", content = "details")]
+pub enum ProxyError {
+    /// Der SQL-Code konnte nicht geparst werden.
+    ParseError {
+        reason: String,
+    },
+    /// Ein Fehler ist während der Ausführung in der Datenbank aufgetreten.
+    ExecutionError {
+        sql: String,
+        reason: String,
+    },
+    /// Ein Fehler ist beim Verwalten der Transaktion aufgetreten.
+    TransactionError {
+        reason: String,
+    },
+    /// Ein SQL-Statement wird vom Proxy nicht unterstützt (z.B. DELETE von einer Subquery).
+    UnsupportedStatement {
+        description: String,
+    },
+    HlcError {
+        reason: String,
+    },
+}
+
+// Tabellen, die von der Proxy-Logik ausgeschlossen sind.
+const EXCLUDED_TABLES: &[&str] = &["haex_crdt_settings", "haex_crdt_logs"];
 
 pub struct SqlProxy;
 
@@ -18,145 +50,369 @@ impl SqlProxy {
         Self {}
     }
 
-    // Die zentrale Ausführungsfunktion
-    pub fn execute(&self, sql: &str, conn: &Connection) -> Result<(), String> {
-        // 1. Parsen des SQL-Strings in einen oder mehrere ASTs.
-        // Ein String kann mehrere, durch Semikolon getrennte Anweisungen enthalten.
+    /// Führt SQL-Anweisungen aus, nachdem sie für CRDT-Konformität transformiert wurden.
+    pub fn execute(
+        &self,
+        sql: &str,
+        conn: &mut rusqlite::Connection,
+        hlc_service: &HlcService,
+    ) -> Result<Vec<String>, ProxyError> {
         let dialect = SQLiteDialect {};
-        let mut ast_vec =
-            Parser::parse_sql(&dialect, sql).map_err(|e| format!("SQL-Parse-Fehler: {}", e))?;
+        let mut ast_vec = Parser::parse_sql(&dialect, sql).map_err(|e| ProxyError::ParseError {
+            reason: e.to_string(),
+        })?;
 
-        // 2. Wir durchlaufen und transformieren jedes einzelne Statement im AST-Vektor.
+        let mut modified_schema_tables = HashSet::new();
+
+        let tx = conn
+            .transaction()
+            .map_err(|e| ProxyError::TransactionError {
+                reason: e.to_string(),
+            })?;
+
+        let hlc_timestamp =
+            hlc_service
+                .new_timestamp_and_persist(&tx)
+                .map_err(|e| ProxyError::HlcError {
+                    reason: e.to_string(),
+                })?;
+
         for statement in &mut ast_vec {
-            self.transform_statement(statement)?;
-        }
-
-        // 3. Ausführen der (möglicherweise modifizierten) Anweisungen in einer einzigen Transaktion.
-        // Dies stellt sicher, dass alle Operationen atomar sind.
-        let tx = conn.transaction().map_err(|e| e.to_string())?;
-        for statement in ast_vec {
-            let final_sql = statement.to_string();
-            tx.execute(&final_sql)
-                .map_err(|e| format!("DB-Ausführungsfehler bei '{}': {}", final_sql, e))?;
-
-            // Wenn es ein CREATE/ALTER TABLE war, müssen die Trigger neu erstellt werden.
-            // Dies geschieht innerhalb derselben Transaktion.
-            if let Statement::CreateTable { name, .. } | Statement::AlterTable { name, .. } =
-                statement
-            {
-                let table_name = name.0.last().unwrap().value.clone();
-                let trigger_manager = crate::trigger_manager::TriggerManager::new(&tx);
-                trigger_manager
-                    .setup_triggers_for_table(&table_name)
-                    .map_err(|e| {
-                        format!("Trigger-Setup-Fehler für Tabelle '{}': {}", table_name, e)
-                    })?;
+            if let Some(table_name) = self.transform_statement(statement, Some(&hlc_timestamp))? {
+                modified_schema_tables.insert(table_name);
             }
         }
-        tx.commit().map_err(|e| e.to_string())?;
 
-        Ok(())
+        for statement in ast_vec {
+            let final_sql = statement.to_string();
+            tx.execute(&final_sql, [])
+                .map_err(|e| ProxyError::ExecutionError {
+                    sql: final_sql,
+                    reason: e.to_string(),
+                })?;
+        }
+        tx.commit().map_err(|e| ProxyError::TransactionError {
+            reason: e.to_string(),
+        })?;
+
+        Ok(modified_schema_tables.into_iter().collect())
     }
 
-    // Diese Methode wendet die Transformation auf ein einzelnes Statement an.
-    fn transform_statement(&self, statement: &mut Statement) -> Result<(), String> {
-        let mut visitor = TombstoneVisitor;
-        // `visit` durchläuft den AST und ruft die entsprechenden `visit_*_mut` Methoden auf.
-        statement.visit(&mut visitor);
-        Ok(())
-    }
-}
-
-struct TombstoneVisitor;
-
-impl TombstoneVisitor {
-    fn is_audited_table(&self, table_name: &str) -> bool {
-        !EXCLUDED_TABLES.contains(&table_name.to_lowercase().as_str())
-    }
-}
-
-impl VisitorMut for TombstoneVisitor {
-    type Break = ();
-
-    // Diese Methode wird für jedes Statement im AST aufgerufen
-    fn visit_statement_mut(&mut self, stmt: &mut Statement) -> ControlFlow<Self::Break> {
+    /// Wendet die Transformation auf ein einzelnes Statement an.
+    fn transform_statement(
+        &self,
+        stmt: &mut Statement,
+        hlc_timestamp: Option<&Timestamp>,
+    ) -> Result<Option<String>, ProxyError> {
         match stmt {
-            // Fall 1: CREATE TABLE
-            Statement::CreateTable { name, columns, .. } => {
-                let table_name = name.0.last().unwrap().value.as_str();
-                if self.is_audited_table(table_name) {
-                    // Füge die 'tombstone'-Spalte hinzu, wenn sie nicht existiert
-                    if !columns
-                        .iter()
-                        .any(|c| c.name.value.to_lowercase() == TOMBSTONE_COLUMN_NAME)
-                    {
-                        columns.push(ColumnDef {
-                            name: Ident::new(TOMBSTONE_COLUMN_NAME),
-                            data_type: DataType::Integer,
-                            collation: None,
-                            options: vec![], // Default ist 0
-                        });
+            sqlparser::ast::Statement::Query(query) => {
+                if let SetExpr::Select(select) = &mut *query.body {
+                    let mut tombstone_filters = Vec::new();
+                    for twj in &select.from {
+                        if let TableFactor::Table { name, alias, .. } = &twj.relation {
+                            if self.is_audited_table(name) {
+                                let table_idents = if let Some(a) = alias {
+                                    vec![a.name.clone()]
+                                } else {
+                                    name.0
+                                        .iter()
+                                        .filter_map(|part| match part {
+                                            ObjectNamePart::Identifier(id) => Some(id.clone()),
+                                            _ => None,
+                                        })
+                                        .collect::<Vec<_>>()
+                                };
+                                let column_ident = Ident::new(TOMBSTONE_COLUMN);
+                                let full_ident = [table_idents, vec![column_ident]].concat();
+                                let filter = Expr::BinaryOp {
+                                    left: Box::new(Expr::CompoundIdentifier(full_ident)),
+                                    op: BinaryOperator::Eq,
+                                    right: Box::new(Expr::Value(
+                                        sqlparser::ast::Value::Number("1".to_string(), false)
+                                            .into(),
+                                    )),
+                                };
+                                tombstone_filters.push(filter);
+                            }
+                        }
+                    }
+                    if !tombstone_filters.is_empty() {
+                        let combined_filter = tombstone_filters
+                            .into_iter()
+                            .reduce(|acc, expr| Expr::BinaryOp {
+                                left: Box::new(acc),
+                                op: BinaryOperator::And,
+                                right: Box::new(expr),
+                            })
+                            .unwrap();
+                        match &mut select.selection {
+                            Some(existing) => {
+                                *existing = Expr::BinaryOp {
+                                    left: Box::new(existing.clone()),
+                                    op: BinaryOperator::And,
+                                    right: Box::new(combined_filter),
+                                };
+                            }
+                            None => {
+                                select.selection = Some(combined_filter);
+                            }
+                        }
+                    }
+                }
+
+                // Hinweis: UNION, EXCEPT etc. werden hier nicht behandelt, was dem bisherigen Code entspricht.
+            }
+            Statement::CreateTable(create_table) => {
+                if self.is_audited_table(&create_table.name) {
+                    self.add_crdt_columns(&mut create_table.columns);
+                    return Ok(Some(
+                        create_table
+                            .name
+                            .to_string()
+                            .trim_matches('`')
+                            .trim_matches('"')
+                            .to_string(),
+                    ));
+                }
+            }
+            Statement::Insert(insert_stmt) => {
+                if let TableObject::TableName(name) = &insert_stmt.table {
+                    if self.is_audited_table(name) {
+                        if let Some(ts) = hlc_timestamp {
+                            self.add_hlc_to_insert(insert_stmt, ts);
+                        }
                     }
                 }
             }
-
-            // Fall 2: DELETE
-            Statement::Delete(del_stmt) => {
-                // Wandle das DELETE-Statement in ein UPDATE-Statement um
-                let new_update = Statement::Update {
-                    table: del_stmt.from.clone(),
-                    assignments: vec![],
-                    value: Box::new(Expr::Value(Value::Number("1".to_string(), false))),
-                    from: None,
-                    selection: del_stmt.selection.clone(),
-                    returning: None,
+            /* Statement::Update(update_stmt) => {
+                if let TableFactor::Table { name, .. } = &update_stmt.table.relation {
+                    if self.is_audited_table(&name) {
+                        if let Some(ts) = hlc_timestamp {
+                            update_stmt.assignments.push(self.create_hlc_assignment(ts));
+                        }
+                    }
+                }
+            } */
+            Statement::Update {
+                table,
+                assignments: assignments,
+                from,
+                selection,
+                returning,
+                or,
+            } => {
+                if let TableFactor::Table { name, .. } = &table.relation {
+                    if self.is_audited_table(&name) {
+                        if let Some(ts) = hlc_timestamp {
+                            assignments.push(self.create_hlc_assignment(ts));
+                        }
+                    }
+                }
+                *stmt = Statement::Update {
+                    table: table.clone(),
+                    assignments: assignments.clone(),
+                    from: from.clone(),
+                    selection: selection.clone(),
+                    returning: returning.clone(),
+                    or: *or,
                 };
-                // Ersetze das aktuelle Statement im AST
-                *stmt = new_update;
+            }
+            Statement::Delete(del_stmt) => {
+                let table_name = self.extract_table_name_from_from(&del_stmt.from);
+                if let Some(name) = table_name {
+                    if self.is_audited_table(&name) {
+                        // GEÄNDERT: Übergibt den Zeitstempel an die Transformationsfunktion
+                        if let Some(ts) = hlc_timestamp {
+                            self.transform_delete_to_update(stmt, ts);
+                        }
+                    }
+                } else {
+                    return Err(ProxyError::UnsupportedStatement {
+                        description: "DELETE from non-table source or multiple tables".to_string(),
+                    });
+                }
+            }
+            Statement::AlterTable { name, .. } => {
+                if self.is_audited_table(name) {
+                    return Ok(Some(
+                        name.to_string()
+                            .trim_matches('`')
+                            .trim_matches('"')
+                            .to_string(),
+                    ));
+                }
             }
             _ => {}
         }
-
-        // Setze die Traversierung für untergeordnete Knoten fort (z.B. SELECTs)
-        visit_mut::walk_statement_mut(self, stmt)
+        Ok(None)
     }
 
-    // Diese Methode wird für jede Query (auch Subqueries) aufgerufen
-    fn visit_query_mut(&mut self, query: &mut Query) -> ControlFlow<Self::Break> {
-        // Zuerst rekursiv in die Tiefe gehen, um innere Queries zuerst zu bearbeiten
-        visit_mut::walk_query_mut(self, query);
+    /// Fügt die Tombstone-Spalte zu einer Liste von Spaltendefinitionen hinzu.
+    fn add_tombstone_column(&self, columns: &mut Vec<ColumnDef>) {
+        if !columns
+            .iter()
+            .any(|c| c.name.value.to_lowercase() == TOMBSTONE_COLUMN)
+        {
+            columns.push(ColumnDef {
+                name: Ident::new(TOMBSTONE_COLUMN),
+                data_type: DataType::Integer(None),
+                options: vec![],
+            });
+        }
+    }
 
-        // Dann die WHERE-Klausel der aktuellen Query anpassen
-        if let Some(from_clause) = query.body.as_select_mut().map(|s| &mut s.from) {
-            // (Hier würde eine komplexere Logik zur Analyse der Joins und Tabellen stehen)
-            // Vereinfacht nehmen wir an, wir fügen es für die erste Tabelle hinzu.
-            let table_name = if let Some(relation) = from_clause.get_mut(0) {
-                // Diese Logik muss verfeinert werden, um Aliase etc. zu behandeln
-                relation.relation.to_string()
+    /// Prüft, ob eine Tabelle von der Proxy-Logik betroffen sein soll.
+    fn is_audited_table(&self, name: &ObjectName) -> bool {
+        let table_name = name.to_string().to_lowercase();
+        let table_name = table_name.trim_matches('`').trim_matches('"');
+        !EXCLUDED_TABLES.contains(&table_name)
+    }
+
+    fn extract_table_name_from_from(&self, from: &sqlparser::ast::FromTable) -> Option<ObjectName> {
+        let tables = match from {
+            sqlparser::ast::FromTable::WithFromKeyword(from)
+            | sqlparser::ast::FromTable::WithoutKeyword(from) => from,
+        };
+        if tables.len() == 1 {
+            if let TableFactor::Table { name, .. } = &tables[0].relation {
+                Some(name.clone())
             } else {
-                "".to_string()
-            };
+                None
+            }
+        } else {
+            None
+        }
+    }
 
-            if self.is_audited_table(&table_name) {
-                let tombstone_check = Expr::BinaryOp {
-                    left: Box::new(Expr::Identifier(Ident::new(TOMBSTONE_COLUMN_NAME))),
-                    op: sqlparser::ast::BinaryOperator::Eq,
-                    right: Box::new(Expr::Value(Value::Number("0".to_string(), false))),
-                };
+    fn extract_table_name(&self, from: &[TableWithJoins]) -> Option<ObjectName> {
+        if from.len() == 1 {
+            if let TableFactor::Table { name, .. } = &from[0].relation {
+                Some(name.clone())
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
 
-                let existing_selection = query.selection.take();
-                let new_selection = match existing_selection {
-                    Some(expr) => Expr::BinaryOp {
-                        left: Box::new(expr),
-                        op: sqlparser::ast::BinaryOperator::And,
-                        right: Box::new(tombstone_check),
-                    },
-                    None => tombstone_check,
-                };
-                query.selection = Some(Box::new(new_selection));
+    fn create_tombstone_assignment(&self) -> Assignment {
+        Assignment {
+            target: AssignmentTarget::ColumnName(ObjectName(vec![ObjectNamePart::Identifier(
+                Ident::new(TOMBSTONE_COLUMN),
+            )])),
+            value: Expr::Value(sqlparser::ast::Value::Number("1".to_string(), false).into()),
+        }
+    }
+
+    fn add_tombstone_filter(&self, selection: &mut Option<Expr>) {
+        let tombstone_expr = Expr::BinaryOp {
+            left: Box::new(Expr::Identifier(Ident::new(TOMBSTONE_COLUMN))),
+            op: BinaryOperator::Eq,
+            // HIER IST DIE FINALE KORREKTUR:
+            right: Box::new(Expr::Value(Value::Number("0".to_string(), false).into())),
+        };
+
+        match selection {
+            Some(existing) => {
+                // Kombiniere mit AND, wenn eine WHERE-Klausel existiert
+                *selection = Some(Expr::BinaryOp {
+                    left: Box::new(existing.clone()),
+                    op: BinaryOperator::And,
+                    right: Box::new(tombstone_expr),
+                });
+            }
+            None => {
+                // Setze neue WHERE-Klausel, wenn keine existiert
+                *selection = Some(tombstone_expr);
             }
         }
+    }
 
-        ControlFlow::Continue(())
+    fn add_crdt_columns(&self, columns: &mut Vec<ColumnDef>) {
+        if !columns.iter().any(|c| c.name.value == TOMBSTONE_COLUMN) {
+            columns.push(ColumnDef {
+                name: Ident::new(TOMBSTONE_COLUMN),
+                data_type: DataType::Integer(None),
+                options: vec![],
+            });
+        }
+        if !columns.iter().any(|c| c.name.value == HLC_TIMESTAMP_COLUMN) {
+            columns.push(ColumnDef {
+                name: Ident::new(HLC_TIMESTAMP_COLUMN),
+                data_type: DataType::Text, // HLC wird als String gespeichert
+                options: vec![],
+            });
+        }
+    }
+
+    fn transform_delete_to_update(&self, stmt: &mut Statement, hlc_timestamp: &Timestamp) {
+        if let Statement::Delete(del_stmt) = stmt {
+            let table_to_update = match &del_stmt.from {
+                sqlparser::ast::FromTable::WithFromKeyword(from)
+                | sqlparser::ast::FromTable::WithoutKeyword(from) => from[0].clone(),
+            };
+
+            // Erstellt beide Zuweisungen
+            let assignments = vec![
+                self.create_tombstone_assignment(),
+                self.create_hlc_assignment(hlc_timestamp),
+            ];
+
+            *stmt = Statement::Update {
+                table: table_to_update,
+                assignments,
+                from: None,
+                selection: del_stmt.selection.clone(),
+                returning: None,
+                or: None,
+            };
+        }
+    }
+
+    fn add_hlc_to_insert(
+        &self,
+        insert_stmt: &mut sqlparser::ast::Insert,
+        ts: &Timestamp,
+    ) -> Result<(), ProxyError> {
+        insert_stmt.columns.push(Ident::new(HLC_TIMESTAMP_COLUMN));
+
+        match insert_stmt.source.as_mut() {
+            Some(query) => match &mut *query.body {
+                // Dereferenziere die Box mit *
+                SetExpr::Values(values) => {
+                    for row in &mut values.rows {
+                        row.push(Expr::Value(
+                            Value::SingleQuotedString(ts.to_string()).into(),
+                        ));
+                    }
+                }
+                SetExpr::Select(select) => {
+                    let hlc_expr = Expr::Value(Value::SingleQuotedString(ts.to_string()).into());
+                    select.projection.push(SelectItem::UnnamedExpr(hlc_expr));
+                }
+                _ => {
+                    return Err(ProxyError::UnsupportedStatement {
+                        description: "INSERT with unsupported source".to_string(),
+                    });
+                }
+            },
+            None => {
+                return Err(ProxyError::UnsupportedStatement {
+                    description: "INSERT statement has no source".to_string(),
+                });
+            }
+        }
+        Ok(())
+    }
+    /// Erstellt eine Zuweisung `haex_modified_hlc = '...'`
+    // NEU: Hilfsfunktion
+    fn create_hlc_assignment(&self, ts: &Timestamp) -> Assignment {
+        Assignment {
+            target: AssignmentTarget::ColumnName(ObjectName(vec![ObjectNamePart::Identifier(
+                Ident::new(HLC_TIMESTAMP_COLUMN),
+            )])),
+            value: Expr::Value(Value::SingleQuotedString(ts.to_string()).into()),
+        }
     }
 }

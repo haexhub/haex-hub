@@ -105,6 +105,9 @@ importers:
         specifier: ^3.25.67
         version: 3.25.67
     devDependencies:
+      '@iconify-json/proicons':
+        specifier: ^1.2.17
+        version: 1.2.17
       '@iconify/json':
         specifier: ^2.2.351
         version: 2.2.355
@@ -686,6 +689,9 @@ packages:
   '@humanwhocodes/retry@0.4.3':
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
+
+  '@iconify-json/proicons@1.2.17':
+    resolution: {integrity: sha512-FYnIsbhj91Epr62+QuyVXkljizcqWBHWrK3KGMdKwYxan3PxDZQiOOfKQepLR02Y9PJ4/4N8N22P5F6XS8eCFw==}
 
   '@iconify/collections@1.0.560':
     resolution: {integrity: sha512-sXm0Io67deUIqWmaSGb+JJ4Y9DJvgT/seaQlCOHUuHhs3qcPuLY6WMlfoUSmmXV5yHFhZprRZEs1np2BZ/BCJw==}
@@ -5862,6 +5868,10 @@ snapshots:
   '@humanwhocodes/retry@0.3.1': {}
 
   '@humanwhocodes/retry@0.4.3': {}
+
+  '@iconify-json/proicons@1.2.17':
+    dependencies:
+      '@iconify/types': 2.0.0
 
   '@iconify/collections@1.0.560':
     dependencies:

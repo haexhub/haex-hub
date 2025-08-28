@@ -1,6 +1,6 @@
 import { blob, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
-export const haexCrdtMessages = sqliteTable('haex_crdt_messages', {
+export const haexCrdtLogs = sqliteTable('haex_crdt_logs', {
   hlc_timestamp: text().primaryKey(),
   table_name: text(),
   row_pks: text({ mode: 'json' }),
@@ -9,8 +9,8 @@ export const haexCrdtMessages = sqliteTable('haex_crdt_messages', {
   new_value: text({ mode: 'json' }),
   old_value: text({ mode: 'json' }),
 })
-export type InsertHaexCrdtMessages = typeof haexCrdtMessages.$inferInsert
-export type SelectHaexCrdtMessages = typeof haexCrdtMessages.$inferSelect
+export type InsertHaexCrdtLogs = typeof haexCrdtLogs.$inferInsert
+export type SelectHaexCrdtLogs = typeof haexCrdtLogs.$inferSelect
 
 export const haexCrdtSnapshots = sqliteTable('haex_crdt_snapshots', {
   snapshot_id: text().primaryKey(),
@@ -21,7 +21,6 @@ export const haexCrdtSnapshots = sqliteTable('haex_crdt_snapshots', {
 })
 
 export const haexCrdtSettings = sqliteTable('haex_crdt_settings', {
-  id: text().primaryKey(),
-  type: text({ enum: ['hlc_timestamp'] }).unique(),
+  type: text().primaryKey(),
   value: text(),
 })
