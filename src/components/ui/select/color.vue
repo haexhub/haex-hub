@@ -10,24 +10,23 @@
 
     <input
       :id
-      :readonly="read_only"
-      :disabled="read_only"
+      ref="colorRef"
+      v-model="model"
+      :readonly="readOnly"
+      :disabled="readOnly"
       :title="t('pick')"
       class="top-0 left-0 absolute size-0"
       type="color"
-      v-model="model"
-      ref="colorRef"
     />
 
     <UiTooltip :tooltip="t('reset')">
-      <button
+      <UiButton
+        color="error"
+        :class="{ 'btn-disabled': readOnly }"
+        icon="mdi:refresh"
+        :disabled="readOnly"
         @click="model = ''"
-        class="btn btn-sm text-sm btn-outline btn-error"
-        :class="{ 'btn-disabled': read_only }"
-        type="button"
-      >
-        <Icon name="mdi:refresh" />
-      </button>
+      />
     </UiTooltip>
   </div>
 </template>
@@ -39,12 +38,12 @@ const { t } = useI18n()
 const model = defineModel<string | null>()
 const colorRef = useTemplateRef('colorRef')
 defineProps({
-  read_only: Boolean,
+  readOnly: Boolean,
 })
 
 const { currentTheme } = storeToRefs(useUiStore())
 const textColorClass = computed(() => {
-  if (!model.value)
+  if (!model.value && currentTheme.value)
     return currentTheme.value.value === 'dark' ? 'text-black' : 'text-white'
 
   const color = getContrastingTextColor(model.value)

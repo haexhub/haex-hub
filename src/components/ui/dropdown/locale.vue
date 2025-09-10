@@ -1,40 +1,38 @@
 <template>
-  <UiDropdown
-    :items="availableLocales"
-    class="btn btn-primary btn-outline"
-    @select="(locale) => $emit('select', locale)"
+  <UDropdownMenu
+    arrow
+    :items
+    :ui="{}"
   >
-    <template #activator>
-      <Icon :name="flags[locale]" />
-      <Icon
-        name="tabler:chevron-down"
-        class="dropdown-open:rotate-180 size-4"
-      />
-    </template>
-
-    <template #item="{ item }">
-      <div class="flex gap-2 justify-center">
-        <Icon
-          :name="flags[item]"
-          class="my-auto"
-        />
-        <p>
-          {{ item }}
-        </p>
-      </div>
-    </template>
-  </UiDropdown>
+    <UButton
+      :icon="items.find((item) => item.label === locale)?.icon"
+      :label="locale"
+      color="neutral"
+      variant="outline"
+    />
+  </UDropdownMenu>
 </template>
 
 <script setup lang="ts">
+import type { DropdownMenuItem } from '@nuxt/ui'
 import type { Locale } from 'vue-i18n'
 
+const { locales, locale } = useI18n()
+
 const flags = {
-  de: 'emojione:flag-for-germany',
-  en: 'emojione:flag-for-united-kingdom',
+  de: 'circle-flags:de',
+  en: 'circle-flags:uk',
 }
 
-const { availableLocales, locale } = useI18n()
+const emit = defineEmits<{ select: [Locale] }>()
 
-defineEmits<{ select: [Locale] }>()
+const items = computed<DropdownMenuItem[]>(() =>
+  locales.value.map((locale) => ({
+    label: locale.code,
+    icon: flags[locale.code],
+    onSelect() {
+      emit('select', locale.code)
+    },
+  })),
+)
 </script>

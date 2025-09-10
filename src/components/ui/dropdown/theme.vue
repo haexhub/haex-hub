@@ -1,22 +1,24 @@
 <template>
-  <UiDropdown :items="availableThemes" class="btn btn-primary btn-outline" @select="(theme) => $emit('select', theme)">
-    <template #activator>
-      <Icon :name="currentTheme.icon" />
-    </template>
-
-    <template #item="{ item }">
-      <div class="flex gap-2 justify-center">
-        <Icon :name="item.icon" class="my-auto" />
-        <p>
-          {{ item.name }}
-        </p>
-      </div>
-    </template>
-  </UiDropdown>
+  <UDropdownMenu :items>
+    <UButton :icon="currentTheme?.icon" />
+  </UDropdownMenu>
 </template>
 
 <script setup lang="ts">
+import type { DropdownMenuItem } from '@nuxt/ui'
+
 const { availableThemes, currentTheme } = storeToRefs(useUiStore())
 
-defineEmits<{ select: [ITheme] }>()
+const emit = defineEmits<{ select: [string] }>()
+
+watchImmediate(availableThemes, () =>
+  console.log('availableThemes', availableThemes),
+)
+
+const items = computed<DropdownMenuItem[]>(() =>
+  availableThemes?.value.map((theme) => ({
+    ...theme,
+    onSelect: () => emit('select', theme.value),
+  })),
+)
 </script>

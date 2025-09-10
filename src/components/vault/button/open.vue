@@ -1,67 +1,62 @@
 <template>
   <UiDialogConfirm
     v-model:open="open"
-    class="btn btn-primary btn-outline shadow-md btn-lg"
     :confirm-label="t('open')"
-    :abort-label="t('abort')"
-    @abort="onAbort"
+    :description="vault.path || path"
     @confirm="onOpenDatabase"
-    @open="onLoadDatabase"
   >
+    <UiButton
+      :label="t('vault.open')"
+      :ui="{
+        base: 'px-3 py-2',
+      }"
+      icon="mdi:folder-open-outline"
+      size="xl"
+      variant="outline"
+      block
+      @click.stop="onLoadDatabase"
+    />
+
     <template #title>
       <i18n-t
         keypath="title"
         tag="p"
-        class="flex gap-x-2 flex-wrap"
+        class="flex gap-x-2 text-wrap"
       >
         <template #haexvault>
           <UiTextGradient>HaexVault</UiTextGradient>
         </template>
       </i18n-t>
-      Path1: {{ test }}
-      <div class="text-sm">{{ props.path ?? database.path }}</div>
     </template>
 
-    <template #trigger>
-      <Icon name="mdi:folder-open-outline" />
-      {{ t('database.open') }}
-    </template>
+    <template #body>
+      <UForm
+        :state="vault"
+        class="flex flex-col gap-4 w-full h-full justify-center"
+      >
+        <UiInputPassword
+          v-model="vault.password"
+          class="w-full"
+          autofocus
+        />
 
-    <UiInputPassword
-      :check-input="check"
-      :rules="vaultDatabaseSchema.password"
-      @keyup.enter="onOpenDatabase"
-      autofocus
-      prepend-icon="mdi:key-outline"
-      v-model="database.password"
-    />
+        <UButton
+          hidden
+          type="submit"
+          @click="onOpenDatabase"
+        />
+      </UForm>
+    </template>
   </UiDialogConfirm>
 </template>
 
 <script setup lang="ts">
 import { open as openVault } from '@tauri-apps/plugin-dialog'
-import { vaultDatabaseSchema } from './schema'
-import {
-  BaseDirectory,
-  copyFile,
-  mkdir,
-  exists,
-  readFile,
-  writeFile,
-  stat,
-} from '@tauri-apps/plugin-fs'
+import { vaultSchema } from './schema'
 
 const { t } = useI18n()
 
-const open = defineModel('open', { type: Boolean })
-
-const props = defineProps<{
-  path: string
-}>()
-
-const check = ref(false)
-
-const database = reactive<{
+const vault = reactive<{
   name: string
   password: string
   path: string | null
@@ -73,28 +68,13 @@ const database = reactive<{
   type: 'password',
 })
 
-const initDatabase = () => {
-  database.name = ''
-  database.password = ''
-  database.path = ''
-  database.type = 'password'
-}
+const open = defineModel('open', { type: Boolean })
 
-initDatabase()
-
-const { add } = useSnackbar()
-
-const handleError = (error: unknown) => {
-  open.value = false
-  console.error('handleError', error, typeof error)
-  add({ type: 'error', text: `${error}` })
-}
-
-const { openAsync } = useVaultStore()
+const { add } = useToast()
 
 const onLoadDatabase = async () => {
   try {
-    database.path = await openVault({
+    vault.path = await openVault({
       multiple: false,
       directory: false,
       filters: [
@@ -105,50 +85,62 @@ const onLoadDatabase = async () => {
       ],
     })
 
-    console.log('onLoadDatabase', database.path)
-    if (!database.path) return
+    console.log('onLoadDatabase', vault.path)
+    if (!vault.path) {
+      open.value = false
+      return
+    }
 
     open.value = true
   } catch (error) {
-    handleError(error)
+    open.value = false
+    console.error('handleError', error, typeof error)
+    add({ color: 'error', description: `${error}` })
   }
 }
-
-const localePath = useLocalePath()
 
 const { syncLocaleAsync, syncThemeAsync, syncVaultNameAsync } =
   useVaultSettingsStore()
 
+const props = defineProps<{
+  path: string
+}>()
+
+const check = ref(false)
+
+const initVault = () => {
+  vault.name = ''
+  vault.password = ''
+  vault.path = ''
+  vault.type = 'password'
+}
+
+const onAbort = () => {
+  initVault()
+  open.value = false
+}
+
 const onOpenDatabase = async () => {
   try {
+    const { openAsync } = useVaultStore()
+    const localePath = useLocalePath()
+
     check.value = true
-    const path = database.path || props.path
-    const pathCheck = vaultDatabaseSchema.path.safeParse(path)
-    const passwordCheck = vaultDatabaseSchema.password.safeParse(
-      database.password,
-    )
+    const path = vault.path || props.path
+    const pathCheck = vaultSchema.path.safeParse(path)
+    const passwordCheck = vaultSchema.password.safeParse(vault.password)
 
-    /* if (!pathCheck.success || !passwordCheck.success || !path) {
-      add({
-        type: 'error',
-        text: `Params falsch. Path: ${pathCheck.error} | Password: ${passwordCheck.error}`,
-      })
-      return
-    } */
-
-    //const vaultName = await copyDatabaseInAppDirectoryAsync(path)
-
-    //if (!vaultName) return
+    if (pathCheck.error || passwordCheck.error) return
 
     const vaultId = await openAsync({
       path,
-      password: database.password,
+      password: vault.password,
     })
 
     if (!vaultId) {
       add({
-        type: 'error',
-        text: 'Vault konnte nicht geöffnet werden. \n Vermutlich ist das Passwort falsch',
+        color: 'error',
+        description: t('error.open'),
       })
       return
     }
@@ -169,53 +161,31 @@ const onOpenDatabase = async () => {
       syncVaultNameAsync(),
     ])
   } catch (error) {
-    handleError(error)
+    open.value = false
+    console.error('handleError', error, typeof error)
+    add({ color: 'error', description: `${error}` })
   }
-}
-
-const test = ref()
-const copyDatabaseInAppDirectoryAsync = async (source: string) => {
-  const vaultName = getFileName(source)
-  const vaultsDirExists = await exists('vaults', {
-    baseDir: BaseDirectory.AppLocalData,
-  })
-  //convertFileSrc
-  if (!vaultsDirExists) {
-    await mkdir('vaults', {
-      baseDir: BaseDirectory.AppLocalData,
-    })
-  }
-
-  test.value = `source: ${source} - target: vaults/${vaultName}`
-  console.log('copyDatabaseInAppDirectoryAsync', `vaults/${vaultName}`)
-
-  const sourceFile = await readFile(source)
-  await writeFile(`vaults/HaexVault.db`, sourceFile, {
-    baseDir: BaseDirectory.AppLocalData,
-  })
-  /* await copyFile(source, `vaults/HaexVault.db`, {
-    toPathBaseDir: BaseDirectory.AppLocalData,
-  }) */
-  return vaultName
-}
-const onAbort = () => {
-  initDatabase()
-  open.value = false
 }
 </script>
 
 <i18n lang="yaml">
 de:
-  open: Öffnen
-  abort: Abbrechen
+  open: Entsperren
   title: '{haexvault} entsperren'
-  database:
+  password: Passwort
+  vault:
     open: Vault öffnen
+  description: Öffne eine vorhandene Vault
+  error:
+    open: Vault konnte nicht geöffnet werden. \n Vermutlich ist das Passwort falsch
 
 en:
-  open: Open
-  abort: Abort
+  open: Unlock
   title: Unlock {haexvault}
-  database:
+  password: Passwort
+  description: Open your existing vault
+  vault:
     open: Open Vault
+  error:
+    open: Vault couldn't be opened. \n The password is probably wrong
 </i18n>

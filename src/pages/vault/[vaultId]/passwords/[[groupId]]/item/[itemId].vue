@@ -1,56 +1,53 @@
 <template>
   <div>
-    <div class="flex flex-col">
+    <!-- <div class="flex flex-col">
       <p>
         {{ item.originalDetails }}
       </p>
       {{ item.details }}
-    </div>
+    </div> -->
     <HaexPassItem
-      :history="item.history"
-      :read_only
-      @close="onClose()"
-      @submit="onUpdateAsync"
       v-model:details="item.details"
       v-model:key-values-add="item.keyValuesAdd"
       v-model:key-values-delete="item.keyValuesDelete"
       v-model:key-values="item.keyValues"
+      :history="item.history"
+      :read-only
+      @close="onClose()"
+      @submit="onUpdateAsync"
     />
 
     <HaexPassMenuBottom
       :has-changes
-      :show-edit-button="read_only && !hasChanges"
-      :show-readonly-button="!read_only && !hasChanges"
-      :show-save-button="!read_only && hasChanges"
-      @close="onClose"
-      @delete="showConfirmDeleteDialog = true"
-      @edit="read_only = false"
-      @readonly="read_only = true"
-      @save="onUpdateAsync"
+      :show-edit-button="readOnly && !hasChanges"
+      :show-readonly-button="!readOnly && !hasChanges"
+      :show-save-button="!readOnly && hasChanges"
       show-close-button
       show-delete-button
-    >
-    </HaexPassMenuBottom>
+      @close="onClose"
+      @delete="showConfirmDeleteDialog = true"
+      @edit="readOnly = false"
+      @readonly="readOnly = true"
+      @save="onUpdateAsync"
+    />
 
     <HaexPassDialogDeleteItem
       v-model:open="showConfirmDeleteDialog"
       @abort="showConfirmDeleteDialog = false"
       @confirm="deleteItemAsync"
-    >
-    </HaexPassDialogDeleteItem>
+    />
 
     <HaexPassDialogUnsavedChanges
-      :has-changes="hasChanges"
       v-model:ignore-changes="ignoreChanges"
+      v-model:open="showUnsavedChangesDialog"
+      :has-changes="hasChanges"
       @abort="showUnsavedChangesDialog = false"
       @confirm="onConfirmIgnoreChanges"
-      v-model:open="showUnsavedChangesDialog"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { usePasswordGroup } from '~/components/haex/pass/group/composables'
 import type {
   SelectHaexPasswordsItemDetails,
   SelectHaexPasswordsItemHistory,
@@ -61,13 +58,13 @@ definePageMeta({
   name: 'passwordItemEdit',
 })
 
-defineProps({
+/* defineProps({
   icon: String,
   title: String,
   withCopyButton: Boolean,
-})
+}) */
 
-const read_only = ref(true)
+const readOnly = ref(true)
 const showConfirmDeleteDialog = ref(false)
 const { t } = useI18n()
 
@@ -91,6 +88,7 @@ const item = reactive<{
     updateAt: null,
     url: null,
     username: null,
+    haex_tombstone: null,
   },
   keyValues: [],
   history: [],
@@ -107,6 +105,7 @@ const item = reactive<{
     updateAt: null,
     url: null,
     username: null,
+    haex_tombstone: null,
   },
   originalKeyValues: null,
 })
@@ -132,7 +131,7 @@ watch(
   { immediate: true },
 )
 
-const { add } = useSnackbar()
+const { add } = useToast()
 const { deleteAsync, updateAsync } = usePasswordItemStore()
 const { syncGroupItemsAsync } = usePasswordGroupStore()
 const { currentGroupId, inTrashGroup } = storeToRefs(usePasswordGroupStore())
@@ -147,12 +146,13 @@ const onUpdateAsync = async () => {
       keyValuesAdd: item.keyValuesAdd,
       keyValuesDelete: item.keyValuesDelete,
     })
-    if (newId) add({ type: 'success', text: t('success.update') })
+    if (newId) add({ color: 'success', description: t('success.update') })
     syncGroupItemsAsync()
     ignoreChanges.value = true
     onClose()
   } catch (error) {
-    add({ type: 'error', text: t('error.update') })
+    console.log(error)
+    add({ color: 'error', description: t('error.update') })
   }
 }
 
@@ -162,7 +162,7 @@ const onClose = () => {
   if (hasChanges.value && !ignoreChanges.value)
     return (showUnsavedChangesDialog.value = true)
 
-  read_only.value = true
+  readOnly.value = true
   useRouter().back()
 }
 
@@ -170,27 +170,26 @@ const deleteItemAsync = async () => {
   try {
     await deleteAsync(item.details.id, inTrashGroup.value)
     showConfirmDeleteDialog.value = false
-    add({ type: 'success', text: t('success.delete') })
+    add({ color: 'success', description: t('success.delete') })
     await syncGroupItemsAsync()
     onClose()
   } catch (errro) {
+    console.log(errro)
     add({
-      type: 'error',
-      text: t('error.delete'),
+      color: 'error',
+      description: t('error.delete'),
     })
   }
 }
 
-const { areItemsEqual } = usePasswordGroup()
-const hasChanges = computed(
-  () =>
-    !!(
-      !areItemsEqual(item.originalDetails, item.details) ||
-      !areItemsEqual(item.originalKeyValues, item.keyValues) ||
-      item.keyValuesAdd.length ||
-      item.keyValuesDelete.length
-    ),
-)
+const hasChanges = computed(() => {
+  return !(
+    JSON.stringify(item.originalDetails) === JSON.stringify(item.details) &&
+    JSON.stringify(item.originalKeyValues) === JSON.stringify(item.keyValues) &&
+    !item.keyValuesAdd.length &&
+    !item.keyValuesDelete.length
+  )
+})
 
 const showUnsavedChangesDialog = ref(false)
 const onConfirmIgnoreChanges = () => {

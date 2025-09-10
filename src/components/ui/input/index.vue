@@ -1,181 +1,88 @@
 <template>
-  <div>
-    <fieldset
-      class="join w-full"
-      :class="{ 'pt-1.5': label }"
-      v-bind="$attrs"
-    >
-      <slot name="prepend" />
-
-      <div class="input join-item">
-        <Icon
-          v-if="prependIcon"
-          :name="prependIcon"
-          class="my-auto shrink-0"
-        />
-
-        <div class="input-floating grow">
-          <input
-            :autofocus
-            :id
-            :name="name ?? id"
-            :placeholder="placeholder || label"
-            :readonly="read_only"
-            :type
-            class="ps-2"
-            ref="inputRef"
-            v-model="input"
-            @keyup="(e:KeyboardEvent) => $emit('keyup', e)"
-          />
-          <label
-            :for="id"
-            class="input-floating-label"
-          >
-            {{ label }}
-          </label>
-        </div>
-
-        <Icon
-          v-if="appendIcon"
-          :name="appendIcon"
-          class="my-auto shrink-0"
-        />
-      </div>
-
-      <UiButton
-        v-if="withClearButton"
-        class="btn-outline btn-square"
-        @click="input = ''"
-      >
-        <Icon name="mdi:close" />
-      </UiButton>
-
-      <slot name="append" />
-
-      <UiButton
-        v-if="withCopyButton"
-        :tooltip="t('copy')"
-        class="btn-outline btn-accent btn-square"
-        @click="copy(`${input}`)"
-      >
-        <Icon :name="copied ? 'mdi:check' : 'mdi:content-copy'" />
-      </UiButton>
-    </fieldset>
-
-    <span
-      v-show="errors"
-      class="flex flex-col px-2 pt-0.5"
+  <UInput
+    v-model="value"
+    :placeholder="props.placeholder || ' '"
+    :readonly="props.readOnly"
+    :leading-icon="props.leadingIcon"
+    :ui="{ base: 'peer' }"
+    @change="(e) => $emit('change', e)"
+    @blur="(e) => $emit('blur', e)"
+    @keyup="(e: KeyboardEvent) => $emit('keyup', e)"
+    @keydown="(e: KeyboardEvent) => $emit('keydown', e)"
+  >
+    <label
+      class="absolute pointer-events-none -top-2.5 left-0 text-highlighted text-xs font-medium px-1.5 transition-all peer-focus:-top-2.5 peer-focus:text-highlighted peer-focus:text-xs peer-focus:font-medium peer-placeholder-shown:text-sm peer-placeholder-shown:text-dimmed peer-placeholder-shown:top-1.5 peer-placeholder-shown:font-normal"
     >
       <span
-        v-for="error in errors"
-        class="label-text-alt text-error"
+        class="inline-flex bg-default px-1"
+        :class="props?.leadingIcon ? 'mx-6' : 'mx-0'"
       >
-        {{ error }}
+        {{ props?.label }}
       </span>
-    </span>
-  </div>
+    </label>
+
+    <template #trailing>
+      <slot name="trailing" />
+
+      <UiButton
+        v-show="props.withCopyButton"
+        :color="copied ? 'success' : 'neutral'"
+        :tooltip="t('copy')"
+        :icon="copied ? 'mdi:check' : 'mdi:content-copy'"
+        size="sm"
+        variant="link"
+        @click="copy(`${value}`)"
+      />
+    </template>
+
+    <template
+      v-for="(_, slotName) in filteredSlots"
+      #[slotName]="slotProps"
+    >
+      <slot
+        :name="slotName"
+        v-bind="slotProps"
+      />
+    </template>
+  </UInput>
 </template>
 
 <script setup lang="ts">
-import type { ZodSchema } from 'zod'
+import type { AcceptableValue, InputProps } from '@nuxt/ui'
 
-const input = defineModel<string | number | undefined | null>({
-  required: true,
-})
+const value = defineModel<AcceptableValue | undefined>()
 
-const inputRef = useTemplateRef('inputRef')
-defineExpose({ inputRef })
-
-const emit = defineEmits<{
-  error: [string[]]
-  keyup: [KeyboardEvent]
-}>()
-
-const props = defineProps({
-  placeholder: {
-    type: String,
-    default: '',
-  },
-  type: {
-    type: String as PropType<
-      | 'button'
-      | 'checkbox'
-      | 'color'
-      | 'date'
-      | 'datetime-local'
-      | 'email'
-      | 'file'
-      | 'hidden'
-      | 'image'
-      | 'month'
-      | 'number'
-      | 'password'
-      | 'radio'
-      | 'range'
-      | 'reset'
-      | 'search'
-      | 'submit'
-      | 'tel'
-      | 'text'
-      | 'time'
-      | 'url'
-      | 'week'
-    >,
-    default: 'text',
-  },
-  label: String,
-  name: String,
-  prependIcon: {
-    type: String,
-    default: '',
-  },
-  prependLabel: String,
-  appendIcon: {
-    type: String,
-    default: '',
-  },
-  appendLabel: String,
-  rules: Object as PropType<ZodSchema>,
-  checkInput: Boolean,
-  withCopyButton: Boolean,
-  withClearButton: Boolean,
-  autofocus: Boolean,
-  read_only: Boolean,
-})
-
-onMounted(() => {
-  if (props.autofocus && inputRef.value) inputRef.value.focus()
-})
-
-const errors = defineModel<string[] | undefined>('errors')
-
-const id = useId()
-
-watch(input, () => checkInput())
-
-watch(
-  () => props.checkInput,
-  () => {
-    checkInput()
-  },
-)
-
-const checkInput = () => {
-  if (props.rules) {
-    const result = props.rules.safeParse(input.value)
-    //console.log('check result', result.error, props.rules);
-    if (!result.success) {
-      errors.value = result.error.errors.map((error) => error.message)
-      emit('error', errors.value)
-    } else {
-      errors.value = []
-    }
-  }
+interface IInputProps extends /* @vue-ignore */ InputProps {
+  tooltip?: string
 }
+
+const props = defineProps<
+  IInputProps & {
+    withCopyButton?: boolean
+    readOnly?: boolean
+    label?: string
+    leadingIcon?: string
+  }
+>()
+
+defineEmits<{
+  change: [Event]
+  blur: [Event]
+  keyup: [KeyboardEvent]
+  keydown: [KeyboardEvent]
+}>()
 
 const { copy, copied } = useClipboard()
 
 const { t } = useI18n()
+
+const filteredSlots = computed(() => {
+  return Object.fromEntries(
+    Object.entries(useSlots()).filter(([name]) => name !== 'trailing'),
+  )
+})
+
+watchImmediate(props, () => console.log('props', props))
 </script>
 
 <i18n lang="yaml">

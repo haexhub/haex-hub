@@ -1,8 +1,9 @@
 <template>
-  <div class="items-center justify-center flex w-full relative min-h-full">
-    <div class="absolute top-2 right-2">
-      <UiDropdownLocale @select="setLocale" />
+  <div class="items-center justify-center flex w-full h-full relative">
+    <div class="absolute top-2 right-4">
+      <UiDropdownLocale @select="onSelectLocale" />
     </div>
+
     <div class="flex flex-col justify-center items-center gap-5 max-w-3xl">
       <UiLogoHaexhub class="bg-primary p-3 size-16 rounded-full shrink-0" />
       <span
@@ -32,16 +33,23 @@
         </div>
 
         <div
-          class="relative border-base-content/25 divide-base-content/25 flex w-full flex-col divide-y rounded-md border first:*:rounded-t-md last:*:rounded-b-md overflow-scroll"
+          class="relative border-base-content/25 divide-base-content/25 flex w-full flex-col divide-y rounded-md border overflow-scroll"
         >
           <div
             v-for="vault in lastVaults"
             :key="vault.path"
-            class="flex items-center justify-between group h-12 overflow-x-scroll"
+            class="flex items-center justify-between group overflow-x-scroll"
           >
-            <button
-              class="link link-accent flex items-center no-underline justify-between text-nowrap text-sm md:text-base shrink w-full py-2 px-4"
-              @click=";((passwordPromptOpen = true), (vaultPath = vault.path))"
+            <UButton
+              variant="ghost"
+              color="neutral"
+              class="flex items-center no-underline justify-between text-nowrap text-sm md:text-base shrink w-full px-3"
+              @click="
+                () => {
+                  passwordPromptOpen = true
+                  vaultPath = vault.path
+                }
+              "
             >
               <span class="block md:hidden">
                 {{ vault.name }}
@@ -49,15 +57,17 @@
               <span class="hidden md:block">
                 {{ vault.path }}
               </span>
-            </button>
-            <button
-              class="absolute right-2 btn btn-square btn-error btn-xs hidden group-hover:flex min-w-6"
+            </UButton>
+            <UButton
+              color="error"
+              square
+              class="absolute right-2 hidden group-hover:flex min-w-6"
             >
               <Icon
                 name="mdi:trash-can-outline"
                 @click="removeVaultAsync(vault.path)"
               />
-            </button>
+            </UButton>
           </div>
         </div>
       </div>
@@ -65,9 +75,12 @@
       <div class="flex flex-col items-center gap-2">
         <h4>{{ t('sponsors') }}</h4>
         <div>
-          <button @click="openUrl('https://itemis.com')">
+          <UButton
+            variant="link"
+            @click="openUrl('https://itemis.com')"
+          >
             <UiLogoItemis class="text-[#00457C]" />
-          </button>
+          </UButton>
         </div>
       </div>
     </div>
@@ -75,9 +88,8 @@
 </template>
 
 <script setup lang="ts">
-import { UiLogoHaexhub } from '#components'
 import { openUrl } from '@tauri-apps/plugin-opener'
-
+import type { Locale } from 'vue-i18n'
 definePageMeta({
   name: 'vaultOpen',
 })
@@ -91,19 +103,20 @@ const { syncLastVaultsAsync, removeVaultAsync } = useLastVaultStore()
 const { lastVaults } = storeToRefs(useLastVaultStore())
 
 await syncLastVaultsAsync()
+
+const onSelectLocale = async (locale: Locale) => {
+  await setLocale(locale)
+}
 </script>
 
-<i18n lang="json">
-{
-  "de": {
-    "welcome": "Viel Spass mit",
-    "lastUsed": "Zuletzt verwendete Vaults",
-    "sponsors": "Supported by"
-  },
-  "en": {
-    "welcome": "Have fun with",
-    "lastUsed": "Last used Vaults",
-    "sponsors": "Supported by"
-  }
-}
+<i18n lang="yaml">
+de:
+  welcome: 'Viel Spass mit'
+  lastUsed: 'Zuletzt verwendete Vaults'
+  sponsors: 'Supported by'
+
+en:
+  welcome: 'Have fun with'
+  lastUsed: 'Last used Vaults'
+  sponsors: 'Supported by'
 </i18n>

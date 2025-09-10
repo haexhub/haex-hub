@@ -5,73 +5,73 @@
       @submit.prevent="$emit('submit')"
     >
       <UiInput
-        v-show="!read_only || itemDetails.title"
+        v-show="!readOnly || itemDetails.title"
+        ref="titleRef"
+        v-model.trim="itemDetails.title"
         :check-input="check"
         :label="t('item.title')"
         :placeholder="t('item.title')"
-        :read_only
+        :read-only
         :with-copy-button
         autofocus
-        ref="titleRef"
-        v-model.trim="itemDetails.title"
         @keyup.enter="$emit('submit')"
       />
 
       <UiInput
-        v-show="!read_only || itemDetails.username"
+        v-show="!readOnly || itemDetails.username"
+        v-model.trim="itemDetails.username"
         :check-input="check"
         :label="t('item.username')"
         :placeholder="t('item.username')"
         :with-copy-button
-        :read_only
-        v-model.trim="itemDetails.username"
+        :read-only
         @keyup.enter="$emit('submit')"
       />
 
       <UiInputPassword
-        v-show="!read_only || itemDetails.password"
-        :check-input="check"
-        :read_only
-        :with-copy-button
+        v-show="!readOnly || itemDetails.password"
         v-model.trim="itemDetails.password"
+        :check-input="check"
+        :read-only
+        :with-copy-button
         @keyup.enter="$emit('submit')"
       >
         <template #append>
-          <UiDialogPasswordGenerator
-            v-if="!read_only"
+          <!-- <UiDialogPasswordGenerator
+            v-if="!readOnly"
             class="join-item"
             :password="itemDetails.password"
             v-model="preventClose"
-          />
+          /> -->
         </template>
       </UiInputPassword>
 
       <UiInputUrl
-        v-show="!read_only || itemDetails.url"
+        v-show="!readOnly || itemDetails.url"
+        v-model="itemDetails.url"
         :label="t('item.url')"
         :placeholder="t('item.url')"
-        :read_only
+        :read-only
         :with-copy-button
-        v-model="itemDetails.url"
         @keyup.enter="$emit('submit')"
       />
 
-      <UiSelectIcon
-        v-show="!read_only"
+      <!-- <UiSelectIcon
+        v-show="!readOnly"
         :default-icon="defaultIcon || 'mdi:key-outline'"
-        :read_only
+        :readOnly
         v-model="itemDetails.icon"
-      />
+      /> -->
 
       <UiTextarea
-        v-show="!read_only || itemDetails.note"
+        v-show="!readOnly || itemDetails.note"
         v-model="itemDetails.note"
         :label="t('item.note')"
         :placeholder="t('item.note')"
-        :read_only
+        :readOnly
         :with-copy-button
         @keyup.enter.stop
-        class="h-52"
+        color="error"
       />
     </form>
   </div>
@@ -82,7 +82,7 @@ import type { SelectHaexPasswordsItemDetails } from '~~/src-tauri/database/schem
 
 defineProps<{
   defaultIcon?: string | null
-  read_only?: boolean
+  readOnly?: boolean
   withCopyButton?: boolean
 }>()
 
@@ -93,7 +93,7 @@ const itemDetails = defineModel<SelectHaexPasswordsItemDetails>({
   required: true,
 })
 
-const preventClose = defineModel<boolean>('preventClose')
+//const preventClose = defineModel<boolean>('preventClose')
 
 const check = defineModel<boolean>('check-input', { default: false })
 
@@ -104,7 +104,7 @@ const check = defineModel<boolean>('check-input', { default: false })
 
 const titleRef = useTemplateRef('titleRef')
 onStartTyping(() => {
-  titleRef.value?.inputRef?.focus()
+  titleRef.value?.$el?.focus()
 })
 </script>
 

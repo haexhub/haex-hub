@@ -1,7 +1,7 @@
 import { platform } from '@tauri-apps/plugin-os'
 import type { LocationQueryValue, RouteLocationRawI18n } from 'vue-router'
 
-export const bytesToBase64DataUrlAsync = async (
+/* export const bytesToBase64DataUrlAsync = async (
   bytes: Uint8Array,
   type = 'application/octet-stream',
 ) => {
@@ -12,7 +12,7 @@ export const bytesToBase64DataUrlAsync = async (
     })
     reader.readAsDataURL(new File([new Blob([bytes])], '', { type }))
   })
-}
+} */
 
 export const blobToImageAsync = (blob: Blob): Promise<HTMLImageElement> => {
   return new Promise((resolve) => {
@@ -66,7 +66,7 @@ export const readableFileSize = (sizeInByte: number | string = 0) => {
 }
 
 export const getSingleRouteParam = (
-  param: string | string[] | LocationQueryValue | LocationQueryValue[],
+  param: string | string[] | undefined,
 ): string => {
   const _param = Array.isArray(param) ? (param.at(0) ?? '') : (param ?? '')
   //console.log('getSingleRouteParam found:', _param, param)
@@ -122,7 +122,7 @@ export const hexToString = (hex: string) => {
 }
 
 export const getContrastingTextColor = (
-  hexColor: string,
+  hexColor?: string | null,
 ): 'black' | 'white' => {
   if (!hexColor) {
     return 'black' // Fallback

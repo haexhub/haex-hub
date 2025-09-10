@@ -195,7 +195,7 @@ impl SqlProxy {
             } */
             Statement::Update {
                 table,
-                assignments: assignments,
+                assignments,
                 from,
                 selection,
                 returning,

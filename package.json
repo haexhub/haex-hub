@@ -1,5 +1,5 @@
 {
-  "name": "haex-hub",
+  "name": "tauri-app",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -16,57 +16,48 @@
     "eslint:fix": "eslint --fix"
   },
   "dependencies": {
-    "@libsql/client": "^0.15.9",
-    "@nuxt/eslint": "1.4.1",
-    "@nuxt/icon": "^1.14.0",
-    "@nuxt/image": "1.10.0",
-    "@nuxtjs/i18n": "^9.5.5",
+    "@nuxt/eslint": "1.9.0",
+    "@nuxt/fonts": "0.11.4",
+    "@nuxt/icon": "2.0.0",
+    "@nuxt/ui": "^3.3.2",
+    "@nuxtjs/i18n": "10.0.6",
     "@pinia/nuxt": "^0.11.1",
     "@tailwindcss/vite": "^4.1.10",
     "@tauri-apps/api": "^2.5.0",
     "@tauri-apps/plugin-dialog": "^2.2.2",
     "@tauri-apps/plugin-fs": "^2.3.0",
-    "@tauri-apps/plugin-http": "~2.4.4",
-    "@tauri-apps/plugin-notification": "~2.2.3",
+    "@tauri-apps/plugin-http": "2.5.2",
+    "@tauri-apps/plugin-notification": "2.3.1",
     "@tauri-apps/plugin-opener": "^2.3.0",
     "@tauri-apps/plugin-os": "^2.2.2",
-    "@tauri-apps/plugin-sql": "~2.2.1",
+    "@tauri-apps/plugin-sql": "2.3.0",
     "@tauri-apps/plugin-store": "^2.2.1",
-    "@vlcn.io/crsqlite": "^0.16.3",
-    "@vueuse/components": "^13.4.0",
+    "@vueuse/components": "^13.9.0",
     "@vueuse/core": "^13.4.0",
     "@vueuse/nuxt": "^13.4.0",
     "drizzle-orm": "^0.44.2",
-    "eslint": "^9.29.0",
-    "flyonui": "^2.2.0",
+    "eslint": "^9.34.0",
     "fuse.js": "^7.1.0",
-    "nuxt": "^3.17.5",
-    "nuxt-snackbar": "1.3.0",
+    "nuxt": "^4.0.3",
     "nuxt-zod-i18n": "^1.12.0",
     "tailwindcss": "^4.1.10",
-    "tailwindcss-intersect": "^2.2.0",
-    "tailwindcss-motion": "^1.1.1",
-    "vue": "^3.5.17",
-    "zod": "^3.25.67"
+    "vue": "^3.5.20",
+    "vue-router": "^4.5.1",
+    "zod": "4.1.5"
   },
   "devDependencies": {
-    "@iconify-json/proicons": "^1.2.17",
     "@iconify/json": "^2.2.351",
     "@iconify/tailwind4": "^1.0.6",
     "@tauri-apps/cli": "^2.5.0",
+    "@vitejs/plugin-vue": "6.0.1",
     "@vue/compiler-sfc": "^3.5.17",
     "drizzle-kit": "^0.31.2",
     "globals": "^16.2.0",
     "prettier": "3.6.2",
-    "typescript": "^5.8.3"
-  },
-  "packageManager": "pnpm@10.12.2",
-  "pnpm": {
-    "ignoredBuiltDependencies": [
-      "@parcel/watcher",
-      "esbuild",
-      "vue-demi"
-    ]
+    "tw-animate-css": "^1.3.8",
+    "typescript": "^5.8.3",
+    "vite": "7.1.3",
+    "vue-tsc": "3.0.6"
   },
   "prettier": {
     "trailingComma": "all",
@@ -74,5 +65,11 @@
     "semi": false,
     "singleQuote": true,
     "singleAttributePerLine": true
-  }
+  },
+  "pnpm": {
+    "overrides": {
+      "zod": "^3.22.4"
+    }
+  },
+  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67"
 }

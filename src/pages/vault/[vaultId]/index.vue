@@ -1,12 +1,12 @@
 <template>
-  <div class="h-full text-base-content flex bg-base-200">
-    <HaexExtensionCard
-      v-for="extension in extensionStore.availableExtensions"
-      v-bind="extension"
-      :key="extension.id"
-    />
-    <UiButton @click="requesty()">Storage Request</UiButton>
-    res: {{ res }}
+  <div class="text-base-content flex flex-col">
+    <div class="h-screen bg-amber-300">
+      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    </div>
+    <div class="h-screen bg-teal-300">
+      abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      availableThemes:{{ uiStore.availableThemes }}
+    </div>
   </div>
 </template>
 
@@ -15,17 +15,5 @@ definePageMeta({
   name: 'vaultOverview',
 })
 
-const storage = useAndroidStorage()
-const extensionStore = useExtensionsStore()
-
-const res = ref()
-
-const requesty = async () => {
-  try {
-    res.value = await storage.requestStoragePermission()
-    res.value += ' wat the fuk'
-  } catch (error) {
-    res.value = error
-  }
-}
+const uiStore = useUiStore()
 </script>

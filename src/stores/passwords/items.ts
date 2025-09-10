@@ -34,13 +34,14 @@ export const usePasswordItemStore = defineStore('passwordItemStore', () => {
   const syncItemsAsync = async () => {
     const { currentVault } = useVaultStore()
 
-    items.value = await currentVault.drizzle
-      .select()
-      .from(haexPasswordsItemDetails)
-      .innerJoin(
-        haexPasswordsGroupItems,
-        eq(haexPasswordsItemDetails.id, haexPasswordsGroupItems.itemId),
-      )
+    items.value =
+      (await currentVault?.drizzle
+        .select()
+        .from(haexPasswordsItemDetails)
+        .innerJoin(
+          haexPasswordsGroupItems,
+          eq(haexPasswordsItemDetails.id, haexPasswordsGroupItems.itemId),
+        )) ?? []
   }
 
   return {
@@ -158,7 +159,7 @@ const readByGroupIdAsync = async (groupId?: string | null) => {
     console.log('get entries by groupId', groupId || null)
 
     if (groupId) {
-      const entries = await currentVault.drizzle
+      const entries = await currentVault?.drizzle
         .select()
         .from(haexPasswordsGroupItems)
         .innerJoin(
@@ -168,9 +169,9 @@ const readByGroupIdAsync = async (groupId?: string | null) => {
         .where(eq(haexPasswordsGroupItems.groupId, groupId))
 
       console.log('found entries by groupId', entries)
-      return entries.map((entry) => entry.haex_passwords_item_details)
+      return entries?.map((entry) => entry.haex_passwords_item_details)
     } else {
-      const entries = await currentVault.drizzle
+      const entries = await currentVault?.drizzle
         .select()
         .from(haexPasswordsGroupItems)
         .innerJoin(
@@ -180,7 +181,7 @@ const readByGroupIdAsync = async (groupId?: string | null) => {
         .where(isNull(haexPasswordsGroupItems.groupId))
 
       console.log('found entries', entries)
-      return entries.map((entry) => entry.haex_passwords_item_details)
+      return entries?.map((entry) => entry.haex_passwords_item_details)
     }
   } catch (error) {
     console.error(error)
@@ -195,7 +196,7 @@ const readAsync = async (itemId: string | null) => {
     const { currentVault } = useVaultStore()
 
     const details =
-      await currentVault.drizzle.query.haexPasswordsItemDetails.findFirst({
+      await currentVault?.drizzle.query.haexPasswordsItemDetails.findFirst({
         where: eq(haexPasswordsItemDetails.id, itemId),
       })
 
@@ -219,7 +220,7 @@ const readKeyValuesAsync = async (itemId: string | null) => {
   const { currentVault } = useVaultStore()
 
   const keyValues =
-    await currentVault.drizzle.query.haexPasswordsItemKeyValues.findMany({
+    await currentVault?.drizzle.query.haexPasswordsItemKeyValues.findMany({
       where: eq(haexPasswordsGroupItems.itemId, itemId),
     })
   return keyValues
@@ -329,7 +330,7 @@ const deleteAsync = async (itemId: string, final: boolean = false) => {
     })
   else {
     if (await createTrashIfNotExistsAsync())
-      await currentVault.drizzle
+      await currentVault?.drizzle
         .update(haexPasswordsGroupItems)
         .set({ groupId: trashId })
         .where(eq(haexPasswordsGroupItems.itemId, itemId))
@@ -339,12 +340,12 @@ const deleteAsync = async (itemId: string, final: boolean = false) => {
 const deleteKeyValueAsync = async (id: string) => {
   console.log('deleteKeyValueAsync', id)
   const { currentVault } = useVaultStore()
-  return await currentVault.drizzle
+  return await currentVault?.drizzle
     .delete(haexPasswordsItemKeyValues)
     .where(eq(haexPasswordsItemKeyValues.id, id))
 }
 
-const areItemsEqual = (
+/* const areItemsEqual = (
   groupA: unknown | unknown[] | null,
   groupB: unknown | unknown[] | null,
 ) => {
@@ -359,4 +360,4 @@ const areItemsEqual = (
     })
   }
   return areObjectsEqual(groupA, groupB)
-}
+} */

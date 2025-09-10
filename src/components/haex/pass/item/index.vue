@@ -1,70 +1,41 @@
 <template>
   <div class="p-1">
-    <UiCard
-      body-class="rounded overflow-auto p-0 h-full"
+    <UCard
+      class="rounded overflow-auto p-0 h-full"
       @close="onClose"
     >
       <div class="">
-        <nav
-          aria-label="Tabs Password Item"
-          aria-orientation="horizontal"
-          class="tabs tabs-bordered w-full transition-all duration-700 sticky top-0 z-10"
-          role="tablist"
+        <UTabs
+          :items="tabs"
+          variant="link"
+          :ui="{ trigger: 'grow' }"
+          class="gap-4 w-full"
         >
-          <button
-            :id="id.details"
-            aria-controls="vaultDetailsId"
-            aria-selected="true"
-            class="tab active-tab:tab-active active w-full"
-            data-tab="#vaultDetailsId"
-            role="tab"
-            type="button"
-          >
-            <Icon
-              name="material-symbols:key-outline"
-              class="me-2"
+          <template #details>
+            <HaexPassItemDetails
+              v-if="details"
+              v-model="details"
+              with-copy-button
+              :read-only
+              :defaultIcon
+              v-model:prevent-close="preventClose"
+              @submit="$emit('submit')"
             />
-            <span class="hidden sm:block">
-              {{ t('tab.details') }}
-            </span>
-          </button>
-          <button
-            :id="id.keyValue"
-            aria-controls="tabs-basic-2"
-            aria-selected="false"
-            class="tab active-tab:tab-active w-full"
-            data-tab="#tabs-basic-2"
-            role="tab"
-            type="button"
-          >
-            <Icon
-              name="fluent:group-list-20-filled"
-              class="me-2"
-            />
-            <span class="hidden sm:block">
-              {{ t('tab.keyValue') }}
-            </span>
-          </button>
-          <button
-            :id="id.history"
-            aria-controls="tabs-basic-3"
-            aria-selected="false"
-            class="tab active-tab:tab-active w-full"
-            data-tab="#tabs-basic-3"
-            role="tab"
-            type="button"
-          >
-            <Icon
-              name="material-symbols:history"
-              class="me-2"
-            />
-            <span class="hidden sm:block">
-              {{ t('tab.history') }}
-            </span>
-          </button>
-        </nav>
+          </template>
 
-        <div class="h-full pb-8">
+          <template #keyValue>
+            <HaexPassItemKeyValue
+              v-if="keyValues"
+              v-model="keyValues"
+              v-model:items-to-add="keyValuesAdd"
+              v-model:items-to-delete="keyValuesDelete"
+              :read-only
+              :item-id="details!.id"
+            />
+          </template>
+        </UTabs>
+
+        <!-- <div class="h-full pb-8">
           <div
             id="vaultDetailsId"
             role="tabpanel"
@@ -104,15 +75,16 @@
             role="tabpanel"
             :aria-labelledby="id.history"
           >
-            <!-- <HaexPassItemHistory v-model="itemHistory" /> -->
+            <HaexPassItemHistory />
           </div>
-        </div>
+        </div> -->
       </div>
-    </UiCard>
+    </UCard>
   </div>
 </template>
 
 <script setup lang="ts">
+import type { TabsItem } from '@nuxt/ui'
 import type {
   SelectHaexPasswordsItemDetails,
   SelectHaexPasswordsItemHistory,
@@ -125,13 +97,13 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  close: [void]
-  addKeyValue: [void]
+  close: []
+  addKeyValue: []
   removeKeyValue: [string]
-  submit: [void]
+  submit: []
 }>()
 
-const read_only = defineModel<boolean>('read_only', { default: false })
+const readOnly = defineModel<boolean>('readOnly', { default: false })
 
 const details = defineModel<SelectHaexPasswordsItemDetails | null>('details', {
   required: true,
@@ -152,12 +124,12 @@ const keyValuesDelete = defineModel<SelectHaexPasswordsItemKeyValues[]>(
 
 const { t } = useI18n()
 
-const id = reactive({
+/* const id = reactive({
   details: useId(),
   keyValue: useId(),
   history: useId(),
   content: {},
-})
+}) */
 
 const preventClose = ref(false)
 
@@ -166,6 +138,24 @@ const onClose = () => {
 
   emit('close')
 }
+
+const tabs = ref<TabsItem[]>([
+  {
+    label: t('tab.details'),
+    icon: 'material-symbols:key-outline',
+    slot: 'details' as const,
+  },
+  {
+    label: t('tab.keyValue'),
+    icon: 'fluent:group-list-20-filled',
+    slot: 'keyValue' as const,
+  },
+  {
+    label: t('tab.history'),
+    icon: 'material-symbols:history',
+    slot: 'history' as const,
+  },
+])
 </script>
 
 <i18n lang="json">

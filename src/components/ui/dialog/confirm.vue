@@ -1,61 +1,73 @@
 <template>
-  <UiDialog
-    :title
-    @close="onAbort"
+  <UModal
     v-model:open="open"
+    :title
+    :description
+    :fullscreen="isSmallScreen"
   >
-    <template #trigger>
-      <slot name="trigger" />
-    </template>
+    <slot>
+      <!-- <UiButton
+        color="primary"
+        variant="outline"
+        icon="mdi:menu"
+        :ui="{
+          base: '',
+        }"
+      /> -->
+    </slot>
 
     <template #title>
       <slot name="title" />
     </template>
 
-    <slot />
-
-    <template #buttons>
-      <slot name="buttons">
-        <UiButton
-          class="btn-error btn-outline w-full sm:w-auto"
-          @click="onAbort"
-        >
-          <Icon :name="abortIcon || 'mdi:close'" />
-          {{ abortLabel ?? t('abort') }}
-        </UiButton>
-        <UiButton
-          class="btn-primary w-full sm:w-auto"
-          @click="onConfirm"
-        >
-          <Icon :name="confirmIcon || 'mdi:check'" />
-          {{ confirmLabel ?? t('confirm') }}
-        </UiButton>
-      </slot>
+    <template #body>
+      <slot name="body" />
     </template>
-  </UiDialog>
+
+    <template #footer>
+      <div class="flex flex-col sm:flex-row gap-4 justify-end w-full">
+        <UiButton
+          :icon="abortIcon || 'mdi:close'"
+          :label="abortLabel || t('abort')"
+          block
+          color="error"
+          variant="outline"
+          @click="open = false"
+        />
+        <UiButton
+          :icon="confirmIcon || 'mdi:check'"
+          :label="confirmLabel || t('confirm')"
+          block
+          color="primary"
+          varaint="solid"
+          @click="$emit('confirm')"
+        />
+      </div>
+    </template>
+  </UModal>
 </template>
 
 <script setup lang="ts">
+import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
+
 defineProps<{
-  confirmLabel?: string
-  abortLabel?: string
-  title?: string
   abortIcon?: string
+  abortLabel?: string
   confirmIcon?: string
+  confirmLabel?: string
+  description?: string
+  title?: string
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
 
 const { t } = useI18n()
-const emit = defineEmits(['confirm', 'abort'])
+defineEmits(['confirm'])
 
-const onAbort = () => {
-  emit('abort')
-}
+const breakpoints = useBreakpoints(breakpointsTailwind)
 
-const onConfirm = () => {
-  emit('confirm')
-}
+// "smAndDown" gilt für sm, xs usw.
+const isSmallScreen = breakpoints.smaller('sm')
 </script>
 
 <i18n lang="yaml">

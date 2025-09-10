@@ -1,5 +1,6 @@
 <template>
   <UiInput
+    v-model.trim="value"
     :autofocus
     :check-input="checkInput"
     :label="label || t('url')"
@@ -7,17 +8,18 @@
     :read_only
     :rules
     :with-copy-button
-    v-model.trim="value"
     @keyup="(e) => $emit('keyup', e)"
   >
-    <template #append>
+    <template #trailing>
       <UiButton
+        color="neutral"
+        variant="link"
+        size="sm"
+        icon="streamline:web"
         :disabled="!value?.length"
+        :tooltip="t('browse')"
         @click="openUrl(`${value}`)"
-        class="btn-outline btn-accent btn-square"
-      >
-        <Icon name="streamline:web" />
-      </UiButton>
+      />
     </template>
   </UiInput>
 </template>
@@ -45,13 +47,12 @@ defineEmits<{
 }>()
 </script>
 
-<i18n lang="json">
-{
-  "de": {
-    "url": "Url"
-  },
-  "en": {
-    "url": "Url"
-  }
-}
+<i18n lang="yaml">
+de:
+  url: Url
+  browse: Url öffnen
+
+en:
+  url: Url
+  browse: Open url
 </i18n>

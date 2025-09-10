@@ -12,47 +12,44 @@
           class="flex gap-2 hover:bg-primary/20 px-4 items-center"
           @click="currentSelected = item"
         >
-          <button class="link flex items-center no-underline w-full py-2">
+          <button class="flex items-center no-underline w-full py-2">
             <input
               v-model="item.key"
-              :readonly="currentSelected !== item || read_only"
+              :readonly="currentSelected !== item || readOnly"
               class="flex-1 cursor-pointer"
             />
           </button>
 
           <UiButton
-            v-if="!read_only"
+            v-if="!readOnly"
             :class="[currentSelected === item ? 'visible' : 'invisible']"
-            class="inline-flex btn-square btn-error btn-outline"
+            variant="outline"
+            color="error"
+            icon="mdi:trash-outline"
             @click="deleteItem(item.id)"
-          >
-            <Icon
-              name="mdi:trash-outline"
-              class="size-5"
-            />
-          </UiButton>
+          />
         </li>
       </UiList>
 
-      <UiTextarea
+      <UTextarea
         v-if="items.length || itemsToAdd.length"
-        :read_only="read_only || !currentSelected"
+        :readOnly="readOnly || !currentSelected"
         class="flex-1 min-w-52 border-base-content/25"
-        rows="6"
         v-model="currentValue"
         with-copy-button
       />
     </div>
     <div
-      v-show="!read_only"
+      v-show="!readOnly"
       class="flex py-4 gap-2 justify-center items-end flex-wrap"
     >
       <UiButton
         @click="addItem"
         class="btn-primary btn-outline flex-1-1 min-w-40"
+        icon="mdi:plus"
       >
-        <Icon name="mdi:plus" />
-        <p class="hidden sm:inline-block">{{ t('add') }}</p>
+        <!-- <Icon name="mdi:plus" />
+        <p class="hidden sm:inline-block">{{ t('add') }}</p> -->
       </UiButton>
     </div>
   </div>
@@ -61,7 +58,7 @@
 <script setup lang="ts">
 import type { SelectHaexPasswordsItemKeyValues } from '~~/src-tauri/database/schemas/vault'
 
-const { itemId } = defineProps<{ read_only?: boolean; itemId: string }>()
+const { itemId } = defineProps<{ readOnly?: boolean; itemId: string }>()
 
 const items = defineModel<SelectHaexPasswordsItemKeyValues[]>({ default: [] })
 
@@ -74,9 +71,9 @@ const itemsToAdd = defineModel<SelectHaexPasswordsItemKeyValues[]>(
   { default: [] },
 )
 
-defineEmits<{ add: [void]; remove: [string] }>()
+defineEmits<{ add: []; remove: [string] }>()
 
-const { t } = useI18n()
+//const { t } = useI18n()
 
 const currentSelected = ref<SelectHaexPasswordsItemKeyValues | undefined>(
   items.value?.at(0),
@@ -101,6 +98,7 @@ const addItem = () => {
     key: '',
     value: '',
     updateAt: null,
+    haex_tombstone: null,
   })
 }
 

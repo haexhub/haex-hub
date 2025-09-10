@@ -1,67 +1,72 @@
 <template>
-  <div class="h-full">
-    <div class="min-h-full flex flex-col">
+  <div class="flex-1 h-full">
+    <div class="h-full flex flex-col">
       <HaexPassGroupBreadcrumbs
-        :items="breadCrumbs"
-        class="px-2 sticky -top-2 z-10 bg-base-200"
         v-show="breadCrumbs.length"
+        :items="breadCrumbs"
+        class="px-2 sticky -top-2 z-10"
       />
       <div class="flex-1 py-1 flex">
         <HaexPassMobileMenu
-          :menu-items="groupItems"
           ref="listRef"
           v-model:selected-items="selectedItems"
+          :menu-items="groupItems"
         />
       </div>
 
       <div
-        class="fixed bottom-4 flex justify-between transition-all pointer-events-none right-0 sm:items-center items-end px-8"
-        :class="[isVisible ? 'left-15 ' : 'left-0']"
+        class="fixed bottom-4 flex justify-between transition-all w-full sm:items-center items-end px-8"
       >
-        <div class="w-full"></div>
-        <UiButtonAction
-          v-if="!inTrashGroup"
-          :menu
-        />
+        <div class="w-full" />
+
+        <UDropdownMenu
+          v-model:open="open"
+          :items="menu"
+        >
+          <UButton
+            icon="mdi:plus"
+            :ui="{
+              base: 'rotate-45 ',
+              leadingIcon: [open ? 'rotate-0' : 'rotate-45', 'transition-all'],
+            }"
+            size="xl"
+          />
+        </UDropdownMenu>
 
         <div
           class="flex flex-col sm:flex-row gap-4 w-full justify-end items-end"
         >
           <UiButton
             v-show="selectedItems.size === 1"
-            class="btn-square btn-accent"
-            @click="onEditAsync"
+            color="secondary"
+            icon="mdi:pencil"
             :tooltip="t('edit')"
-          >
-            <Icon name="mdi:pencil" />
-          </UiButton>
+            @click="onEditAsync"
+          />
 
           <UiButton
-            class="btn-square btn-accent"
             v-show="selectedItems.size"
-            @click="onCut"
+            color="secondary"
             :tooltip="t('cut')"
-          >
-            <Icon name="mdi:scissors" />
-          </UiButton>
+            icon="mdi:scissors"
+            @click="onCut"
+          />
 
           <UiButton
-            class="btn-square btn-accent"
             v-show="selectedGroupItems?.length"
-            @click="onPasteAsync"
+            color="secondary"
+            icon="proicons:clipboard-paste"
             :tooltip="t('paste')"
-          >
-            <Icon name="proicons:clipboard-paste" />
-          </UiButton>
+            @click="onPasteAsync"
+          />
 
           <UiButton
             v-show="selectedItems.size"
-            class="btn-square btn-accent"
-            @click="onDeleteAsync"
+            color="secondary"
+            icon="mdi:trash-outline"
             :tooltip="t('delete')"
-          >
-            <Icon name="mdi:trash" />
-          </UiButton>
+            @click="onDeleteAsync"
+          />
         </div>
       </div>
     </div>
@@ -70,15 +75,18 @@
 
 <script setup lang="ts">
 import type { IPasswordMenuItem } from '~/components/haex/pass/mobile/menu/types'
-import { useMagicKeys } from '@vueuse/core'
+//import { useMagicKeys, whenever } from '@vueuse/core'
 import Fuse from 'fuse.js'
 
 definePageMeta({
   name: 'passwordGroupItems',
 })
 
+const open = ref(false)
+
 const { t } = useI18n()
-const { add } = useSnackbar()
+
+const { add } = useToast()
 
 const selectedItems = ref<Set<IPasswordMenuItem>>(new Set())
 const { menu } = storeToRefs(usePasswordsActionMenuStore())
@@ -88,7 +96,9 @@ const { syncGroupItemsAsync } = usePasswordGroupStore()
 onMounted(async () => {
   try {
     await Promise.allSettled([syncItemsAsync(), syncGroupItemsAsync()])
-  } catch (error) {}
+  } catch (error) {
+    console.error(error)
+  }
 })
 
 const {
@@ -146,8 +156,6 @@ const groupItems = computed<IPasswordMenuItem[]>(() => {
   return menuItems
 })
 
-const { isVisible } = storeToRefs(useSidebarStore())
-
 const onEditAsync = async () => {
   const item = selectedItems.value.values().next().value
 
@@ -200,7 +208,7 @@ const onPasteAsync = async () => {
   } catch (error) {
     console.error(error)
     selectedGroupItems.value = []
-    add({ type: 'error', text: t('error.paste') })
+    add({ color: 'error', description: t('error.paste') })
   }
 }
 onKeyStroke('v', async (event) => {
@@ -209,10 +217,12 @@ onKeyStroke('v', async (event) => {
   }
 })
 
-const { escape } = useMagicKeys()
-watch(escape, () => {
+/* const { escape } = useMagicKeys()
+whenever(escape, () => {
   selectedItems.value.clear()
-})
+}) */
+
+onKeyStroke('escape', () => selectedItems.value.clear())
 
 onKeyStroke('a', (event) => {
   if (event.ctrlKey) {
@@ -237,10 +247,11 @@ const onDeleteAsync = async () => {
   selectedItems.value.clear()
   await syncGroupItemsAsync()
 }
-const keys = useMagicKeys()
-watch(keys.delete, async () => {
+/* const keys = useMagicKeys()
+whenever(keys, async () => {
   await onDeleteAsync()
-})
+}) */
+onKeyStroke('delete', () => onDeleteAsync())
 
 const listRef = useTemplateRef<HTMLElement>('listRef')
 onClickOutside(listRef, () => setTimeout(() => selectedItems.value.clear(), 50))
@@ -252,6 +263,7 @@ de:
   paste: Einfügen
   delete: Löschen
   edit: Bearbeiten
+  wtf: 'wtf'
 en:
   cut: Cut
   paste: Paste

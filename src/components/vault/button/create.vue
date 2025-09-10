@@ -1,127 +1,101 @@
 <template>
   <UiDialogConfirm
-    v-model:open="open"
-    class="btn btn-primary btn-outline shadow-md btn-lg"
-    @click="open = true"
-    @abort="open = false"
-    @confirm="onCreateAsync"
     :confirm-label="t('create')"
+    @confirm="onCreateAsync"
   >
-    <template #trigger>
-      <Icon name="mdi:plus" />
-      {{ t('database.create') }}
-    </template>
+    <UiButton
+      :label="t('vault.create')"
+      :ui="{
+        base: 'px-3 py-2',
+      }"
+      icon="mdi:plus"
+      size="xl"
+      variant="outline"
+      block
+    />
 
     <template #title>
-      <div class="flex gap-x-2 items-center">
-        <Icon
-          name="mdi:safe"
-          class="text-primary"
-        />
-        <p>
-          {{ t('title') }}
-        </p>
-      </div>
+      <i18n-t
+        keypath="title"
+        tag="p"
+        class="flex gap-x-2 flex-wrap"
+      >
+        <template #haexvault>
+          <UiTextGradient>HaexVault</UiTextGradient>
+        </template>
+      </i18n-t>
     </template>
-    <form
-      class="flex flex-col gap-4"
-      @submit="onCreateAsync"
-    >
-      <UiInput
-        v-model="database.name"
-        :check-input="check"
-        :label="t('database.label')"
-        :placeholder="t('database.placeholder')"
-        :rules="vaultDatabaseSchema.name"
-        autofocus
-        prepend-icon="mdi:safe"
-      />
 
-      <UiInputPassword
-        v-model="database.password"
-        :check-input="check"
-        :rules="vaultDatabaseSchema.password"
-        prepend-icon="mdi:key-outline"
-      />
-    </form>
-
-    <!--  <template #buttons>
-      <UiButton
-        class="btn-error btn-outline w-full sm:w-auto"
-        @click="onClose"
+    <template #body>
+      <UForm
+        :state="vault"
+        class="flex flex-col gap-4 w-full h-full justify-center"
       >
-        <Icon name="mdi:x" />
-        {{ t('abort') }}
-      </UiButton>
+        <UiInput
+          v-model="vault.name"
+          leading-icon="mdi:safe"
+          :label="t('vault.label')"
+          :placeholder="t('vault.placeholder')"
+        />
+        <UiInputPassword
+          v-model="vault.password"
+          leading-icon="mdi:key-outline"
+        />
 
-      <UiButton
-        class="btn-primary w-full sm:w-auto"
-        @click="onCreateAsync"
-      >
-        {{ t('create') }}
-      </UiButton>
-    </template> -->
+        <UButton
+          hidden
+          type="submit"
+          @click="onCreateAsync"
+        />
+      </UForm>
+    </template>
   </UiDialogConfirm>
 </template>
 
 <script setup lang="ts">
 import { save } from '@tauri-apps/plugin-dialog'
-import { onKeyStroke } from '@vueuse/core'
-import { useVaultStore } from '~/stores/vault'
-import { vaultDatabaseSchema } from './schema'
 import { BaseDirectory, readFile, writeFile } from '@tauri-apps/plugin-fs'
 import { resolveResource } from '@tauri-apps/api/path'
-//import { convertFileSrc } from "@tauri-apps/api/tauri";
 
-onKeyStroke('Enter', (e) => {
-  e.preventDefault()
-  onCreateAsync()
-})
-
-const check = ref(false)
-const open = ref()
+import { vaultSchema } from './schema'
+//import type { FormSubmitEvent } from '@nuxt/ui'
 
 const { t } = useI18n()
 
-const database = reactive<{
+//type Schema = z.output<typeof vaultSchema>
+
+const vault = reactive<{
   name: string
   password: string
   path: string | null
   type: 'password' | 'text'
 }>({
-  name: '',
+  name: 'HaexVault',
   password: '',
   path: '',
   type: 'password',
 })
 
-const initDatabase = () => {
-  database.name = t('database.name')
-  database.password = ''
-  database.path = ''
-  database.type = 'password'
+const initVault = () => {
+  vault.name = 'HaexVault'
+  vault.password = ''
+  vault.path = ''
+  vault.type = 'password'
 }
 
-initDatabase()
-
-const { add } = useSnackbar()
 const { createAsync } = useVaultStore()
+const { add } = useToast()
+
+const check = ref(false)
+const open = ref()
 
 const onCreateAsync = async () => {
   check.value = true
 
-  const nameCheck = vaultDatabaseSchema.name.safeParse(database.name)
-  const passwordCheck = vaultDatabaseSchema.password.safeParse(
-    database.password,
-  )
+  const nameCheck = vaultSchema.name.safeParse(vault.name)
+  const passwordCheck = vaultSchema.password.safeParse(vault.password)
 
-  console.log(
-    'checks',
-    database.name,
-    nameCheck,
-    database.password,
-    passwordCheck,
-  )
+  console.log('checks', vault.name, nameCheck, vault.password, passwordCheck)
   if (!nameCheck.success || !passwordCheck.success) return
 
   open.value = false
@@ -130,28 +104,27 @@ const onCreateAsync = async () => {
 
     const template_vault = await readFile(template_vault_path)
 
-    database.path = await save({
-      defaultPath: database.name.endsWith('.db')
-        ? database.name
-        : `${database.name}.db`,
+    vault.path = await save({
+      defaultPath: vault.name.endsWith('.db') ? vault.name : `${vault.name}.db`,
     })
 
-    if (!database.path) return
+    if (!vault.path) return
 
     await writeFile('temp_vault.db', template_vault, {
       baseDir: BaseDirectory.AppLocalData,
     })
 
-    console.log('data', database)
+    console.log('data', vault)
 
-    if (database.path && database.password) {
+    if (vault.path && vault.password) {
       const vaultId = await createAsync({
-        path: database.path,
-        password: database.password,
+        path: vault.path,
+        password: vault.password,
       })
 
       console.log('vaultId', vaultId)
       if (vaultId) {
+        initVault()
         await navigateTo(
           useLocaleRoute()({ name: 'vaultOverview', params: { vaultId } }),
         )
@@ -159,41 +132,27 @@ const onCreateAsync = async () => {
     }
   } catch (error) {
     console.error(error)
-    add({ type: 'error', text: `${error}` })
+    add({ color: 'error', description: `${error}` })
   }
-}
-
-const onClose = () => {
-  open.value = false
-  initDatabase()
 }
 </script>
 
-<i18n lang="json">
-{
-  "de": {
-    "database": {
-      "label": "Vaultname",
-      "placeholder": "Vaultname",
-      "create": "Neue Vault anlegen",
-      "name": "HaexVault"
-    },
-    "title": "Neue Vault anlegen",
-    "create": "Erstellen",
-    "abort": "Abbrechen",
-    "description": "Haex Vault für deine geheimsten Geheimnisse"
-  },
-  "en": {
-    "database": {
-      "label": "Vaultname",
-      "placeholder": "Vaultname",
-      "create": "Create new Vault",
-      "name": "HaexVault"
-    },
-    "title": "Create New Vault",
-    "create": "Create",
-    "abort": "Abort",
-    "description": "Haex Vault for your most secret secrets"
-  }
-}
+<i18n lang="yaml">
+de:
+  vault:
+    create: Neue Vault erstellen
+    label: Vaultname
+    placeholder: Vaultname
+    name: HaexVault
+  title: Neue {haexvault} erstellen
+  create: Erstellen
+
+en:
+  vault:
+    create: Create new vault
+    label: Vaultname
+    placeholder: Vaultname
+    name: HaexVault
+  title: Create new {haexvault}
+  create: Create
 </i18n>

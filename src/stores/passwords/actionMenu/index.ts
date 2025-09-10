@@ -1,46 +1,50 @@
-import type { IActionMenuItem } from '~/components/ui/button/types'
+//import type { IActionMenuItem } from '~/components/ui/button/types'
+import type { DropdownMenuItem } from '@nuxt/ui'
 import de from './de.json'
 import en from './en.json'
 
 export const usePasswordsActionMenuStore = defineStore(
   'passwordsActionMenuStore',
   () => {
-    const { t } =
-      useI18n()
-      /* {
-      messages: {
-        de: { passwordActionMenu: de },
-        en: { passwordActionMenu: en },
-      },
-    } */
+    const { $i18n } = useNuxtApp()
 
-    const menu = computed<IActionMenuItem[]>(() => [
+    $i18n.setLocaleMessage('de', {
+      ...de,
+    })
+    $i18n.setLocaleMessage('en', { ...en })
+
+    const localeRoute = useLocaleRoute()
+    const menu = computed<DropdownMenuItem[]>(() => [
       {
-        label: 'passwordActionMenu.group.create',
+        label: $i18n.t('group.create'),
         icon: 'mdi:folder-plus-outline',
-        to: {
-          name: 'passwordGroupCreate',
-          params: {
-            ...useRouter().currentRoute.value.params,
-            groupId: usePasswordGroupStore().currentGroupId,
-          },
-          query: {
-            ...useRouter().currentRoute.value.query,
-          },
+        type: 'link',
+        onSelect: () => {
+          navigateTo(
+            localeRoute({
+              name: 'passwordGroupCreate',
+              params: {
+                ...useRouter().currentRoute.value.params,
+                groupId: usePasswordGroupStore().currentGroupId,
+              },
+            }),
+          )
         },
       },
       {
-        label: 'passwordActionMenu.entry.create',
+        label: $i18n.t('entry.create'),
         icon: 'mdi:key-plus',
-        to: {
-          name: 'passwordItemCreate',
-          params: {
-            ...useRouter().currentRoute.value.params,
-            groupId: usePasswordGroupStore().currentGroupId,
-          },
-          query: {
-            ...useRouter().currentRoute.value.query,
-          },
+        type: 'link',
+        onSelect: () => {
+          navigateTo(
+            localeRoute({
+              name: 'passwordItemCreate',
+              params: {
+                ...useRouter().currentRoute.value.params,
+                groupId: usePasswordGroupStore().currentGroupId,
+              },
+            }),
+          )
         },
       },
     ])

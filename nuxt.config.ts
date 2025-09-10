@@ -1,24 +1,29 @@
 import tailwindcss from '@tailwindcss/vite'
-// https://nuxt.com/docs/api/configuration/nuxt-config
 
+// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  compatibilityDate: '2025-07-15',
+  devtools: { enabled: true },
+
+  srcDir: './src',
+
   app: {
     pageTransition: {
       name: 'fade',
     },
   },
+
   modules: [
     'nuxt-zod-i18n',
     '@nuxtjs/i18n',
     '@pinia/nuxt',
     '@vueuse/nuxt',
     '@nuxt/icon',
-    'nuxt-snackbar',
     '@nuxt/eslint',
-    '@nuxt/image',
+    //"@nuxt/image",
+    '@nuxt/fonts',
+    '@nuxt/ui',
   ],
-
-  compatibilityDate: '2024-11-01',
 
   imports: {
     dirs: [
@@ -30,7 +35,7 @@ export default defineNuxtConfig({
     ],
   },
 
-  css: ['./assets/css/tailwind.css'],
+  css: ['./assets/css/main.css'],
 
   icon: {
     provider: 'server',
@@ -55,7 +60,6 @@ export default defineNuxtConfig({
   i18n: {
     strategy: 'prefix_and_default',
     defaultLocale: 'de',
-    vueI18n: '~/i18n/i18n.config.ts',
 
     locales: [
       { code: 'de', language: 'de-DE', isCatchallLocale: true },
@@ -68,9 +72,6 @@ export default defineNuxtConfig({
       redirectOn: 'root', // recommended
     },
     types: 'composition',
-    bundle: {
-      optimizeTranslationDirective: false,
-    },
   },
 
   zodI18n: {
@@ -90,14 +91,10 @@ export default defineNuxtConfig({
     },
   },
 
-  devtools: { enabled: true },
-
-  srcDir: './src',
-  // Enable SSG
   ssr: false,
   // Enables the development server to be discoverable by other devices when running on iOS physical devices
   devServer: {
-    host: process.env.TAURI_DEV_HOST || 'localhost',
+    host: '0',
     port: 3003,
   },
 
@@ -114,4 +111,5 @@ export default defineNuxtConfig({
       strictPort: true,
     },
   },
+  ignore: ['**/src-tauri/**'],
 })

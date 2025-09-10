@@ -1,43 +1,41 @@
 <template>
   <div>
     <HaexPassGroup
-      :read_only
+      v-model="group"
+      :read-only
+      mode="edit"
       @close="onClose"
       @submit="onSaveAsync"
-      mode="edit"
-      v-model="group"
     />
 
     <HaexPassMenuBottom
-      :show-edit-button="read_only && !hasChanges"
-      :show-readonly-button="!read_only && !hasChanges"
+      :show-edit-button="readOnly && !hasChanges"
+      :show-readonly-button="!readOnly && !hasChanges"
       :show-save-button="hasChanges"
       :has-changes
-      @close="onClose()"
-      @delete="showConfirmDeleteDialog = true"
-      @edit="read_only = false"
-      @readonly="read_only = true"
-      @save="onSaveAsync"
       show-close-button
       show-delete-button
-    >
-    </HaexPassMenuBottom>
+      @close="onClose()"
+      @delete="showConfirmDeleteDialog = true"
+      @edit="readOnly = false"
+      @readonly="readOnly = true"
+      @save="onSaveAsync"
+    />
 
     <HaexPassDialogDeleteItem
       v-model:open="showConfirmDeleteDialog"
-      @abort="showConfirmDeleteDialog = false"
-      @confirm="onDeleteAsync"
       :item-name="group.name"
       :final="inTrashGroup"
-    >
-    </HaexPassDialogDeleteItem>
+      @abort="showConfirmDeleteDialog = false"
+      @confirm="onDeleteAsync"
+    />
 
     <HaexPassDialogUnsavedChanges
-      :has-changes="hasChanges"
       v-model:ignore-changes="ignoreChanges"
+      v-model:open="showUnsavedChangesDialog"
+      :has-changes="hasChanges"
       @abort="showUnsavedChangesDialog = false"
       @confirm="onConfirmIgnoreChanges"
-      v-model:open="showUnsavedChangesDialog"
     />
   </div>
 </template>
@@ -59,47 +57,47 @@ const group = ref<SelectHaexPasswordsGroups>({
   description: null,
   icon: null,
   id: '',
-  name: null,
+  name: '',
   order: null,
   parentId: null,
   updateAt: null,
+  haex_tombstone: null,
 })
 
 const original = ref<string>('')
 const ignoreChanges = ref(false)
 
 const { readGroupAsync } = usePasswordGroupStore()
-watch(
-  currentGroupId,
-  async () => {
-    if (!currentGroupId.value) return
-    ignoreChanges.value = false
-    try {
-      const foundGroup = await readGroupAsync(currentGroupId.value)
-      if (foundGroup) {
-        original.value = JSON.parse(JSON.stringify(foundGroup))
-        group.value = foundGroup
-      }
-    } catch (error) {
-      console.error(error)
+watchImmediate(currentGroupId, async () => {
+  if (!currentGroupId.value) return
+  ignoreChanges.value = false
+  try {
+    const foundGroup = await readGroupAsync(currentGroupId.value)
+    if (foundGroup) {
+      original.value = JSON.parse(JSON.stringify(foundGroup))
+      group.value = foundGroup
     }
-  },
-  { immediate: true },
-)
+  } catch (error) {
+    console.error(error)
+  }
+})
 
-const read_only = ref(false)
+const hasChanges = computed(() => {
+  const current = JSON.stringify(group.value)
+  const origin = JSON.stringify(original.value)
+  console.log('hasChanges', current, origin)
+  return !(current === origin)
+})
 
-const { areItemsEqual } = usePasswordGroup()
-const hasChanges = computed(() => !!!areItemsEqual(group.value, original.value))
-
+const readOnly = ref(false)
 const onClose = () => {
   if (showConfirmDeleteDialog.value || showUnsavedChangesDialog.value) return
 
-  read_only.value = true
+  readOnly.value = true
   useRouter().back()
 }
 
-const { add } = useSnackbar()
+const { add } = useToast()
 
 const { updateAsync, syncGroupItemsAsync, deleteGroupAsync } =
   usePasswordGroupStore()
@@ -111,21 +109,21 @@ const onSaveAsync = async () => {
     ignoreChanges.value = true
     await updateAsync(group.value)
     await syncGroupItemsAsync()
-    add({ type: 'success', text: t('change.success') })
+    add({ color: 'success', description: t('change.success') })
     onClose()
   } catch (error) {
-    add({ type: 'error', text: t('change.error') })
+    add({ color: 'error', description: t('change.error') })
     console.log(error)
   }
 }
 
-const showConfirmDeleteDialog = ref(false)
 const showUnsavedChangesDialog = ref(false)
 const onConfirmIgnoreChanges = () => {
   showUnsavedChangesDialog.value = false
   onClose()
 }
 
+const showConfirmDeleteDialog = ref(false)
 const onDeleteAsync = async () => {
   try {
     const parentId = group.value.parentId

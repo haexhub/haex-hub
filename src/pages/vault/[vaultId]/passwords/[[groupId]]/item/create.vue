@@ -1,30 +1,28 @@
 <template>
   <div>
-    {{ currentGroup?.id }} {{ currentGroupId }}
     <HaexPassItem
+      v-model:details="item.details"
+      v-model:key-values-add="item.keyValuesAdd"
       :default-icon="currentGroup?.icon"
       :history="item.history"
       @close="onClose"
       @submit="onCreateAsync"
-      v-model:details="item.details"
-      v-model:key-values-add="item.keyValuesAdd"
     />
 
     <HaexPassMenuBottom
       :has-changes
+      :show-close-button="true"
+      :show-save-button="true"
       @close="onClose"
       @save="onCreateAsync"
-      show-close-button
-      show-save-button
-    >
-    </HaexPassMenuBottom>
+    />
 
     <HaexPassDialogUnsavedChanges
-      :has-changes="hasChanges"
       v-model:ignore-changes="ignoreChanges"
+      v-model:open="showUnsavedChangesDialog"
+      :has-changes="hasChanges"
       @abort="showUnsavedChangesDialog = false"
       @confirm="onConfirmIgnoreChanges"
-      v-model:open="showUnsavedChangesDialog"
     />
   </div>
 </template>
@@ -40,11 +38,11 @@ definePageMeta({
   name: 'passwordItemCreate',
 })
 
-defineProps({
-  icon: String,
-  title: String,
-  withCopyButton: Boolean,
-})
+defineProps<{
+  icon: string
+  title: string
+  withCopyButton: boolean
+}>()
 
 const { t } = useI18n()
 
@@ -56,9 +54,10 @@ const item = reactive<{
   originalKeyValuesAdd: []
 }>({
   details: {
-    id: '',
     createdAt: null,
+    haex_tombstone: null,
     icon: null,
+    id: '',
     note: null,
     password: null,
     tags: null,
@@ -70,9 +69,10 @@ const item = reactive<{
   history: [],
   keyValuesAdd: [],
   originalDetails: {
-    id: '',
     createdAt: null,
+    haex_tombstone: null,
     icon: null,
+    id: '',
     note: null,
     password: null,
     tags: null,
@@ -84,8 +84,8 @@ const item = reactive<{
   originalKeyValuesAdd: [],
 })
 
-const { add } = useSnackbar()
-const { currentGroup, currentGroupId } = storeToRefs(usePasswordGroupStore())
+const { add } = useToast()
+const { currentGroup } = storeToRefs(usePasswordGroupStore())
 const { syncGroupItemsAsync } = usePasswordGroupStore()
 const { addAsync } = usePasswordItemStore()
 
@@ -99,12 +99,13 @@ const onCreateAsync = async () => {
 
     if (newId) {
       ignoreChanges.value = true
-      add({ type: 'success', text: t('success') })
+      add({ color: 'success', description: t('success') })
       await syncGroupItemsAsync()
       onClose()
     }
   } catch (error) {
-    add({ type: 'error', text: t('error') })
+    console.log(error)
+    add({ color: 'error', description: t('error') })
   }
 }
 

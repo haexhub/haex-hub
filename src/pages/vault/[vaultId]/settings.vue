@@ -13,28 +13,16 @@
       <UiInput
         v-model="currentVaultName"
         :placeholder="t('vaultName.label')"
-      >
-        <template #append>
-          <UiTooltip :tooltip="t('save')">
-            <UiButton
-              class="btn-primary"
-              @click="onSetVaultNameAsync"
-            >
-              <Icon name="mdi:content-save-outline" />
-            </UiButton>
-          </UiTooltip>
-        </template>
-      </UiInput>
+        @change="onSetVaultNameAsync"
+      />
     </div>
 
     <div class="p-2">{{ t('notifications.label') }}</div>
-    <div class="flex items-center">
+    <div>
       <UiButton
-        class="btn-primary"
+        :label="t('notifications.requestPermission')"
         @click="requestNotificationPermissionAsync"
-      >
-        {{ t('notifications.requestPermission') }}
-      </UiButton>
+      />
     </div>
 
     <div class="p-2">{{ t('deviceName.label') }}</div>
@@ -42,18 +30,8 @@
       <UiInput
         v-model="deviceName"
         :placeholder="t('deviceName.label')"
-      >
-        <template #append>
-          <UiButton
-            class="btn-primary"
-            @click="onUpdateDeviceNameAsync"
-            :tooltip="t('save')"
-            :rules="vaultDeviceNameSchema"
-          >
-            <Icon name="mdi:content-save-outline" />
-          </UiButton>
-        </template>
-      </UiInput>
+        @change="onUpdateDeviceNameAsync"
+      />
     </div>
   </div>
 </template>
@@ -76,21 +54,23 @@ const onSelectLocaleAsync = async (locale: Locale) => {
   await setLocale(locale)
 }
 
-const { currentTheme } = storeToRefs(useUiStore())
+const { currentThemeName } = storeToRefs(useUiStore())
 
-const onSelectThemeAsync = async (theme: ITheme) => {
-  await updateThemeAsync(theme.value)
-  currentTheme.value = theme
+const onSelectThemeAsync = async (theme: string) => {
+  currentThemeName.value = theme
+  console.log('onSelectThemeAsync', currentThemeName.value)
+  await updateThemeAsync(theme)
 }
 
-const { add } = useSnackbar()
+const { add } = useToast()
+
 const onSetVaultNameAsync = async () => {
   try {
     await updateVaultNameAsync(currentVaultName.value)
-    add({ text: t('vaultName.update.success'), type: 'success' })
+    add({ description: t('vaultName.update.success'), color: 'success' })
   } catch (error) {
     console.error(error)
-    add({ text: t('vaultName.update.error'), type: 'error' })
+    add({ description: t('vaultName.update.error'), color: 'error' })
   }
 }
 
@@ -102,14 +82,16 @@ const { updateDeviceNameAsync, readDeviceNameAsync } = useDeviceStore()
 onMounted(async () => {
   await readDeviceNameAsync()
 })
+
 const onUpdateDeviceNameAsync = async () => {
   const check = vaultDeviceNameSchema.safeParse(deviceName.value)
   if (!check.success) return
   try {
     await updateDeviceNameAsync({ name: deviceName.value })
-    add({ text: t('deviceName.update.success'), type: 'success' })
+    add({ description: t('deviceName.update.success'), color: 'success' })
   } catch (error) {
-    add({ text: t('deviceName.update.error'), type: 'error' })
+    console.log(error)
+    add({ description: t('deviceName.update.error'), color: 'error' })
   }
 }
 </script>

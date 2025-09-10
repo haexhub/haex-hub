@@ -1,12 +1,16 @@
 <template>
   <UiDialogConfirm
+    v-model:open="showUnsavedChangesDialog"
     :confirm-label="t('label')"
     :title="t('title')"
     @abort="$emit('abort')"
     @confirm="onConfirm"
-    v-model:open="showUnsavedChangesDialog"
   >
-    {{ t('question') }}
+    <template #body>
+      <div class="flex items-center h-full">
+        {{ t('question') }}
+      </div>
+    </template>
   </UiDialogConfirm>
 </template>
 
@@ -43,5 +47,5 @@ de:
 en:
   title: Unsaved changes
   question: Should the changes be discarded?
-  label: discard
+  label: Discard
 </i18n>

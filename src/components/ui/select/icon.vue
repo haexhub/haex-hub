@@ -1,5 +1,5 @@
 <template>
-  <UiDropdown
+  <UDropdownMenu
     :items="icons"
     class="btn"
     @select="(newIcon) => (iconName = newIcon)"
@@ -23,7 +23,7 @@
         </li>
       </div>
     </template>
-  </UiDropdown>
+  </UDropdownMenu>
 </template>
 
 <script setup lang="ts">

@@ -1,58 +1,74 @@
-import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
+//import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
 import de from './de.json'
 import en from './en.json'
 
-export interface ITheme {
+/* export interface ITheme {
   value: string
   name: string
   icon: string
-}
+} */
 
 export const useUiStore = defineStore('uiStore', () => {
-  const breakpoints = useBreakpoints(breakpointsTailwind)
+  /* const breakpoints = useBreakpoints(breakpointsTailwind)
 
-  const currentScreenSize = computed(() =>
+  const current ScreenSize = computed(() =>
     breakpoints.active().value.length > 0 ? breakpoints.active().value : 'xs',
-  )
+  ) */
 
-  const { t } = useI18n({
-    messages: {
-      de: { ui: de },
-      en: { ui: en },
-    },
+  const { $i18n } = useNuxtApp()
+
+  $i18n.setLocaleMessage('de', {
+    ui: de,
   })
+  $i18n.setLocaleMessage('en', { ui: en })
 
   const availableThemes = ref([
     {
       value: 'dark',
-      name: t('ui.dark'),
+      label: $i18n.t('ui.dark'),
       icon: 'line-md:moon-rising-alt-loop',
     },
     {
       value: 'light',
-      name: t('ui.light'),
+      label: $i18n.t('ui.light'),
       icon: 'line-md:moon-to-sunny-outline-loop-transition',
     },
-    { value: 'soft', name: t('ui.soft'), icon: 'line-md:paint-drop' },
+    /*     {
+      value: 'soft',
+      label: t('ui.soft'),
+      icon: 'line-md:paint-drop',
+    },
+
     {
       value: 'corporate',
-      name: t('ui.corporate'),
+      label: t('ui.corporate'),
       icon: 'hugeicons:corporate',
-    },
+    }, */
   ])
 
-  const defaultTheme = ref(availableThemes.value[0])
+  const defaultTheme = ref('dark')
 
-  const currentTheme = ref(defaultTheme)
+  const currentThemeName = ref(defaultTheme.value)
 
-  const currentThemeValue = computed(() => currentTheme.value.value)
+  const currentTheme = computed(
+    () =>
+      availableThemes.value.find(
+        (theme) => theme.value === currentThemeName.value,
+      ) ?? availableThemes.value.at(0),
+  )
+
+  const colorMode = useColorMode()
+
+  watchImmediate(currentThemeName, () => {
+    console.log('set colorMode', currentThemeName.value)
+    colorMode.preference = currentThemeName.value
+  })
 
   return {
     availableThemes,
-    breakpoints,
-    currentScreenSize,
+    //currentScreenSize,
     currentTheme,
-    currentThemeValue,
+    currentThemeName,
     defaultTheme,
   }
 })

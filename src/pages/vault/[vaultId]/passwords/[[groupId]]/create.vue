@@ -1,6 +1,5 @@
 <template>
   <div>
-    {{ currentGroupId }}
     <HaexPassGroup
       v-model="group"
       mode="create"
@@ -9,20 +8,19 @@
     />
 
     <HaexPassMenuBottom
-      @close="onClose"
-      @save="createAsync"
       show-close-button
       show-save-button
       :has-changes
-    >
-    </HaexPassMenuBottom>
+      @close="onClose"
+      @save="createAsync"
+    />
 
     <HaexPassDialogUnsavedChanges
+      v-model:ignore-changes="ignoreChanges"
+      v-model:open="showUnsavedChangesDialog"
       :has-changes
       @abort="showUnsavedChangesDialog = false"
       @confirm="onConfirmIgnoreChanges"
-      v-model:ignore-changes="ignoreChanges"
-      v-model:open="showUnsavedChangesDialog"
     />
   </div>
 </template>
@@ -45,6 +43,7 @@ const group = ref<SelectHaexPasswordsGroups>({
   parentId: currentGroupId.value || null,
   createdAt: null,
   updateAt: null,
+  haex_tombstone: null,
 })
 
 const errors = ref({

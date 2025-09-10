@@ -1,41 +1,54 @@
 <template>
-  <div class="relative">
-    <UiButton
-      v-if="withCopyButton"
-      :tooltip="t('copy')"
-      class="btn-square btn-outline btn-accent absolute z-10 top-2 right-2"
-      @click="copy(`${value}`)"
+  <div>
+    <UTextarea
+      :id
+      v-model="value"
+      :ui="{ base: 'peer' }"
+      :readonly="readOnly"
+      class="w-full"
+      v-bind="$attrs"
     >
-      <Icon :name="copied ? 'mdi:check' : 'mdi:content-copy'" />
-    </UiButton>
-
-    <div class="textarea-floating">
-      <textarea
-        :class="{ 'pr-10': withCopyButton }"
-        :id
-        :placeholder
-        :readonly="read_only"
-        class="textarea"
-        v-bind="$attrs"
-        v-model="value"
-      ></textarea>
       <label
-        class="textarea-floating-label"
-        :for="id"
+        class="absolute pointer-events-none -top-2.5 left-0 text-highlighted text-xs font-medium px-1.5 transition-all peer-focus:-top-2.5 peer-focus:text-highlighted peer-focus:text-xs peer-focus:font-medium peer-placeholder-shown:text-sm peer-placeholder-shown:text-dimmed peer-placeholder-shown:top-1.5 peer-placeholder-shown:font-normal"
       >
-        {{ label }}
+        <span class="inline-flex bg-default px-1">
+          {{ props.label }}
+        </span>
       </label>
-    </div>
+
+      <template #trailing>
+        <UiButton
+          v-show="withCopyButton"
+          :color="copied ? 'success' : 'neutral'"
+          :tooltip="t('copy')"
+          :icon="copied ? 'mdi:check' : 'mdi:content-copy'"
+          size="sm"
+          variant="link"
+          @click="copy(`${value}`)"
+        />
+      </template>
+    </UTextarea>
   </div>
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import type { TextareaProps } from '@nuxt/ui'
+
+interface ITextareaProps extends /* @vue-ignore */ TextareaProps {
+  tooltip?: string
+  withCopyButton?: boolean
+  readOnly?: boolean
+  label?: string
+}
+
+const props = defineProps<ITextareaProps>()
+
+/* defineProps<{
   placeholder?: string
   label?: string
-  read_only?: boolean
+  readOnly?: boolean
   withCopyButton?: boolean
-}>()
+}>() */
 
 const id = useId()
 

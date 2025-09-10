@@ -1,5 +1,5 @@
 <template>
-  <div class="w-screen h-dvh bg-base-200 min-w-52 overflow-auto">
+  <div class="bg-default isolate h-dvh">
     <slot />
   </div>
 </template>

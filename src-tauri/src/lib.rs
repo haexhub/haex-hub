@@ -1,6 +1,6 @@
 //mod browser;
 mod android_storage;
-mod crdt;
+pub mod crdt;
 mod database;
 mod extension;
 mod models;

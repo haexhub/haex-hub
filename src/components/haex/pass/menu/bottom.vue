@@ -1,70 +1,60 @@
 <template>
   <div
-    class="fixed bottom-4 flex justify-between transition-all pointer-events-none right-0 sm:items-center items-end"
-    :class="[isVisible ? 'left-15 ' : 'left-0']"
+    class="fixed bottom-4 flex justify-between transition-all pointer-events-none right-0 sm:items-center items-end h-12"
+    :class="[isVisible ? 'left-16' : 'left-0']"
   >
     <div class="flex items-center justify-center flex-1">
       <UiButton
         v-show="showCloseButton"
         :tooltip="t('abort')"
+        icon="mdi:close"
+        color="error"
+        variant="ghost"
+        class="pointer-events-auto"
         @click="$emit('close')"
-        class="btn-accent btn-square"
-      >
-        <Icon name="mdi:close" />
-      </UiButton>
+      />
     </div>
 
     <div>
       <UiButton
         v-show="showEditButton"
+        icon="mdi:pencil-outline"
+        class="pointer-events-auto"
+        size="xl"
         :tooltip="t('edit')"
         @click="$emit('edit')"
-        class="btn-xl btn-square btn-primary"
-      >
-        <Icon
-          name="mdi:pencil-outline"
-          class="size-11 shrink-0"
-        />
-      </UiButton>
+      />
 
       <UiButton
         v-show="showReadonlyButton"
+        icon="mdi:pencil-off-outline"
+        class="pointer-events-auto"
+        size="xl"
         :tooltip="t('readonly')"
-        class="btn-xl btn-square btn-primary"
         @click="$emit('readonly')"
-      >
-        <Icon
-          name="mdi:pencil-off-outline"
-          class="size-11 shrink-0"
-        />
-      </UiButton>
+      />
 
       <UiButton
         v-show="showSaveButton"
+        icon="mdi:content-save-outline"
+        size="xl"
+        class="pointer-events-auto"
+        :class="{ 'animate-pulse': hasChanges }"
         :tooltip="t('save')"
-        class="btn-xl btn-square btn-primary motion-duration-2000"
-        :class="{ 'motion-preset-pulse-sm': hasChanges }"
         @click="$emit('save')"
-      >
-        <Icon
-          name="mdi:content-save-outline"
-          class="size-11 shrink-0"
-        />
-      </UiButton>
+      />
     </div>
 
     <div class="flex items-center justify-center flex-1">
       <UiButton
         v-show="showDeleteButton"
+        color="error"
+        icon="mdi:trash-outline"
+        class="pointer-events-auto"
+        variant="ghost"
         :tooltip="t('delete')"
-        class="btn-square btn-error"
         @click="$emit('delete')"
-      >
-        <Icon
-          name="mdi:trash-outline"
-          class="shrink-0"
-        />
-      </UiButton>
+      />
     </div>
   </div>
 </template>
@@ -74,12 +64,12 @@ const { isVisible } = storeToRefs(useSidebarStore())
 const { t } = useI18n()
 
 defineProps<{
+  hasChanges?: boolean
   showCloseButton?: boolean
   showDeleteButton?: boolean
   showEditButton?: boolean
   showReadonlyButton?: boolean
   showSaveButton?: boolean
-  hasChanges?: boolean
 }>()
 
 defineEmits(['close', 'edit', 'readonly', 'save', 'delete'])

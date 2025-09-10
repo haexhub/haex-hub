@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+@import '@nuxt/ui';
+@import 'tw-animate-css';
+
+/* Custom Colors */
+@layer base {
+  button,
+  [role='button'] {
+    @apply cursor-pointer;
+  }
+
+  :disabled,
+  [disabled] {
+    @apply cursor-not-allowed;
+  }
+}
+
+:root {
+  --ui-header-height: 48px; /* oder was auch immer deine Header-Höhe ist */
+}

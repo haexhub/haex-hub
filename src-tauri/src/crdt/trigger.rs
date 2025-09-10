@@ -1,4 +1,3 @@
-use crate::crdt::hlc;
 use rusqlite::{Connection, Result, Row};
 use serde::Serialize;
 use std::fmt::Write;
@@ -76,6 +75,7 @@ impl TriggerManager {
 
         let insert_trigger_sql = self.generate_insert_trigger_sql(table_name, &pks, &cols_to_track);
         let update_trigger_sql = self.generate_update_trigger_sql(table_name, &pks, &cols_to_track);
+        let drop_insert_trigger_sql = self.drop_trigger_sql(table_name, "insert");
 
         let tx = conn.transaction()?;
         tx.execute_batch(&format!("{}\n{}", insert_trigger_sql, update_trigger_sql))?;
@@ -125,6 +125,10 @@ impl TriggerManager {
                 {column_inserts}
             END;"
         )
+    }
+
+    fn drop_trigger_sql(&self, table: &str, action: &str) -> String {
+        format!("DROP TRIGGER IF EXISTS z_crdt_{table}_{action};")
     }
 
     fn generate_update_trigger_sql(

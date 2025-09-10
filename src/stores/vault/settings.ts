@@ -62,9 +62,9 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
       )
   }
   const syncThemeAsync = async () => {
-    const { availableThemes, defaultTheme, currentTheme } = storeToRefs(
-      useUiStore(),
-    )
+    const { defaultTheme, currentTheme, currentThemeName, availableThemes } =
+      storeToRefs(useUiStore())
+
     const currentThemeRow =
       await currentVault.value?.drizzle.query.haexSettings.findFirst({
         where: eq(schema.haexSettings.key, VaultSettingsKeyEnum.theme),
@@ -74,13 +74,13 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
       const theme = availableThemes.value.find(
         (theme) => theme.value === currentThemeRow.value,
       )
-      currentTheme.value = theme ?? defaultTheme.value
+      currentThemeName.value = theme?.value || defaultTheme.value
     } else {
       await currentVault.value?.drizzle.insert(schema.haexSettings).values({
         id: crypto.randomUUID(),
         key: VaultSettingsKeyEnum.theme,
         type: VaultSettingsTypeEnum.settings,
-        value: currentTheme.value.value,
+        value: currentTheme.value?.value,
       })
     }
   }
@@ -121,14 +121,13 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
   const readDeviceNameAsync = async (id: string) => {
     const { currentVault } = useVaultStore()
 
-    const deviceName = await currentVault.drizzle?.query.haexSettings.findFirst(
-      {
+    const deviceName =
+      await currentVault?.drizzle?.query.haexSettings.findFirst({
         where: and(
           eq(schema.haexSettings.type, VaultSettingsTypeEnum.deviceName),
           eq(schema.haexSettings.key, id),
         ),
-      },
-    )
+      })
     console.log('readDeviceNameAsync', deviceName)
     return deviceName
   }
@@ -148,7 +147,7 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
       return
     }
 
-    return currentVault.drizzle?.insert(schema.haexSettings).values({
+    return currentVault?.drizzle?.insert(schema.haexSettings).values({
       id: crypto.randomUUID(),
       type: VaultSettingsTypeEnum.deviceName,
       key: deviceId,
@@ -168,7 +167,7 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
     const isNameOk = vaultDeviceNameSchema.safeParse(deviceName)
     if (!isNameOk.success) return
 
-    return currentVault.drizzle
+    return currentVault?.drizzle
       ?.update(schema.haexSettings)
       .set({
         value: deviceName,

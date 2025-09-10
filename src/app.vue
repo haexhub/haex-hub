@@ -1,20 +1,14 @@
 <template>
-  <div>
+  <UApp :locale="locales[locale]">
     <NuxtLayout>
       <NuxtPage />
-      <NuxtSnackbar />
     </NuxtLayout>
-  </div>
+  </UApp>
 </template>
 
 <script setup lang="ts">
-const { currentThemeValue } = storeToRefs(useUiStore())
-
-useHead({
-  htmlAttrs: {
-    'data-theme': currentThemeValue,
-  },
-})
+import * as locales from '@nuxt/ui/locale'
+const { locale } = useI18n()
 </script>
 
 <style>

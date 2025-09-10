@@ -6,9 +6,11 @@
     @abort="$emit('abort')"
     @confirm="$emit('confirm')"
   >
-    {{
-      final ? t('final.question', { itemName }) : t('question', { itemName })
-    }}
+    <template #body>
+      {{
+        final ? t('final.question', { itemName }) : t('question', { itemName })
+      }}
+    </template>
   </UiDialogConfirm>
 </template>
 

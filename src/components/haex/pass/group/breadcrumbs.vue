@@ -1,48 +1,46 @@
 <template>
-  <div class="breadcrumbs">
-    <ul>
-      <li>
-        <NuxtLinkLocale :to="{ name: 'passwordGroupItems' }">
-          <Icon
-            name="mdi:safe"
-            size="24"
-          />
-        </NuxtLinkLocale>
-      </li>
-      <template v-for="item in items">
-        <li class="breadcrumbs-separator rtl:rotate-180">
-          <Icon name="tabler:chevron-right" />
-        </li>
+  <ul class="flex items-center gap-2 p-2">
+    <li>
+      <NuxtLinkLocale :to="{ name: 'passwordGroupItems' }">
+        <Icon
+          name="mdi:safe"
+          size="24"
+        />
+      </NuxtLinkLocale>
+    </li>
 
-        <li>
-          <NuxtLinkLocale
-            :to="{ name: 'passwordGroupItems', params: { groupId: item.id } }"
-          >
-            {{ item.name }}
-          </NuxtLinkLocale>
-        </li>
-      </template>
-      <li class="ml-2">
-        <UiTooltip
-          :tooltip="t('edit')"
-          class="[--placement:bottom]"
+    <li
+      v-for="item in items"
+      :key="item.id"
+      class="flex items-center gap-2"
+    >
+      <Icon
+        name="tabler:chevron-right"
+        class="rtl:rotate-180"
+      />
+      <NuxtLinkLocale
+        :to="{ name: 'passwordGroupItems', params: { groupId: item.id } }"
+      >
+        {{ item.name }}
+      </NuxtLinkLocale>
+    </li>
+
+    <li class="ml-2">
+      <UTooltip :text="t('edit')">
+        <NuxtLinkLocale
+          :to="{
+            name: 'passwordGroupEdit',
+            params: { groupId: lastGroup?.id },
+          }"
         >
-          <NuxtLinkLocale
-            :to="{
-              name: 'passwordGroupEdit',
-              params: { groupId: lastGroup?.id },
-            }"
-          >
-            <Icon name="mdi:pencil" />
-          </NuxtLinkLocale>
-        </UiTooltip>
-      </li>
-    </ul>
-  </div>
+          <Icon name="mdi:pencil" />
+        </NuxtLinkLocale>
+      </UTooltip>
+    </li>
+  </ul>
 </template>
 
 <script setup lang="ts">
-import { UiTooltip } from '#components'
 import type { SelectHaexPasswordsGroups } from '~~/src-tauri/database/schemas/vault'
 
 const groups = defineProps<{ items: SelectHaexPasswordsGroups[] }>()

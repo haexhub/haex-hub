@@ -2,7 +2,6 @@
   <svg
     viewBox="122 107 263 292"
     xmlns="http://www.w3.org/2000/svg"
-    style="max-height: 500px"
   >
     <g
       stroke-width="0.3"

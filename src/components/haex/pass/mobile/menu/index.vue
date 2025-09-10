@@ -4,15 +4,21 @@
     class="flex-1"
   >
     <ul
-      class="flex flex-col w-full h-full gap-y-2 first:rounded-t-md last:rounded-b-md p-1"
       ref="listRef"
+      class="flex flex-col w-full h-full gap-y-2 first:rounded-t-md last:rounded-b-md p-1"
     >
       <li
         v-for="(item, index) in menuItems"
         :key="item.id"
-        class="bg-base-100 rounded-lg hover:bg-base-content/20 origin-to intersect:motion-preset-slide-down intersect:motion-ease-spring-bouncier intersect:motion-delay ease-in-out shadow"
+        v-on-long-press="[
+          onLongPressCallbackHook,
+          {
+            delay: 1000,
+          },
+        ]"
+        class="bg-accented rounded-lg hover:bg-base-content/20 origin-to intersect:motion-preset-slide-down intersect:motion-ease-spring-bouncier intersect:motion-delay ease-in-out shadow"
         :class="{
-          'bg-base-content/30 outline outline-accent hover:bg-base-content/20':
+          'bg-elevated/30 outline outline-accent hover:bg-base-content/20':
             selectedItems.has(item) ||
             (currentSelectedItem?.id === item.id &&
               longPressedHook &&
@@ -22,12 +28,6 @@
           ),
         }"
         :style="{ '--motion-delay': `${50 * index}ms` }"
-        v-on-long-press="[
-          onLongPressCallbackHook,
-          {
-            delay: 1000,
-          },
-        ]"
         @mousedown="
           longPressedHook
             ? (currentSelectedItem = null)
@@ -85,7 +85,7 @@ const { search } = storeToRefs(useSearchStore())
 const onClickItemAsync = async (item: IPasswordMenuItem) => {
   currentSelectedItem.value = null
 
-  if (longPressedHook.value || selectedItems.value.size || ctrl.value) {
+  if (longPressedHook.value || selectedItems.value.size || ctrl?.value) {
     if (selectedItems.value?.has(item)) {
       selectedItems.value.delete(item)
     } else {

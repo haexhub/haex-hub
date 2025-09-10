@@ -1,84 +1,78 @@
 <template>
-  <div class="p-1">
-    <UiCard
-      v-if="group"
-      :title="mode === 'edit' ? t('title.edit') : t('title.create')"
-      icon="mdi:folder-plus-outline"
-      @close="$emit('close')"
-      body-class="px-0"
-    >
-      <form
-        class="flex flex-col gap-4 w-full p-4"
-        @submit.prevent="$emit('submit')"
-      >
-        <UiInput
-          :label="t('name')"
-          :placeholder="t('name')"
-          :read_only
-          autofocus
-          v-model="group.name"
-          ref="nameRef"
-          @keyup.enter="$emit('submit')"
+  <UCard v-if="group">
+    <template #header>
+      <div class="flex items-center gap-2">
+        <Icon
+          :name="
+            mode === 'edit'
+              ? 'mdi:folder-edit-outline'
+              : 'mdi:folder-plus-outline'
+          "
+          size="24"
         />
+        <span>{{ mode === 'edit' ? t('title.edit') : t('title.create') }}</span>
+      </div>
+    </template>
 
-        <UiInput
-          v-model="group.description"
-          :label="t('description')"
-          :placeholder="t('description')"
-          :read_only
-          @keyup.enter="$emit('submit')"
-        />
+    <form class="flex flex-col gap-4 w-full p-4">
+      <UiInput
+        ref="nameRef"
+        v-model="group.name"
+        :label="t('name')"
+        :placeholder="t('name')"
+        :read-only
+        autofocus
+        @keyup.enter="$emit('submit')"
+      />
 
-        <div class="flex flex-wrap gap-4">
-          <UiSelectIcon
+      <UiInput
+        v-model="group.description"
+        :label="t('description')"
+        :placeholder="t('description')"
+        :read-only
+        @keyup.enter="$emit('submit')"
+      />
+
+      <div class="flex flex-wrap gap-4">
+        <!-- <UiSelectIcon
             v-model="group.icon"
             default-icon="mdi:folder-outline"
-            :read_only
+            :readOnly
           />
 
           <UiSelectColor
             v-model="group.color"
-            :read_only
-          />
-        </div>
-
-        <!-- <div class="flex flex-wrap justify-end gap-4">
-          <UiButton
-            class="btn-error btn-outline flex-1"
-            @click="$emit('close')"
-          >
-            {{ t('abort') }}
-            <Icon name="mdi:close" />
-          </UiButton>
-
-          <UiButton
-            class="btn-primary flex-1"
-            @click="$emit('submit')"
-          >
-            {{ mode === 'create' ? t('create') : t('save') }}
-            <Icon name="mdi:check" />
-          </UiButton>
-        </div> -->
-      </form>
-    </UiCard>
-  </div>
+            :readOnly
+          /> -->
+      </div>
+    </form>
+  </UCard>
 </template>
 
 <script setup lang="ts">
 import type { SelectHaexPasswordsGroups } from '~~/src-tauri/database/schemas/vault'
 
 const group = defineModel<SelectHaexPasswordsGroups | null>()
-const { read_only = false } = defineProps<{
-  read_only?: boolean
+const { readOnly = false } = defineProps<{
+  readOnly?: boolean
   mode: 'create' | 'edit'
 }>()
-defineEmits(['close', 'submit'])
+const emit = defineEmits(['close', 'submit'])
 
 const { t } = useI18n()
 
 const nameRef = useTemplateRef('nameRef')
 onStartTyping(() => {
-  nameRef.value?.inputRef?.focus()
+  nameRef.value?.$el.focus()
+})
+
+const { escape } = useMagicKeys()
+
+watchEffect(async () => {
+  if (escape?.value) {
+    await nextTick()
+    emit('close')
+  }
 })
 </script>
 

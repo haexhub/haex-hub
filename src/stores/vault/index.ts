@@ -60,8 +60,8 @@ export const useVaultStore = defineStore('vaultStore', () => {
           name: fileName ?? path,
           drizzle: drizzle<typeof schema>(
             async (sql, params: unknown[], method) => {
-              let rows: unknown[] = []
-              let results: any = []
+              let rows: any[] = []
+              let results: any[] = []
 
               // If the query is a SELECT, use the select method
               if (isSelectQuery(sql)) {

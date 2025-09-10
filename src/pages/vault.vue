@@ -13,18 +13,20 @@
         confirm-icon="mdi:content-save-outline"
         v-model:open="showNewDeviceDialog"
       >
-        <div class="flex flex-col gap-4">
-          <p>{{ t('newDevice.intro') }}</p>
-          <p>
-            {{ t('newDevice.setName') }}
-          </p>
-          {{ deviceId }}
-          <UiInput
-            v-model="newDeviceName"
-            :label="t('newDevice.label')"
-            :rules="vaultDeviceNameSchema"
-          />
-        </div>
+        <template #body>
+          <div class="flex flex-col gap-4">
+            <p>{{ t('newDevice.intro') }}</p>
+            <p>
+              {{ t('newDevice.setName') }}
+            </p>
+            {{ deviceId }}
+            <UiInput
+              v-model="newDeviceName"
+              :label="t('newDevice.label')"
+              :rules="vaultDeviceNameSchema"
+            />
+          </div>
+        </template>
       </UiDialogConfirm>
     </div>
   </div>
@@ -61,7 +63,7 @@ onMounted(async () => {
   }
 })
 
-const { add } = useSnackbar()
+const { add } = useToast()
 const onSetDeviceNameAsync = async () => {
   try {
     const check = vaultDeviceNameSchema.safeParse(newDeviceName.value)
@@ -72,9 +74,9 @@ const onSetDeviceNameAsync = async () => {
 
     await addDeviceNameAsync({ name: newDeviceName.value })
     showNewDeviceDialog.value = false
-    add({ type: 'success', text: t('newDevice.success') })
+    add({ color: 'success', description: t('newDevice.success') })
   } catch (error) {
-    add({ type: 'error', text: t('newDevice.error') })
+    add({ color: 'error', description: t('newDevice.error') })
   }
 }
 </script>
