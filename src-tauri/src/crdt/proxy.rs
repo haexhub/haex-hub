@@ -105,7 +105,7 @@ impl SqlProxy {
         hlc_timestamp: Option<&Timestamp>,
     ) -> Result<Option<String>, ProxyError> {
         match stmt {
-            sqlparser::ast::Statement::Query(query) => {
+            Statement::Query(query) => {
                 if let SetExpr::Select(select) = &mut *query.body {
                     let mut tombstone_filters = Vec::new();
                     for twj in &select.from {
@@ -162,6 +162,7 @@ impl SqlProxy {
 
                 // Hinweis: UNION, EXCEPT etc. werden hier nicht behandelt, was dem bisherigen Code entspricht.
             }
+
             Statement::CreateTable(create_table) => {
                 if self.is_audited_table(&create_table.name) {
                     self.add_crdt_columns(&mut create_table.columns);
@@ -175,6 +176,7 @@ impl SqlProxy {
                     ));
                 }
             }
+
             Statement::Insert(insert_stmt) => {
                 if let TableObject::TableName(name) = &insert_stmt.table {
                     if self.is_audited_table(name) {
@@ -184,15 +186,7 @@ impl SqlProxy {
                     }
                 }
             }
-            /* Statement::Update(update_stmt) => {
-                if let TableFactor::Table { name, .. } = &update_stmt.table.relation {
-                    if self.is_audited_table(&name) {
-                        if let Some(ts) = hlc_timestamp {
-                            update_stmt.assignments.push(self.create_hlc_assignment(ts));
-                        }
-                    }
-                }
-            } */
+
             Statement::Update {
                 table,
                 assignments,
@@ -217,6 +211,7 @@ impl SqlProxy {
                     or: *or,
                 };
             }
+
             Statement::Delete(del_stmt) => {
                 let table_name = self.extract_table_name_from_from(&del_stmt.from);
                 if let Some(name) = table_name {
@@ -232,6 +227,7 @@ impl SqlProxy {
                     });
                 }
             }
+
             Statement::AlterTable { name, .. } => {
                 if self.is_audited_table(name) {
                     return Ok(Some(

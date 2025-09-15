@@ -5,10 +5,10 @@ use rusqlite::Connection;
 use serde_json::Value as JsonValue;
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
-use tauri::{path::BaseDirectory, AppHandle, Manager, State, Wry};
+use tauri::{path::BaseDirectory, AppHandle, Manager, State};
 
 use crate::database::core::open_and_init_db;
 pub struct HlcService(pub Mutex<uhlc::HLC>);

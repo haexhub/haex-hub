@@ -1,5 +1,5 @@
 // database/core.rs
-use crate::crdt::hlc;
+
 use crate::database::DbConnection;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use rusqlite::{
@@ -166,7 +166,7 @@ pub fn open_and_init_db(path: &str, key: &str, create: bool) -> Result<Connectio
 
     let conn = Connection::open_with_flags(path, flags).map_err(|e| {
         format!(
-            "Dateiii gibt es nicht: {}. Habe nach {} gesucht",
+            "Datei gibt es nicht: {}. Habe nach {} gesucht",
             e.to_string(),
             path
         )
@@ -174,8 +174,8 @@ pub fn open_and_init_db(path: &str, key: &str, create: bool) -> Result<Connectio
     conn.pragma_update(None, "key", key)
         .map_err(|e| e.to_string())?;
 
-    conn.execute_batch("SELECT count(*) from haex_extensions")
-        .map_err(|e| e.to_string())?;
+    /* conn.execute_batch("SELECT count(*) from haex_extensions")
+    .map_err(|e| e.to_string())?; */
 
     let journal_mode: String = conn
         .query_row("PRAGMA journal_mode=WAL;", [], |row| row.get(0))

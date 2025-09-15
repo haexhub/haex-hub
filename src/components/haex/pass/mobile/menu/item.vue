@@ -1,9 +1,8 @@
 <template>
   <button
-    aria-disabled
     class="flex gap-4 w-full px-4 py-2"
-    @click="$emit('click', menuItem)"
     :style="{ color: menuItem.color ?? '' }"
+    @click="$emit('click', menuItem)"
   >
     <Icon
       :name="menuIcon"
@@ -34,7 +33,7 @@ const menuIcon = computed(() =>
   menuItem?.icon
     ? menuItem.icon
     : menuItem.type === 'group'
-    ? 'mdi:folder-outline'
-    : 'mdi:key-outline',
+      ? 'mdi:folder-outline'
+      : 'mdi:key-outline',
 )
 </script>

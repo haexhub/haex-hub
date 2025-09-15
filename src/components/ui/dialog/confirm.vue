@@ -4,6 +4,7 @@
     :title
     :description
     :fullscreen="isSmallScreen"
+    :ui="{ header: 'pt-10 sm:pt-0', footer: 'mb-10 sm:mb-0' }"
   >
     <slot>
       <!-- <UiButton

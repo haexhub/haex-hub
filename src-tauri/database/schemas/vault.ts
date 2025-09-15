@@ -7,8 +7,9 @@ import {
   unique,
   type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core'
+import tableNames from '../tableNames.json'
 
-export const haexSettings = sqliteTable('haex_settings', {
+export const haexSettings = sqliteTable(tableNames.haex.settings, {
   id: text().primaryKey(),
   key: text(),
   type: text(),
@@ -18,7 +19,7 @@ export const haexSettings = sqliteTable('haex_settings', {
 export type InsertHaexSettings = typeof haexSettings.$inferInsert
 export type SelectHaexSettings = typeof haexSettings.$inferSelect
 
-export const haexExtensions = sqliteTable('haex_extensions', {
+export const haexExtensions = sqliteTable(tableNames.haex.extensions, {
   id: text().primaryKey(),
   author: text(),
   enabled: integer({ mode: 'boolean' }),
@@ -31,8 +32,8 @@ export const haexExtensions = sqliteTable('haex_extensions', {
 export type InsertHaexExtensions = typeof haexExtensions.$inferInsert
 export type SelectHaexExtensions = typeof haexExtensions.$inferSelect
 
-export const haexExtensionsPermissions = sqliteTable(
-  'haex_extensions_permissions',
+export const haexExtensionPermissions = sqliteTable(
+  tableNames.haex.extension_permissions,
   {
     id: text().primaryKey(),
     extensionId: text('extension_id').references(
@@ -51,12 +52,12 @@ export const haexExtensionsPermissions = sqliteTable(
     unique().on(table.extensionId, table.resource, table.operation, table.path),
   ],
 )
-export type InsertHaexExtensionsPermissions =
-  typeof haexExtensionsPermissions.$inferInsert
-export type SelectHaexExtensionsPermissions =
-  typeof haexExtensionsPermissions.$inferSelect
+export type InserthaexExtensionPermissions =
+  typeof haexExtensionPermissions.$inferInsert
+export type SelecthaexExtensionPermissions =
+  typeof haexExtensionPermissions.$inferSelect
 
-export const haexNotifications = sqliteTable('haex_notifications', {
+export const haexNotifications = sqliteTable(tableNames.haex.notifications, {
   id: text().primaryKey(),
   alt: text(),
   date: text(),
@@ -75,7 +76,7 @@ export type InsertHaexNotifications = typeof haexNotifications.$inferInsert
 export type SelectHaexNotifications = typeof haexNotifications.$inferSelect
 
 export const haexPasswordsItemDetails = sqliteTable(
-  'haex_passwords_item_details',
+  tableNames.haex.passwords.item_details,
   {
     id: text().primaryKey(),
     title: text(),
@@ -98,7 +99,7 @@ export type SelectHaexPasswordsItemDetails =
   typeof haexPasswordsItemDetails.$inferSelect
 
 export const haexPasswordsItemKeyValues = sqliteTable(
-  'haex_passwords_item_key_values',
+  tableNames.haex.passwords.item_key_values,
   {
     id: text().primaryKey(),
     itemId: text('item_id').references(
@@ -118,7 +119,7 @@ export type SelectHaexPasswordsItemKeyValues =
   typeof haexPasswordsItemKeyValues.$inferSelect
 
 export const haexPasswordsItemHistory = sqliteTable(
-  'haex_passwords_item_history',
+  tableNames.haex.passwords.item_histories,
   {
     id: text().primaryKey(),
     itemId: text('item_id').references(
@@ -137,27 +138,30 @@ export type InserthaexPasswordsItemHistory =
 export type SelectHaexPasswordsItemHistory =
   typeof haexPasswordsItemHistory.$inferSelect
 
-export const haexPasswordsGroups = sqliteTable('haex_passwords_groups', {
-  id: text().primaryKey(),
-  name: text(),
-  description: text(),
-  icon: text(),
-  order: integer(),
-  color: text(),
-  parentId: text('parent_id').references(
-    (): AnySQLiteColumn => haexPasswordsGroups.id,
-  ),
-  createdAt: text('created_at').default(sql`(CURRENT_TIMESTAMP)`),
-  updateAt: integer('updated_at', { mode: 'timestamp' }).$onUpdate(
-    () => new Date(),
-  ),
-  haex_tombstone: integer({ mode: 'boolean' }),
-})
+export const haexPasswordsGroups = sqliteTable(
+  tableNames.haex.passwords.groups,
+  {
+    id: text().primaryKey(),
+    name: text(),
+    description: text(),
+    icon: text(),
+    order: integer(),
+    color: text(),
+    parentId: text('parent_id').references(
+      (): AnySQLiteColumn => haexPasswordsGroups.id,
+    ),
+    createdAt: text('created_at').default(sql`(CURRENT_TIMESTAMP)`),
+    updateAt: integer('updated_at', { mode: 'timestamp' }).$onUpdate(
+      () => new Date(),
+    ),
+    haex_tombstone: integer({ mode: 'boolean' }),
+  },
+)
 export type InsertHaexPasswordsGroups = typeof haexPasswordsGroups.$inferInsert
 export type SelectHaexPasswordsGroups = typeof haexPasswordsGroups.$inferSelect
 
 export const haexPasswordsGroupItems = sqliteTable(
-  'haex_passwords_group_items',
+  tableNames.haex.passwords.group_items,
   {
     groupId: text('group_id').references(
       (): AnySQLiteColumn => haexPasswordsGroups.id,

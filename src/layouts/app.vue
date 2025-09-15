@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex flex-col">
     <header
-      class="bg-default/70 backdrop-blur border-b border-accented h-(--ui-header-height) sticky top-0 z-50 flex"
+      class="bg-default/90 backdrop-blur border-b border-accented h-(--ui-header-height) sticky top-0 z-50 flex"
     >
       <div class="px-2 bg-primary rounded-br-xs">
         <UiLogoHaexhub class="p-2 size-12 shrink-0" />

@@ -1,13 +1,18 @@
 //mod browser;
-mod android_storage;
+//mod android_storage;
 pub mod crdt;
 mod database;
 mod extension;
 mod models;
+pub mod table_names {
+    include!(concat!(env!("OUT_DIR"), "/tableNames.rs"));
+}
 
-use database::DbConnection;
 use models::ExtensionState;
+use rusqlite::{Connection, OpenFlags};
 use std::sync::{Arc, Mutex};
+
+use crate::database::DbConnection;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -67,9 +72,9 @@ pub fn run() {
             extension::copy_directory,
             extension::database::extension_sql_execute,
             extension::database::extension_sql_select,
-            android_storage::request_storage_permission,
+            /* android_storage::request_storage_permission,
             android_storage::has_storage_permission,
-            android_storage::get_external_storage_paths,
+            android_storage::get_external_storage_paths, */
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

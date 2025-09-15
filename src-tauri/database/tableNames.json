@@ -1,0 +1,20 @@
+{
+  "haex": {
+    "settings": "haex_settings",
+    "extensions": "haex_extensions",
+    "extension_permissions": "haex_extension_permissions",
+    "notifications": "haex_notifications",
+    "passwords": {
+      "groups": "haex_passwords_groups",
+      "group_items": "haex_passwords_group_items",
+      "item_details": "haex_passwords_item_details",
+      "item_key_values": "haex_passwords_item_key_values",
+      "item_histories": "haex_passwords_item_history"
+    },
+    "crdt": {
+      "logs": "haex_crdt_logs",
+      "snapshots": "haex_crdt_snapshots",
+      "configs": "haex_crdt_configs"
+    }
+  }
+}

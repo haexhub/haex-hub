@@ -1,6 +1,7 @@
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import tableNames from '../tableNames.json'
 
-export const haexCrdtLogs = sqliteTable('haex_crdt_logs', {
+export const haexCrdtLogs = sqliteTable(tableNames.haex.crdt.logs, {
   hlc_timestamp: text().primaryKey(),
   table_name: text(),
   row_pks: text({ mode: 'json' }),
@@ -12,7 +13,7 @@ export const haexCrdtLogs = sqliteTable('haex_crdt_logs', {
 export type InsertHaexCrdtLogs = typeof haexCrdtLogs.$inferInsert
 export type SelectHaexCrdtLogs = typeof haexCrdtLogs.$inferSelect
 
-export const haexCrdtSnapshots = sqliteTable('haex_crdt_snapshots', {
+export const haexCrdtSnapshots = sqliteTable(tableNames.haex.crdt.snapshots, {
   snapshot_id: text().primaryKey(),
   created: text(),
   epoch_hlc: text(),
@@ -20,7 +21,7 @@ export const haexCrdtSnapshots = sqliteTable('haex_crdt_snapshots', {
   file_size_bytes: integer(),
 })
 
-export const haexCrdtSettings = sqliteTable('haex_crdt_settings', {
-  type: text().primaryKey(),
+export const haexCrdtConfigs = sqliteTable(tableNames.haex.crdt.configs, {
+  key: text().primaryKey(),
   value: text(),
 })
