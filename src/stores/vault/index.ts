@@ -1,10 +1,7 @@
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { invoke } from '@tauri-apps/api/core'
-import { platform } from '@tauri-apps/plugin-os'
 import * as schema from '@/../src-tauri/database/schemas/vault'
 import type { SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy'
-import { isTable, sql } from 'drizzle-orm'
-import { getTableConfig } from 'drizzle-orm/sqlite-core'
 
 interface IVault {
   name: string

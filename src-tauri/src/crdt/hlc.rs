@@ -1,5 +1,5 @@
 // src/hlc_service.rs
-
+use crate::table_names::TABLE_CRDT_CONFIGS;
 use rusqlite::{params, Connection, Result as RusqliteResult, Transaction};
 use std::{
     fmt::Debug,
@@ -14,7 +14,7 @@ use uuid::Uuid;
 const HLC_NODE_ID_TYPE: &str = "hlc_node_id";
 const HLC_TIMESTAMP_TYPE: &str = "hlc_timestamp";
 
-pub const CRDT_SETTINGS_TABLE: &str = "haex_crdt_settings";
+//pub const TABLE_CRDT_CONFIGS: &str = "haex_crdt_settings";
 
 #[derive(Error, Debug)]
 pub enum HlcError {
@@ -49,7 +49,7 @@ impl HlcService {
 
         // 3. Load the last persisted timestamp and update the clock.
         let last_state_str: RusqliteResult<String> = conn.query_row(
-            &format!("SELECT value FROM {} WHERE type = ?1", CRDT_SETTINGS_TABLE),
+            &format!("SELECT value FROM {} WHERE key = ?1", TABLE_CRDT_CONFIGS),
             params![HLC_TIMESTAMP_TYPE],
             |row| row.get(0),
         );
@@ -83,9 +83,9 @@ impl HlcService {
 
         tx.execute(
             &format!(
-                "INSERT INTO {} (type, value) VALUES (?1,?2)
-                 ON CONFLICT(type) DO UPDATE SET value = excluded.value",
-                CRDT_SETTINGS_TABLE
+                "INSERT INTO {} (key, value) VALUES (?1,?2)
+                 ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                TABLE_CRDT_CONFIGS
             ),
             params![HLC_TIMESTAMP_TYPE, timestamp_str],
         )?;
@@ -97,7 +97,7 @@ impl HlcService {
     fn get_or_create_node_id(conn: &mut Connection) -> Result<ID, HlcError> {
         let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
 
-        let query = format!("SELECT value FROM {} WHERE type =?1", CRDT_SETTINGS_TABLE);
+        let query = format!("SELECT value FROM {} WHERE key =?1", TABLE_CRDT_CONFIGS);
 
         match tx.query_row(&query, params![HLC_NODE_ID_TYPE], |row| {
             row.get::<_, String>(0)
@@ -117,8 +117,8 @@ impl HlcService {
 
                 tx.execute(
                     &format!(
-                        "INSERT INTO {} (type, value) VALUES (?1, ?2)",
-                        CRDT_SETTINGS_TABLE
+                        "INSERT INTO {} (key, value) VALUES (?1, ?2)",
+                        TABLE_CRDT_CONFIGS
                     ),
                     params![HLC_NODE_ID_TYPE, new_id_str],
                 )?;

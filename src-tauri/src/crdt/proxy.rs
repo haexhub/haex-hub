@@ -1,8 +1,10 @@
 // In src-tauri/src/crdt/proxy.rs
-
 use crate::crdt::hlc::HlcService;
 use crate::crdt::trigger::{HLC_TIMESTAMP_COLUMN, TOMBSTONE_COLUMN};
+use crate::table_names::{TABLE_CRDT_CONFIGS, TABLE_CRDT_LOGS};
+use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use sqlparser::ast::{
     Assignment, AssignmentTarget, BinaryOperator, ColumnDef, DataType, Expr, Ident, Insert,
     ObjectName, ObjectNamePart, SelectItem, SetExpr, Statement, TableFactor, TableObject,
@@ -11,8 +13,11 @@ use sqlparser::ast::{
 use sqlparser::dialect::SQLiteDialect;
 use sqlparser::parser::Parser;
 use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
+use tauri::{path::BaseDirectory, AppHandle, Manager, State};
 use ts_rs::TS;
 use uhlc::Timestamp;
+pub struct DbConnection(pub Arc<Mutex<Option<Connection>>>);
 
 #[derive(Serialize, Deserialize, TS)]
 #[ts(export)]
@@ -41,7 +46,7 @@ pub enum ProxyError {
 }
 
 // Tabellen, die von der Proxy-Logik ausgeschlossen sind.
-const EXCLUDED_TABLES: &[&str] = &["haex_crdt_settings", "haex_crdt_logs"];
+const EXCLUDED_TABLES: &[&str] = &[TABLE_CRDT_CONFIGS, TABLE_CRDT_LOGS];
 
 pub struct SqlProxy;
 
@@ -54,7 +59,8 @@ impl SqlProxy {
     pub fn execute(
         &self,
         sql: &str,
-        conn: &mut rusqlite::Connection,
+        params: Vec<JsonValue>,
+        state: State<'_, DbConnection>,
         hlc_service: &HlcService,
     ) -> Result<Vec<String>, ProxyError> {
         let dialect = SQLiteDialect {};
@@ -64,21 +70,27 @@ impl SqlProxy {
 
         let mut modified_schema_tables = HashSet::new();
 
+        let db_lock = state
+            .0
+            .lock()
+            .map_err(|e| format!("Mutex Lock Fehler: {}", e))?;
+        let conn = db_lock.as_ref().ok_or("Keine Datenbankverbindung")?;
+
         let tx = conn
             .transaction()
             .map_err(|e| ProxyError::TransactionError {
                 reason: e.to_string(),
             })?;
 
-        let hlc_timestamp =
-            hlc_service
-                .new_timestamp_and_persist(&tx)
-                .map_err(|e| ProxyError::HlcError {
-                    reason: e.to_string(),
-                })?;
+        /* let hlc_timestamp =
+        hlc_service
+            .new_timestamp_and_persist(&tx)
+            .map_err(|e| ProxyError::HlcError {
+                reason: e.to_string(),
+            })?; */
 
         for statement in &mut ast_vec {
-            if let Some(table_name) = self.transform_statement(statement, Some(&hlc_timestamp))? {
+            if let Some(table_name) = self.transform_statement(statement)? {
                 modified_schema_tables.insert(table_name);
             }
         }
@@ -99,15 +111,12 @@ impl SqlProxy {
     }
 
     /// Wendet die Transformation auf ein einzelnes Statement an.
-    fn transform_statement(
-        &self,
-        stmt: &mut Statement,
-        hlc_timestamp: Option<&Timestamp>,
-    ) -> Result<Option<String>, ProxyError> {
+    fn transform_statement(&self, stmt: &mut Statement) -> Result<Option<String>, ProxyError> {
         match stmt {
             Statement::Query(query) => {
                 if let SetExpr::Select(select) = &mut *query.body {
                     let mut tombstone_filters = Vec::new();
+
                     for twj in &select.from {
                         if let TableFactor::Table { name, alias, .. } = &twj.relation {
                             if self.is_audited_table(name) {
@@ -160,7 +169,7 @@ impl SqlProxy {
                     }
                 }
 
-                // Hinweis: UNION, EXCEPT etc. werden hier nicht behandelt, was dem bisherigen Code entspricht.
+                // TODO: UNION, EXCEPT etc. werden hier nicht behandelt
             }
 
             Statement::CreateTable(create_table) => {
@@ -180,9 +189,7 @@ impl SqlProxy {
             Statement::Insert(insert_stmt) => {
                 if let TableObject::TableName(name) = &insert_stmt.table {
                     if self.is_audited_table(name) {
-                        if let Some(ts) = hlc_timestamp {
-                            self.add_hlc_to_insert(insert_stmt, ts);
-                        }
+                        self.add_hlc_to_insert(insert_stmt);
                     }
                 }
             }
@@ -217,9 +224,8 @@ impl SqlProxy {
                 if let Some(name) = table_name {
                     if self.is_audited_table(&name) {
                         // GEÄNDERT: Übergibt den Zeitstempel an die Transformationsfunktion
-                        if let Some(ts) = hlc_timestamp {
-                            self.transform_delete_to_update(stmt, ts);
-                        }
+
+                        self.transform_delete_to_update(stmt);
                     }
                 } else {
                     return Err(ProxyError::UnsupportedStatement {
@@ -336,24 +342,20 @@ impl SqlProxy {
         if !columns.iter().any(|c| c.name.value == HLC_TIMESTAMP_COLUMN) {
             columns.push(ColumnDef {
                 name: Ident::new(HLC_TIMESTAMP_COLUMN),
-                data_type: DataType::Text, // HLC wird als String gespeichert
+                data_type: DataType::String(None),
                 options: vec![],
             });
         }
     }
 
-    fn transform_delete_to_update(&self, stmt: &mut Statement, hlc_timestamp: &Timestamp) {
+    fn transform_delete_to_update(&self, stmt: &mut Statement) {
         if let Statement::Delete(del_stmt) = stmt {
             let table_to_update = match &del_stmt.from {
                 sqlparser::ast::FromTable::WithFromKeyword(from)
                 | sqlparser::ast::FromTable::WithoutKeyword(from) => from[0].clone(),
             };
 
-            // Erstellt beide Zuweisungen
-            let assignments = vec![
-                self.create_tombstone_assignment(),
-                self.create_hlc_assignment(hlc_timestamp),
-            ];
+            let assignments = vec![self.create_tombstone_assignment()];
 
             *stmt = Statement::Update {
                 table: table_to_update,

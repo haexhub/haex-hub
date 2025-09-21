@@ -1,16 +1,15 @@
-use crate::table_names::{TABLE_CRDT_CONFIGS, TABLE_CRDT_LOGS};
+use crate::table_names::TABLE_CRDT_LOGS;
 use rusqlite::{Connection, Result as RusqliteResult, Row, Transaction};
 use serde::Serialize;
 use std::error::Error;
 use std::fmt::{self, Display, Formatter, Write};
-use std::panic::{self, AssertUnwindSafe};
 use ts_rs::TS;
 
-// Die "z_"-Präfix soll sicherstellen, dass diese Trigger als Letzte ausgeführt werden
+// Der "z_"-Präfix soll sicherstellen, dass diese Trigger als Letzte ausgeführt werden
 const INSERT_TRIGGER_TPL: &str = "z_crdt_{TABLE_NAME}_insert";
 const UPDATE_TRIGGER_TPL: &str = "z_crdt_{TABLE_NAME}_update";
 
-const SYNC_ACTIVE_KEY: &str = "sync_active";
+//const SYNC_ACTIVE_KEY: &str = "sync_active";
 pub const TOMBSTONE_COLUMN: &str = "haex_tombstone";
 pub const HLC_TIMESTAMP_COLUMN: &str = "haex_hlc_timestamp";
 
@@ -20,6 +19,10 @@ pub enum CrdtSetupError {
     DatabaseError(rusqlite::Error),
     /// Die Tabelle hat keine Tombstone-Spalte, was eine CRDT-Voraussetzung ist.
     TombstoneColumnMissing {
+        table_name: String,
+        column_name: String,
+    },
+    HlcColumnMissing {
         table_name: String,
         column_name: String,
     },
@@ -38,6 +41,14 @@ impl Display for CrdtSetupError {
             } => write!(
                 f,
                 "Table '{}' is missing the required tombstone column '{}'",
+                table_name, column_name
+            ),
+            CrdtSetupError::HlcColumnMissing {
+                table_name,
+                column_name,
+            } => write!(
+                f,
+                "Table '{}' is missing the required hlc column '{}'",
                 table_name, column_name
             ),
             CrdtSetupError::PrimaryKeyMissing { table_name } => {
@@ -66,55 +77,52 @@ pub enum TriggerSetupResult {
     TableNotFound,
 }
 
-fn set_sync_active(conn: &mut Connection) -> RusqliteResult<()> {
+/* fn set_sync_active(conn: &mut Connection) -> RusqliteResult<()> {
     let sql = format!(
         "INSERT OR REPLACE INTO \"{meta_table}\" (key, value) VALUES (?, '1');",
         meta_table = TABLE_CRDT_CONFIGS
     );
     conn.execute(&sql, [SYNC_ACTIVE_KEY])?;
     Ok(())
-}
+} */
 
-fn clear_sync_active(conn: &mut Connection) -> RusqliteResult<()> {
+/* fn clear_sync_active(conn: &mut Connection) -> RusqliteResult<()> {
     let sql = format!(
         "DELETE FROM \"{meta_table}\" WHERE key = ?;",
         meta_table = TABLE_CRDT_CONFIGS
     );
     conn.execute(&sql, [SYNC_ACTIVE_KEY])?;
     Ok(())
-}
+} */
 
 /// Führt eine Aktion aus, während die Trigger temporär deaktiviert sind.
 /// Diese Funktion stellt sicher, dass die Trigger auch bei einem Absturz (Panic)
 /// wieder aktiviert werden.
-pub fn with_triggers_paused<F, R>(conn: &mut Connection, action: F) -> RusqliteResult<R>
+/* pub fn with_triggers_paused<F, R>(conn: &mut Connection, action: F) -> RusqliteResult<R>
 where
     F: FnOnce(&mut Connection) -> RusqliteResult<R>,
 {
-    set_sync_active(conn)?;
-
     // AssertUnwindSafe wird benötigt, um den Mutex über eine Panic-Grenze hinweg zu verwenden.
     // Wir fangen einen möglichen Panic in `action` ab.
     let result = panic::catch_unwind(AssertUnwindSafe(|| action(conn)));
 
     // Diese Aktion MUSS immer ausgeführt werden, egal ob `action` erfolgreich war oder nicht.
-    clear_sync_active(conn)?;
 
     match result {
         Ok(res) => res,                    // Alles gut, gib das Ergebnis von `action` zurück.
         Err(e) => panic::resume_unwind(e), // Ein Panic ist aufgetreten, wir geben ihn weiter, nachdem wir aufgeräumt haben.
     }
-}
+} */
 
 /// Erstellt die benötigte Meta-Tabelle, falls sie nicht existiert.
-pub fn setup_meta_table(conn: &mut Connection) -> RusqliteResult<()> {
+/* pub fn setup_meta_table(conn: &mut Connection) -> RusqliteResult<()> {
     let sql = format!(
         "CREATE TABLE IF NOT EXISTS \"{meta_table}\" (key TEXT PRIMARY KEY, value TEXT) WITHOUT ROWID;",
         meta_table = TABLE_CRDT_CONFIGS
     );
     conn.execute(&sql, [])?;
     Ok(())
-}
+} */
 
 #[derive(Debug)]
 struct ColumnInfo {
@@ -139,6 +147,7 @@ fn is_safe_identifier(name: &str) -> bool {
 pub fn setup_triggers_for_table(
     conn: &mut Connection,
     table_name: &str,
+    recreate: &bool,
 ) -> Result<TriggerSetupResult, CrdtSetupError> {
     if !is_safe_identifier(table_name) {
         return Err(rusqlite::Error::InvalidParameterName(format!(
@@ -161,6 +170,13 @@ pub fn setup_triggers_for_table(
         });
     }
 
+    if !columns.iter().any(|c| c.name == HLC_TIMESTAMP_COLUMN) {
+        return Err(CrdtSetupError::HlcColumnMissing {
+            table_name: table_name.to_string(),
+            column_name: HLC_TIMESTAMP_COLUMN.to_string(),
+        });
+    }
+
     let pks: Vec<String> = columns
         .iter()
         .filter(|c| c.is_pk)
@@ -175,7 +191,7 @@ pub fn setup_triggers_for_table(
 
     let cols_to_track: Vec<String> = columns
         .iter()
-        .filter(|c| !c.is_pk && c.name != TOMBSTONE_COLUMN && c.name != HLC_TIMESTAMP_COLUMN)
+        .filter(|c| !c.is_pk) //&& c.name != TOMBSTONE_COLUMN && c.name != HLC_TIMESTAMP_COLUMN
         .map(|c| c.name.clone())
         .collect();
 
@@ -186,6 +202,10 @@ pub fn setup_triggers_for_table(
 
     // Führe die Erstellung innerhalb einer Transaktion aus
     let tx = conn.transaction()?;
+
+    if *recreate {
+        drop_triggers_for_table(&tx, table_name)?;
+    }
     tx.execute_batch(&sql_batch)?;
     tx.commit()?;
 
@@ -224,7 +244,7 @@ pub fn drop_triggers_for_table(
     Ok(())
 }
 
-pub fn recreate_triggers_for_table(
+/* pub fn recreate_triggers_for_table(
     conn: &mut Connection,
     table_name: &str,
 ) -> Result<TriggerSetupResult, CrdtSetupError> {
@@ -278,7 +298,7 @@ pub fn recreate_triggers_for_table(
 
     Ok(TriggerSetupResult::Success)
 }
-
+ */
 /// Generiert das SQL für den INSERT-Trigger.
 fn generate_insert_trigger_sql(table_name: &str, pks: &[String], cols: &[String]) -> String {
     let pk_json_payload = pks
@@ -287,29 +307,39 @@ fn generate_insert_trigger_sql(table_name: &str, pks: &[String], cols: &[String]
         .collect::<Vec<_>>()
         .join(", ");
 
-    let column_inserts = cols.iter().fold(String::new(), |mut acc, col| {
-        writeln!(&mut acc, "    INSERT INTO {log_table} (hlc_timestamp, op_type, table_name, row_pk, column_name, value) VALUES (NEW.\"{hlc_col}\", 'INSERT', '{table}', json_object({pk_payload}), '{column}', json_object('value', NEW.\"{column}\"));",
+    let column_inserts = if cols.is_empty() {
+        // Nur PKs -> einfacher Insert ins Log
+        format!(
+            "INSERT INTO {log_table} (hlc_timestamp, op_type, table_name, row_pks)
+            VALUES (hlc_new_timestamp(), 'INSERT', '{table}', json_object({pk_payload}));",
             log_table = TABLE_CRDT_LOGS,
-            hlc_col = HLC_TIMESTAMP_COLUMN,
             table = table_name,
-            pk_payload = pk_json_payload,
-            column = col
-        ).unwrap();
-        acc
-    });
+            pk_payload = pk_json_payload
+        )
+    } else {
+        cols.iter().fold(String::new(), |mut acc, col| {
+            writeln!(
+                &mut acc,
+                "INSERT INTO {log_table} (hlc_timestamp, op_type, table_name, row_pks, column_name, new_value)
+                VALUES (hlc_new_timestamp(), 'INSERT', '{table}', json_object({pk_payload}), '{column}', json_object('value', NEW.\"{column}\"));",
+                log_table = TABLE_CRDT_LOGS,
+                table = table_name,
+                pk_payload = pk_json_payload,
+                column = col
+            ).unwrap();
+            acc
+        })
+    };
 
     let trigger_name = INSERT_TRIGGER_TPL.replace("{TABLE_NAME}", table_name);
 
     format!(
         "CREATE TRIGGER IF NOT EXISTS \"{trigger_name}\"
             AFTER INSERT ON \"{table_name}\"
-            WHEN (SELECT value FROM \"{config_table}\" WHERE key = '{sync_key}') IS NOT '1'
             FOR EACH ROW
             BEGIN
-                {column_inserts}
-            END;",
-        config_table = TABLE_CRDT_CONFIGS,
-        sync_key = SYNC_ACTIVE_KEY
+            {column_inserts}
+            END;"
     )
 }
 
@@ -320,6 +350,57 @@ fn drop_trigger_sql(trigger_name: String) -> String {
 
 /// Generiert das SQL für den UPDATE-Trigger.
 fn generate_update_trigger_sql(table_name: &str, pks: &[String], cols: &[String]) -> String {
+    let pk_json_payload = pks
+        .iter()
+        .map(|pk| format!("'{}', NEW.\"{}\"", pk, pk))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let mut body = String::new();
+
+    // Spaltenänderungen loggen
+    if !cols.is_empty() {
+        for col in cols {
+            writeln!(
+                &mut body,
+                "INSERT INTO {log_table} (hlc_timestamp, op_type, table_name, row_pks, column_name, new_value, old_value)
+                    SELECT hlc_new_timestamp(), 'UPDATE', '{table}', json_object({pk_payload}), '{column}',
+                    json_object('value', NEW.\"{column}\"), json_object('value', OLD.\"{column}\")
+                    WHERE NEW.\"{column}\" IS NOT OLD.\"{column}\";",
+                log_table = TABLE_CRDT_LOGS,
+                table = table_name,
+                pk_payload = pk_json_payload,
+                column = col
+            ).unwrap();
+        }
+    }
+
+    // Soft-delete loggen
+    writeln!(
+        &mut body,
+        "INSERT INTO {log_table} (hlc_timestamp, op_type, table_name, row_pks)
+            SELECT hlc_new_timestamp(), 'DELETE', '{table}', json_object({pk_payload})
+            WHERE NEW.\"{tombstone_col}\" = 1 AND OLD.\"{tombstone_col}\" = 0;",
+        log_table = TABLE_CRDT_LOGS,
+        table = table_name,
+        pk_payload = pk_json_payload,
+        tombstone_col = TOMBSTONE_COLUMN
+    )
+    .unwrap();
+
+    let trigger_name = UPDATE_TRIGGER_TPL.replace("{TABLE_NAME}", table_name);
+
+    format!(
+        "CREATE TRIGGER IF NOT EXISTS \"{trigger_name}\"
+            AFTER UPDATE ON \"{table_name}\"
+            FOR EACH ROW
+            BEGIN
+            {body}
+            END;"
+    )
+}
+
+/* fn generate_update_trigger_sql(table_name: &str, pks: &[String], cols: &[String]) -> String {
     let pk_json_payload = pks
         .iter()
         .map(|pk| format!("'{}', NEW.\"{}\"", pk, pk))
@@ -361,7 +442,8 @@ fn generate_update_trigger_sql(table_name: &str, pks: &[String], cols: &[String]
         sync_key = SYNC_ACTIVE_KEY
     )
 }
-
+ */
+/*
 /// Durchläuft alle `haex_`-Tabellen und richtet die CRDT-Trigger ein.
 pub fn generate_haex_triggers(conn: &mut Connection) -> Result<(), rusqlite::Error> {
     println!("🔄 Setup CRDT triggers...");
@@ -387,4 +469,4 @@ pub fn generate_haex_triggers(conn: &mut Connection) -> Result<(), rusqlite::Err
     }
     println!("✨ Done setting up CRDT triggers.");
     Ok(())
-}
+} */

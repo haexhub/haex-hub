@@ -70,7 +70,6 @@ pub fn run() {
             database::test,
             database::update_hlc_from_remote,
             extension::copy_directory,
-            extension::database::extension_sql_execute,
             extension::database::extension_sql_select,
             /* android_storage::request_storage_permission,
             android_storage::has_storage_permission,

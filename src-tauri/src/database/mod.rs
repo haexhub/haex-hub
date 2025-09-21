@@ -10,6 +10,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use tauri::{path::BaseDirectory, AppHandle, Manager, State};
 
+use crate::crdt::trigger;
 use crate::database::core::open_and_init_db;
 pub struct HlcService(pub Mutex<uhlc::HLC>);
 pub struct DbConnection(pub Arc<Mutex<Option<Connection>>>);
@@ -163,6 +164,8 @@ pub fn create_encrypted_database(
 
     println!("resource_path: {}", resource_path.display());
 
+    // erstelle Trigger für haex_tables
+
     conn.close().unwrap();
 
     let new_conn = open_and_init_db(&path, &key, false)?;
@@ -199,6 +202,7 @@ pub fn open_encrypted_database(
         core::open_and_init_db(&path, &key, false).map_err(|e| format!("Error during open: {}", e));
 
     let mut db = state.0.lock().map_err(|e| e.to_string())?;
+
     *db = Some(conn.unwrap());
 
     Ok(format!("success"))
@@ -278,18 +282,4 @@ pub fn update_hlc_from_remote(
     let hlc = state.0.lock().unwrap();
     hlc.update_with_timestamp(&remote_ts)
         .map_err(|e| format!("HLC update failed: {:?}", e))
-}
-
-#[tauri::command]
-pub async fn create_crdt_trigger_for_table(
-    state: &State<'_, DbConnection>,
-    table_name: String,
-) -> Result<Vec<Vec<JsonValue>>, String> {
-    let stmt = format!(
-        "SELECT cid, name, type, notnull, dflt_value, pk from pragma_table_info('{}')",
-        table_name
-    );
-
-    let table_info = core::select(stmt, vec![], state).await;
-    Ok(table_info.unwrap())
 }
