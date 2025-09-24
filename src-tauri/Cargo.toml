@@ -18,7 +18,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 serde_json = "1.0.145"
 
 tauri-build = { version = "2.2", features = [] }
-serde = { version = "1.0.223", features = ["derive"] }
+serde = { version = "1.0.226", features = ["derive"] }
 [dependencies]
 rusqlite = { version = "0.37.0", features = [
     "load_extension",

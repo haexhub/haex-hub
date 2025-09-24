@@ -1,3 +1,3 @@
 pub mod hlc;
-pub mod proxy;
+pub mod transformer;
 pub mod trigger;

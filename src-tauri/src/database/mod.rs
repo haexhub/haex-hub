@@ -1,48 +1,41 @@
-// database/mod.rs
+// src-tauri/src/database/mod.rs
+
 pub mod core;
+pub mod error;
 
 use rusqlite::Connection;
 use serde_json::Value as JsonValue;
-
-use std::fs;
+use std::collections::HashMap;
 use std::path::Path;
-use std::str::FromStr;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
+use std::{fs, sync::Arc};
 use tauri::{path::BaseDirectory, AppHandle, Manager, State};
 
-use crate::crdt::trigger;
-use crate::database::core::open_and_init_db;
-pub struct HlcService(pub Mutex<uhlc::HLC>);
+use crate::crdt::hlc::HlcService;
+use crate::database::error::DatabaseError;
 pub struct DbConnection(pub Arc<Mutex<Option<Connection>>>);
 
-#[tauri::command]
-pub async fn sql_select(
-    sql: String,
-    params: Vec<JsonValue>,
-    state: State<'_, DbConnection>,
-) -> Result<Vec<Vec<JsonValue>>, String> {
-    core::select(sql, params, &state).await
+pub struct AppState {
+    pub db: DbConnection,
+    pub hlc: Mutex<HlcService>, // Kein Arc hier nötig, da der ganze AppState von Tauri in einem Arc verwaltet wird.
 }
 
 #[tauri::command]
-pub async fn sql_execute(
+pub fn sql_select(
     sql: String,
     params: Vec<JsonValue>,
-    state: State<'_, DbConnection>,
-) -> Result<usize, String> {
-    core::execute(sql, params, &state).await
+    state: State<'_, AppState>,
+) -> Result<Vec<HashMap<String, JsonValue>>, DatabaseError> {
+    core::select(sql, params, &state.db)
 }
 
 #[tauri::command]
-pub fn test(app_handle: AppHandle) -> Result<String, String> {
-    let resource_path = app_handle
-        .path()
-        .resolve("database/vault.db", BaseDirectory::Resource)
-        .map_err(|e| format!("Fehler {}", e));
-    //let file = app_handle.fs().open(resource_path, {}).unwrap().read();
-    Ok(String::from(resource_path.unwrap().to_string_lossy()))
-    /* std::fs::exists(String::from(resource_path.unwrap().to_string_lossy()))
-    .map_err(|e| format!("Fehler: {}", e)) */
+pub fn sql_execute(
+    sql: String,
+    params: Vec<JsonValue>,
+    state: State<'_, AppState>,
+) -> Result<usize, DatabaseError> {
+    core::execute(sql, params, &state.db)
 }
 
 #[tauri::command]
@@ -50,8 +43,8 @@ pub fn create_encrypted_database(
     app_handle: AppHandle,
     path: String,
     key: String,
-    state: State<'_, DbConnection>,
-) -> Result<String, String> {
+    state: State<'_, AppState>,
+) -> Result<String, DatabaseError> {
     // Ressourcenpfad zur eingebundenen Datenbank auflösen
 
     println!("Arbeitsverzeichnis: {:?}", std::env::current_dir());
@@ -68,14 +61,16 @@ pub fn create_encrypted_database(
     let resource_path = app_handle
         .path()
         .resolve("temp_vault.db", BaseDirectory::AppLocalData)
-        .map_err(|e| format!("Fehler beim Auflösen des Ressourcenpfads: {}", e))?;
+        .map_err(|e| DatabaseError::PathResolutionError {
+            reason: e.to_string(),
+        })?;
 
     // Prüfen, ob die Ressourcendatei existiert
     if !resource_path.exists() {
-        return Err(format!(
-            "Ressourcendatenbank wurde nicht gefunden: {}",
-            resource_path.display()
-        ));
+        return Err(DatabaseError::IoError {
+            path: resource_path.display().to_string(),
+            reason: "Ressourcendatenbank wurde nicht gefunden.".to_string(),
+        });
     }
 
     // Sicherstellen, dass das Zielverzeichnis existiert
@@ -92,15 +87,10 @@ pub fn create_encrypted_database(
 
     let target = Path::new(&path);
     if target.exists() & target.is_file() {
-        println!(
-            "Datei '{}' existiert bereits. Sie wird gelöscht.",
-            target.display()
-        );
-
-        fs::remove_file(target)
-            .map_err(|e| format!("Kann Vault {} nicht löschen. \n {}", target.display(), e))?;
-    } else {
-        println!("Datei '{}' existiert nicht.", target.display());
+        fs::remove_file(target).map_err(|e| DatabaseError::IoError {
+            path: target.display().to_string(),
+            reason: format!("Bestehende Zieldatei konnte nicht gelöscht werden: {}", e),
+        })?;
     }
 
     println!(
@@ -108,37 +98,43 @@ pub fn create_encrypted_database(
         resource_path.as_path().display()
     );
 
-    let conn = Connection::open(&resource_path).map_err(|e| {
-        format!(
-            "Fehler beim Öffnen der kopierten Datenbank: {}",
-            e.to_string()
-        )
+    let conn = Connection::open(&resource_path).map_err(|e| DatabaseError::ConnectionFailed {
+        path: resource_path.display().to_string(),
+        reason: format!(
+            "Fehler beim Öffnen der unverschlüsselten Quelldatenbank: {}",
+            e
+        ),
     })?;
 
     println!("Hänge neue, verschlüsselte Datenbank an unter '{}'", &path);
     // ATTACH DATABASE 'Dateiname' AS Alias KEY 'Passwort';
     conn.execute("ATTACH DATABASE ?1 AS encrypted KEY ?2;", [&path, &key])
-        .map_err(|e| format!("Fehler bei ATTACH DATABASE: {}", e.to_string()))?;
+        .map_err(|e| DatabaseError::ExecutionError {
+            sql: "ATTACH DATABASE ...".to_string(),
+            reason: e.to_string(),
+            table: None,
+        })?;
 
     println!(
         "Exportiere Daten von 'main' nach 'encrypted' mit password {} ...",
         &key
     );
 
-    match conn.query_row("SELECT sqlcipher_export('encrypted');", [], |_row| Ok(())) {
-        Ok(_) => {
-            println!(">>> sqlcipher_export erfolgreich ausgeführt (Rückgabewert ignoriert).");
-        }
-        Err(e) => {
-            eprintln!("!!! FEHLER während sqlcipher_export: {}", e);
-            conn.execute("DETACH DATABASE encrypted;", []).ok(); // Versuche zu detachen
-            return Err(e.to_string()); // Gib den Fehler zurück
-        }
+    if let Err(e) = conn.query_row("SELECT sqlcipher_export('encrypted');", [], |_| Ok(())) {
+        // Versuche aufzuräumen, ignoriere Fehler dabei
+        let _ = conn.execute("DETACH DATABASE encrypted;", []);
+        return Err(DatabaseError::QueryError {
+            reason: format!("Fehler während sqlcipher_export: {}", e),
+        });
     }
 
     println!("Löse die verschlüsselte Datenbank vom Handle...");
     conn.execute("DETACH DATABASE encrypted;", [])
-        .map_err(|e| format!("Fehler bei DETACH DATABASE: {}", e.to_string()))?;
+        .map_err(|e| DatabaseError::ExecutionError {
+            sql: "DETACH DATABASE ...".to_string(),
+            reason: e.to_string(),
+            table: None,
+        })?;
 
     println!("Datenbank erfolgreich nach '{}' verschlüsselt.", &path);
     println!(
@@ -164,17 +160,19 @@ pub fn create_encrypted_database(
 
     println!("resource_path: {}", resource_path.display());
 
-    // erstelle Trigger für haex_tables
+    conn.close()
+        .map_err(|(_, e)| DatabaseError::ConnectionFailed {
+            path: resource_path.display().to_string(),
+            reason: format!("Fehler beim Schließen der Quelldatenbank: {}", e),
+        })?;
 
-    conn.close().unwrap();
-
-    let new_conn = open_and_init_db(&path, &key, false)?;
+    let new_conn = core::open_and_init_db(&path, &key, false)?;
 
     // Aktualisieren der Datenbankverbindung im State
-    let mut db = state
-        .0
-        .lock()
-        .map_err(|e| format!("Mutex-Fehler: {}", e.to_string()))?;
+    let mut db = state.db.0.lock().map_err(|e| DatabaseError::LockError {
+        reason: e.to_string(),
+    })?;
+
     *db = Some(new_conn);
 
     Ok(format!("Verschlüsselte CRDT-Datenbank erstellt",))
@@ -182,11 +180,11 @@ pub fn create_encrypted_database(
 
 #[tauri::command]
 pub fn open_encrypted_database(
-    app_handle: AppHandle,
+    //app_handle: AppHandle,
     path: String,
     key: String,
-    state: State<'_, DbConnection>,
-) -> Result<String, String> {
+    state: State<'_, AppState>,
+) -> Result<String, DatabaseError> {
     /* let vault_path = app_handle
     .path()
     .resolve(format!("vaults/{}", path), BaseDirectory::AppLocalData)
@@ -194,92 +192,16 @@ pub fn open_encrypted_database(
     .into_os_string()
     .into_string()
     .unwrap(); */
-    if !std::path::Path::new(&path).exists() {
+    /* if !std::path::Path::new(&path).exists() {
         return Err(format!("File not found {}", path).into());
-    }
+    } */
 
-    let conn =
-        core::open_and_init_db(&path, &key, false).map_err(|e| format!("Error during open: {}", e));
+    let conn = core::open_and_init_db(&path, &key, false)
+        .map_err(|e| format!("Error during open: {}", e))?;
 
-    let mut db = state.0.lock().map_err(|e| e.to_string())?;
+    let mut db = state.db.0.lock().map_err(|e| e.to_string())?;
 
-    *db = Some(conn.unwrap());
+    *db = Some(conn);
 
     Ok(format!("success"))
-}
-
-fn get_target_triple() -> Result<String, String> {
-    let target_triple = if cfg!(target_os = "linux") {
-        if cfg!(target_arch = "x86_64") {
-            "x86_64-unknown-linux-gnu".to_string()
-        } else if cfg!(target_arch = "aarch64") {
-            "aarch64-unknown-linux-gnu".to_string()
-        } else {
-            return Err(format!(
-                "Unbekannte Linux-Architektur: {}",
-                std::env::consts::ARCH
-            ));
-        }
-    } else if cfg!(target_os = "macos") {
-        if cfg!(target_arch = "x86_64") {
-            "x86_64-apple-darwin".to_string()
-        } else if cfg!(target_arch = "aarch64") {
-            "aarch64-apple-darwin".to_string()
-        } else {
-            return Err(format!(
-                "Unbekannte macOS-Architektur: {}",
-                std::env::consts::ARCH
-            ));
-        }
-    } else if cfg!(target_os = "windows") {
-        if cfg!(target_arch = "x86_64") {
-            "x86_64-pc-windows-msvc".to_string()
-        } else if cfg!(target_arch = "x86") {
-            "i686-pc-windows-msvc".to_string()
-        } else {
-            return Err(format!(
-                "Unbekannte Windows-Architektur: {}",
-                std::env::consts::ARCH
-            ));
-        }
-    } else if cfg!(target_os = "android") {
-        if cfg!(target_arch = "aarch64") {
-            "aarch64-linux-android".to_string()
-        } else {
-            return Err(format!(
-                "Unbekannte Android-Architektur: {}",
-                std::env::consts::ARCH
-            ));
-        }
-    } else if cfg!(target_os = "ios") {
-        if cfg!(target_arch = "aarch64") {
-            "aarch64-apple-ios".to_string()
-        } else {
-            return Err(format!(
-                "Unbekannte iOS-Architektur: {}",
-                std::env::consts::ARCH
-            ));
-        }
-    } else {
-        return Err("Unbekanntes Zielsystem".to_string());
-    };
-    Ok(target_triple)
-}
-
-pub fn get_hlc_timestamp(state: tauri::State<HlcService>) -> String {
-    let hlc = state.0.lock().unwrap();
-    hlc.new_timestamp().to_string()
-}
-
-#[tauri::command]
-pub fn update_hlc_from_remote(
-    remote_timestamp_str: String,
-    state: tauri::State<HlcService>,
-) -> Result<(), String> {
-    let remote_ts =
-        uhlc::Timestamp::from_str(&remote_timestamp_str).map_err(|e| e.cause.to_string())?;
-
-    let hlc = state.0.lock().unwrap();
-    hlc.update_with_timestamp(&remote_ts)
-        .map_err(|e| format!("HLC update failed: {:?}", e))
 }
