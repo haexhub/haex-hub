@@ -2,12 +2,16 @@
 
 use crate::table_names::TABLE_CRDT_CONFIGS;
 use rusqlite::{params, Connection, Transaction};
+use serde_json::json;
 use std::{
     fmt::Debug,
+    path::PathBuf,
     str::FromStr,
     sync::{Arc, Mutex},
     time::Duration,
 };
+use tauri::{AppHandle, Wry};
+use tauri_plugin_store::{Store, StoreExt};
 use thiserror::Error;
 use uhlc::{HLCBuilder, Timestamp, HLC, ID};
 use uuid::Uuid;
@@ -23,6 +27,8 @@ pub enum HlcError {
     ParseTimestamp(String),
     #[error("Failed to parse persisted HLC state: {0}")]
     Parse(String),
+    #[error("Failed to parse HLC Node ID: {0}")]
+    ParseNodeId(String),
     #[error("HLC mutex was poisoned")]
     MutexPoisoned,
     #[error("Failed to create node ID: {0}")]
@@ -35,6 +41,14 @@ pub enum HlcError {
     HexDecode(String),
     #[error("UTF-8 conversion error: {0}")]
     Utf8Error(String),
+    #[error("Failed to access device store: {0}")]
+    DeviceStore(String),
+}
+
+impl From<tauri_plugin_store::Error> for HlcError {
+    fn from(error: tauri_plugin_store::Error) -> Self {
+        HlcError::DeviceStore(error.to_string())
+    }
 }
 
 /// A thread-safe, persistent HLC service.
@@ -53,9 +67,16 @@ impl HlcService {
 
     /// Factory-Funktion: Erstellt und initialisiert einen neuen HLC-Service aus einer bestehenden DB-Verbindung.
     /// Dies ist die bevorzugte Methode zur Instanziierung.
-    pub fn new_from_connection(conn: &mut Connection) -> Result<Self, HlcError> {
+    pub fn new_from_connection(
+        conn: &Connection,
+        app_handle: &AppHandle,
+    ) -> Result<Self, HlcError> {
         // 1. Hole oder erstelle eine persistente Node-ID
-        let node_id = Self::get_or_create_node_id(conn)?;
+        let node_id_str = Self::get_or_create_device_id(app_handle)?;
+
+        let node_id = ID::try_from(node_id_str.as_bytes()).map_err(|e| {
+            HlcError::ParseNodeId(format!("Invalid node ID format from device store: {:?}", e))
+        })?;
 
         // 2. Erstelle eine HLC-Instanz mit stabiler Identität
         let hlc = HLCBuilder::new()
@@ -78,66 +99,52 @@ impl HlcService {
         })
     }
 
-    /* /// Initializes the HLC service with data from the database.
-    /// This should be called once after the database connection is available.
-    pub fn initialize(&self, conn: &mut Connection) -> Result<(), HlcError> {
-        let mut initialized = self
-            .initialized
-            .lock()
-            .map_err(|_| HlcError::MutexPoisoned)?;
+    /// Holt die Geräte-ID aus dem Tauri Store oder erstellt eine neue, wenn keine existiert.
+    fn get_or_create_device_id(app_handle: &AppHandle) -> Result<String, HlcError> {
+        let store_path = PathBuf::from("instance.json");
+        let store = app_handle
+            .store(store_path)
+            .map_err(|e| HlcError::DeviceStore(e.to_string()))?;
 
-        if *initialized {
-            return Ok(()); // Already initialized
+        let id_exists = match store.get("id") {
+            // Fall 1: Der Schlüssel "id" existiert UND sein Wert ist ein String.
+            Some(value) => {
+                if let Some(s) = value.as_str() {
+                    // Das ist unser Erfolgsfall. Wir haben einen &str und können
+                    // eine Kopie davon zurückgeben.
+                    if Uuid::parse_str(s).is_ok() {
+                        // Erfolgsfall: Der Wert ist ein String UND eine gültige UUID.
+                        // Wir können die Funktion direkt mit dem Wert verlassen.
+                        return Ok(s.to_string());
+                    }
+                }
+                // Der Wert existiert, ist aber kein String (z.B. eine Zahl).
+                // Wir behandeln das, als gäbe es keine ID.
+                false
+            }
+            // Fall 2: Der Schlüssel "id" existiert nicht.
+            None => false,
+        };
+
+        // Wenn wir hier ankommen, bedeutet das, `id_exists` ist `false`.
+        // Entweder weil der Schlüssel fehlte oder weil der Wert kein String war.
+        // Also erstellen wir eine neue ID.
+        if !id_exists {
+            let new_id = Uuid::new_v4().to_string();
+
+            store.set("id".to_string(), json!(new_id.clone()));
+
+            store.save()?;
+
+            return Ok(new_id);
         }
 
-        let mut hlc_guard = self.hlc.lock().map_err(|_| HlcError::MutexPoisoned)?;
-
-        // 1. Get or create persistent node ID
-        let node_id = Self::get_or_create_node_id(conn)?;
-
-        // 2. Create HLC instance with stable identity
-        let hlc = HLCBuilder::new()
-            .with_id(node_id)
-            .with_max_delta(Duration::from_secs(1))
-            .build();
-
-        // 3. Load and apply last persisted timestamp
-        if let Some(last_timestamp) = Self::load_last_timestamp(conn)? {
-            hlc.update_with_timestamp(&last_timestamp).map_err(|e| {
-                HlcError::Parse(format!(
-                    "Failed to update HLC with persisted timestamp: {:?}",
-                    e
-                ))
-            })?;
-        }
-
-        *hlc_guard = Some(hlc);
-        *initialized = true;
-
-        Ok(())
-    } */
-
-    /* /// Ensures the HLC service is initialized, calling initialize if needed.
-    pub fn ensure_initialized(&self, conn: &mut Connection) -> Result<(), HlcError> {
-        let initialized = self
-            .initialized
-            .lock()
-            .map_err(|_| HlcError::MutexPoisoned)?;
-        if !*initialized {
-            drop(initialized); // Release lock before calling initialize
-            self.initialize(conn)?;
-        }
-        Ok(())
-    } */
-
-    /* /// Checks if the service is initialized without requiring a database connection.
-    pub fn is_initialized(&self) -> Result<bool, HlcError> {
-        let initialized = self
-            .initialized
-            .lock()
-            .map_err(|_| HlcError::MutexPoisoned)?;
-        Ok(*initialized)
-    } */
+        // Dieser Teil des Codes sollte nie erreicht werden, aber der Compiler
+        // braucht einen finalen return-Wert. Wir können hier einen Fehler werfen.
+        Err(HlcError::DeviceStore(
+            "Unreachable code: Failed to determine device ID".to_string(),
+        ))
+    }
 
     /// Generiert einen neuen Zeitstempel und persistiert den neuen Zustand des HLC sofort.
     /// Muss innerhalb einer bestehenden Datenbanktransaktion aufgerufen werden.
@@ -201,36 +208,6 @@ impl HlcService {
             params![HLC_TIMESTAMP_TYPE, timestamp_str],
         )?;
         Ok(())
-    }
-
-    /// Holt oder erstellt und persistiert eine stabile Node-ID für den HLC.
-    fn get_or_create_node_id(conn: &mut Connection) -> Result<ID, HlcError> {
-        let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
-        let query = format!("SELECT value FROM {} WHERE key = ?1", TABLE_CRDT_CONFIGS);
-
-        let id = match tx.query_row(&query, params![HLC_NODE_ID_TYPE], |row| {
-            row.get::<_, Vec<u8>>(0)
-        }) {
-            Ok(id_bytes) => ID::try_from(id_bytes.as_slice())
-                .map_err(|e| HlcError::Parse(format!("Invalid node ID format: {:?}", e)))?,
-            Err(rusqlite::Error::QueryReturnedNoRows) => {
-                let new_id_bytes = Uuid::new_v4().as_bytes().to_vec();
-                let new_id = ID::try_from(new_id_bytes.as_slice())?;
-
-                tx.execute(
-                    &format!(
-                        "INSERT INTO {} (key, value) VALUES (?1, ?2)",
-                        TABLE_CRDT_CONFIGS
-                    ),
-                    params![HLC_NODE_ID_TYPE, new_id_bytes.as_slice()],
-                )?;
-                new_id
-            }
-            Err(e) => return Err(HlcError::Database(e)),
-        };
-
-        tx.commit()?;
-        Ok(id)
     }
 }
 
