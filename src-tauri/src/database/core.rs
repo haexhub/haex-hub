@@ -156,9 +156,8 @@ pub fn select(
 
     // Stelle sicher, dass es eine Query ist
     if !matches!(statement, Statement::Query(_)) {
-        return Err(DatabaseError::UnsupportedStatement {
-            statement_type: "Non-Query".to_string(),
-            description: "Only SELECT statements are allowed in select function".to_string(),
+        return Err(DatabaseError::StatementError {
+            reason: "Only SELECT statements are allowed in select function".to_string(),
         });
     }
 

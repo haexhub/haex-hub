@@ -115,12 +115,8 @@ impl CrdtTransformer {
             Statement::Query(query) => self.transform_query_recursive(query),
             // Fange alle anderen Fälle ab und gib einen Fehler zurück
             _ => Err(DatabaseError::UnsupportedStatement {
-                statement_type: format!("{:?}", stmt)
-                    .split('(')
-                    .next()
-                    .unwrap_or("")
-                    .to_string(),
-                description: "This operation only accepts SELECT statements.".to_string(),
+                sql: stmt.to_string(),
+                reason: "This operation only accepts SELECT statements.".to_string(),
             }),
         }
     }
@@ -168,8 +164,8 @@ impl CrdtTransformer {
                     Ok(None)
                 } else {
                     Err(DatabaseError::UnsupportedStatement {
-                        statement_type: "DELETE".to_string(),
-                        description: "DELETE from non-table source or multiple tables".to_string(),
+                        sql: del_stmt.to_string(),
+                        reason: "DELETE from non-table source or multiple tables".to_string(),
                     })
                 }
             }
@@ -711,15 +707,15 @@ impl CrdtTransformer {
                 }
                 _ => {
                     return Err(DatabaseError::UnsupportedStatement {
-                        statement_type: "INSERT".to_string(),
-                        description: "INSERT with unsupported source type".to_string(),
+                        sql: insert_stmt.to_string(),
+                        reason: "INSERT with unsupported source type".to_string(),
                     });
                 }
             },
             None => {
                 return Err(DatabaseError::UnsupportedStatement {
-                    statement_type: "INSERT".to_string(),
-                    description: "INSERT statement has no source".to_string(),
+                    reason: "INSERT statement has no source".to_string(),
+                    sql: insert_stmt.to_string(),
                 });
             }
         }
@@ -740,8 +736,8 @@ impl CrdtTransformer {
                         from[0].clone()
                     } else {
                         return Err(DatabaseError::UnsupportedStatement {
-                            statement_type: "DELETE".to_string(),
-                            description: "DELETE with multiple tables not supported".to_string(),
+                            reason: "DELETE with multiple tables not supported".to_string(),
+                            sql: stmt.to_string(),
                         });
                     }
                 }

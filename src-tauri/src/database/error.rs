@@ -1,10 +1,9 @@
 // src-tauri/src/database/error.rs
 
+use crate::crdt::trigger::CrdtSetupError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use ts_rs::TS;
-
-use crate::crdt::trigger::CrdtSetupError;
 
 #[derive(Error, Debug, Serialize, Deserialize, TS)]
 #[ts(export)]
@@ -13,13 +12,20 @@ pub enum DatabaseError {
     /// Der SQL-Code konnte nicht geparst werden.
     #[error("Failed to parse SQL: {reason} - SQL: {sql}")]
     ParseError { reason: String, sql: String },
+
     /// Parameter-Fehler (falsche Anzahl, ungültiger Typ, etc.)
-    #[error("Parameter error: {reason} (expected: {expected}, provided: {provided})")]
-    ParamError {
-        reason: String,
+    #[error("Parameter count mismatch: SQL has {expected} placeholders but {provided} provided. SQL Statement: {sql}")]
+    ParameterMismatchError {
         expected: usize,
         provided: usize,
+        sql: String,
     },
+
+    #[error("No table provided in SQL Statement: {sql}")]
+    NoTableError { sql: String },
+
+    #[error("Statement Error: {reason}")]
+    StatementError { reason: String },
 
     #[error("Failed to prepare statement: {reason}")]
     PrepareError { reason: String },
@@ -28,7 +34,7 @@ pub enum DatabaseError {
     DatabaseError { reason: String },
 
     /// Ein Fehler ist während der Ausführung in der Datenbank aufgetreten.
-    #[error("Execution error on table {}: {} - SQL: {}", table.as_deref().unwrap_or("unknown"), reason, sql)]
+    #[error("Execution error on table {table:?}: {reason} - SQL: {sql}")]
     ExecutionError {
         sql: String,
         reason: String,
@@ -37,34 +43,36 @@ pub enum DatabaseError {
     /// Ein Fehler ist beim Verwalten der Transaktion aufgetreten.
     #[error("Transaction error: {reason}")]
     TransactionError { reason: String },
+
     /// Ein SQL-Statement wird vom Proxy nicht unterstützt.
-    #[error("Unsupported statement type '{statement_type}': {description}")]
-    UnsupportedStatement {
-        statement_type: String,
-        description: String,
-    },
+    #[error("Unsupported statement. '{reason}'. - SQL: {sql}")]
+    UnsupportedStatement { reason: String, sql: String },
+
     /// Fehler im HLC-Service
     #[error("HLC error: {reason}")]
     HlcError { reason: String },
+
     /// Fehler beim Sperren der Datenbankverbindung
     #[error("Lock error: {reason}")]
     LockError { reason: String },
+
     /// Fehler bei der Datenbankverbindung
     #[error("Connection error: {reason}")]
     ConnectionError { reason: String },
+
     /// Fehler bei der JSON-Serialisierung
     #[error("Serialization error: {reason}")]
     SerializationError { reason: String },
 
-    #[error("Permission error for extension '{extension_id}': {reason} (operation: {}, resource: {})", 
-           operation.as_deref().unwrap_or("unknown"), 
-           resource.as_deref().unwrap_or("unknown"))]
+    /// Permission-bezogener Fehler für Extensions
+    #[error("Permission error for extension '{extension_id}': {reason} (operation: {operation:?}, resource: {resource:?})")]
     PermissionError {
         extension_id: String,
         operation: Option<String>,
         resource: Option<String>,
         reason: String,
     },
+
     #[error("Query error: {reason}")]
     QueryError { reason: String },
 
@@ -111,7 +119,43 @@ impl From<CrdtSetupError> for DatabaseError {
     }
 }
 
-impl From<crate::extension::database::ExtensionDatabaseError> for DatabaseError {
+impl DatabaseError {
+    /// Extract extension ID if this error is related to an extension
+    pub fn extension_id(&self) -> Option<&str> {
+        match self {
+            DatabaseError::PermissionError { extension_id, .. } => Some(extension_id.as_str()),
+            _ => None,
+        }
+    }
+
+    /// Check if this is a permission-related error
+    pub fn is_permission_error(&self) -> bool {
+        matches!(self, DatabaseError::PermissionError { .. })
+    }
+
+    /// Get operation if available
+    pub fn operation(&self) -> Option<&str> {
+        match self {
+            DatabaseError::PermissionError {
+                operation: Some(op),
+                ..
+            } => Some(op.as_str()),
+            _ => None,
+        }
+    }
+
+    /// Get resource if available
+    pub fn resource(&self) -> Option<&str> {
+        match self {
+            DatabaseError::PermissionError {
+                resource: Some(res),
+                ..
+            } => Some(res.as_str()),
+            _ => None,
+        }
+    }
+}
+/* impl From<crate::extension::database::ExtensionDatabaseError> for DatabaseError {
     fn from(err: crate::extension::database::ExtensionDatabaseError) -> Self {
         match err {
             crate::extension::database::ExtensionDatabaseError::Permission { source } => {
@@ -156,4 +200,4 @@ impl From<crate::extension::database::ExtensionDatabaseError> for DatabaseError 
             }
         }
     }
-}
+} */

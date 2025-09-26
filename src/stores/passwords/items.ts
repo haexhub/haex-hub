@@ -33,7 +33,6 @@ export const usePasswordItemStore = defineStore('passwordItemStore', () => {
 
   const syncItemsAsync = async () => {
     const { currentVault } = useVaultStore()
-
     items.value =
       (await currentVault?.drizzle
         .select()

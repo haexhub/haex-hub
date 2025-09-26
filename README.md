@@ -72,6 +72,27 @@ install:
 - [tauri](https://v2.tauri.app/start/prerequisites/)
 - [rust](https://v2.tauri.app/start/prerequisites/#rust)
 
+- install webkit2gtk + GTK3
+
+```bash
+# debian/ubuntu
+sudo apt update
+sudo apt install \
+  libwebkit2gtk-4.1-dev \
+  libgtk-3-dev \
+  libayatana-appindicator3-dev \
+  librsvg2-dev
+```
+
+```bash
+# fedora
+sudo dnf install \
+  webkit2gtk4.1-devel \
+  gtk3-devel \
+  libappindicator-gtk3 \
+  librsvg2-devel
+```
+
 - port 3003 needs to be open/free or you need to adjust it in `nuxt.config.ts` AND `src-tauri/tauri.conf.json`
 
 ```

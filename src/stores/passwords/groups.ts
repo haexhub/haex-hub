@@ -37,13 +37,14 @@ export const usePasswordGroupStore = defineStore('passwordGroupStore', () => {
   ) => {
     const group = groups.value.find((group) => group.id === groupId)
     console.log('getParentChain1: found group', group, chain)
-    if (group) {
+    /* if (group) {
       chain.push(group)
       console.log('getParentChain: found group', group, chain)
       return getParentChain(group.parentId, chain)
     }
 
-    return chain.reverse()
+    return chain.reverse() */
+    return []
   }
 
   const syncGroupItemsAsync = async () => {
@@ -322,7 +323,7 @@ const deleteGroupAsync = async (groupId: string, final: boolean = false) => {
     const items = (await readByGroupIdAsync(groupId)) ?? []
     console.log('deleteGroupAsync delete Items', items)
     for (const item of items) {
-      await deleteAsync(item.id, true)
+      if (item) await deleteAsync(item.id, true)
     }
 
     return await currentVault?.drizzle

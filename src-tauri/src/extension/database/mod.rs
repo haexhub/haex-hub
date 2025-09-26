@@ -1,14 +1,14 @@
 // src-tauri/src/extension/database/mod.rs
 
 pub mod permissions;
-
 use crate::crdt::hlc::HlcService;
 use crate::crdt::transformer::CrdtTransformer;
 use crate::crdt::trigger;
 use crate::database::core::{parse_sql_statements, with_connection, ValueConverter};
 use crate::database::error::DatabaseError;
-use crate::database::AppState;
-use permissions::{check_read_permission, check_write_permission, PermissionError};
+use crate::extension::error::ExtensionError;
+use crate::AppState;
+use permissions::{check_read_permission, check_write_permission};
 use rusqlite::params_from_iter;
 use rusqlite::types::Value as SqlValue;
 use rusqlite::Transaction;
@@ -17,36 +17,6 @@ use serde_json::Value as JsonValue;
 use sqlparser::ast::{Statement, TableFactor, TableObject};
 use std::collections::HashSet;
 use tauri::State;
-use thiserror::Error;
-
-/// Combined error type für Extension-Database operations
-#[derive(Error, Debug)]
-pub enum ExtensionDatabaseError {
-    #[error("Permission denied: {source}")]
-    Permission {
-        #[from]
-        source: PermissionError,
-    },
-    #[error("Database error: {source}")]
-    Database {
-        #[from]
-        source: DatabaseError,
-    },
-    #[error("Parameter validation failed: {reason}")]
-    ParameterValidation { reason: String },
-    #[error("Statement execution failed: {reason}")]
-    StatementExecution { reason: String },
-}
-
-// Für Tauri Command Serialization
-impl serde::Serialize for ExtensionDatabaseError {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&self.to_string())
-    }
-}
 
 /// Führt Statements mit korrekter Parameter-Bindung aus
 pub struct StatementExecutor<'a> {
@@ -67,30 +37,27 @@ impl<'a> StatementExecutor<'a> {
         &self,
         statement: &Statement,
         params: &[SqlValue],
-    ) -> Result<(), ExtensionDatabaseError> {
+    ) -> Result<(), DatabaseError> {
         let sql = statement.to_string();
         let expected_params = count_sql_placeholders(&sql);
 
         if expected_params != params.len() {
-            return Err(ExtensionDatabaseError::ParameterValidation {
-                reason: format!(
-                    "Parameter count mismatch for statement: {} (expected: {}, provided: {})",
-                    truncate_sql(&sql, 100),
-                    expected_params,
-                    params.len()
-                ),
+            return Err(DatabaseError::ParameterMismatchError {
+                expected: expected_params,
+                provided: params.len(),
+                sql,
             });
         }
 
         self.transaction
             .execute(&sql, params_from_iter(params.iter()))
-            .map_err(|e| ExtensionDatabaseError::StatementExecution {
-                reason: format!(
-                    "Failed to execute statement on table {}: {}",
+            .map_err(|e| DatabaseError::ExecutionError {
+                sql,
+                table: Some(
                     self.extract_table_name_from_statement(statement)
                         .unwrap_or_else(|| "unknown".to_string()),
-                    e
                 ),
+                reason: e.to_string(),
             })?;
 
         Ok(())
@@ -147,7 +114,7 @@ pub async fn extension_sql_execute(
     extension_id: String,
     state: State<'_, AppState>,
     hlc_service: State<'_, HlcService>,
-) -> Result<Vec<String>, ExtensionDatabaseError> {
+) -> Result<Vec<String>, ExtensionError> {
     // Permission check
     check_write_permission(&state.db, &extension_id, sql).await?;
 
@@ -208,7 +175,7 @@ pub async fn extension_sql_execute(
 
         Ok(modified_schema_tables.into_iter().collect())
     })
-    .map_err(ExtensionDatabaseError::from)
+    .map_err(ExtensionError::from)
 }
 
 #[tauri::command]
@@ -217,7 +184,7 @@ pub async fn extension_sql_select(
     params: Vec<JsonValue>,
     extension_id: String,
     state: State<'_, AppState>,
-) -> Result<Vec<JsonValue>, ExtensionDatabaseError> {
+) -> Result<Vec<JsonValue>, ExtensionError> {
     // Permission check
     check_read_permission(&state.db, &extension_id, sql).await?;
 
@@ -234,8 +201,13 @@ pub async fn extension_sql_select(
     // Validate that all statements are queries
     for stmt in &ast_vec {
         if !matches!(stmt, Statement::Query(_)) {
-            return Err(ExtensionDatabaseError::StatementExecution {
-                reason: "Only SELECT statements are allowed in extension_sql_select".to_string(),
+            return Err(ExtensionError::Database {
+                source: DatabaseError::ExecutionError {
+                    sql: sql.to_string(),
+                    reason: "Only SELECT statements are allowed in extension_sql_select"
+                        .to_string(),
+                    table: None,
+                },
             });
         }
     }
@@ -285,7 +257,7 @@ pub async fn extension_sql_select(
 
         Ok(results)
     })
-    .map_err(ExtensionDatabaseError::from)
+    .map_err(ExtensionError::from)
 }
 
 /// Konvertiert eine SQLite-Zeile zu JSON
@@ -309,16 +281,14 @@ fn row_to_json_value(
 }
 
 /// Validiert Parameter gegen SQL-Platzhalter
-fn validate_params(sql: &str, params: &[JsonValue]) -> Result<(), ExtensionDatabaseError> {
+fn validate_params(sql: &str, params: &[JsonValue]) -> Result<(), DatabaseError> {
     let total_placeholders = count_sql_placeholders(sql);
 
     if total_placeholders != params.len() {
-        return Err(ExtensionDatabaseError::ParameterValidation {
-            reason: format!(
-                "Parameter count mismatch: SQL has {} placeholders but {} parameters provided",
-                total_placeholders,
-                params.len()
-            ),
+        return Err(DatabaseError::ParameterMismatchError {
+            expected: total_placeholders,
+            provided: params.len(),
+            sql: sql.to_string(),
         });
     }
 

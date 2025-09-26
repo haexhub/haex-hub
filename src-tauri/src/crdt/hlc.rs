@@ -67,14 +67,21 @@ impl HlcService {
 
     /// Factory-Funktion: Erstellt und initialisiert einen neuen HLC-Service aus einer bestehenden DB-Verbindung.
     /// Dies ist die bevorzugte Methode zur Instanziierung.
-    pub fn new_from_connection(
-        conn: &Connection,
-        app_handle: &AppHandle,
-    ) -> Result<Self, HlcError> {
+    pub fn try_initialize(conn: &Connection, app_handle: &AppHandle) -> Result<Self, HlcError> {
         // 1. Hole oder erstelle eine persistente Node-ID
         let node_id_str = Self::get_or_create_device_id(app_handle)?;
 
-        let node_id = ID::try_from(node_id_str.as_bytes()).map_err(|e| {
+        // Parse den String in ein Uuid-Objekt.
+        let uuid = Uuid::parse_str(&node_id_str).map_err(|e| {
+            HlcError::ParseNodeId(format!(
+                "Stored device ID is not a valid UUID: {}. Error: {}",
+                node_id_str, e
+            ))
+        })?;
+
+        // Hol dir die rohen 16 Bytes und erstelle daraus die uhlc::ID.
+        // Das `*` dereferenziert den `&[u8; 16]` zu `[u8; 16]`, was `try_from` erwartet.
+        let node_id = ID::try_from(*uuid.as_bytes()).map_err(|e| {
             HlcError::ParseNodeId(format!("Invalid node ID format from device store: {:?}", e))
         })?;
 
@@ -112,6 +119,7 @@ impl HlcService {
                 if let Some(s) = value.as_str() {
                     // Das ist unser Erfolgsfall. Wir haben einen &str und können
                     // eine Kopie davon zurückgeben.
+                    println!("Gefundene und validierte Geräte-ID: {}", s);
                     if Uuid::parse_str(s).is_ok() {
                         // Erfolgsfall: Der Wert ist ein String UND eine gültige UUID.
                         // Wir können die Funktion direkt mit dem Wert verlassen.

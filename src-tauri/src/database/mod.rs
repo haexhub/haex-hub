@@ -13,12 +13,9 @@ use tauri::{path::BaseDirectory, AppHandle, Manager, State};
 
 use crate::crdt::hlc::HlcService;
 use crate::database::error::DatabaseError;
+use crate::table_names::TABLE_CRDT_CONFIGS;
+use crate::AppState;
 pub struct DbConnection(pub Arc<Mutex<Option<Connection>>>);
-
-pub struct AppState {
-    pub db: DbConnection,
-    pub hlc: Mutex<HlcService>, // Kein Arc hier nötig, da der ganze AppState von Tauri in einem Arc verwaltet wird.
-}
 
 #[tauri::command]
 pub fn sql_select(
@@ -166,25 +163,33 @@ pub fn create_encrypted_database(
             reason: format!("Fehler beim Schließen der Quelldatenbank: {}", e),
         })?;
 
-    let new_conn = core::open_and_init_db(&path, &key, false)?;
+    initialize_session(&app_handle, &path, &key, &state)?;
+
+    /* let new_conn = core::open_and_init_db(&path, &key, false)?;
 
     // Aktualisieren der Datenbankverbindung im State
     let mut db = state.db.0.lock().map_err(|e| DatabaseError::LockError {
         reason: e.to_string(),
     })?;
 
-    *db = Some(new_conn);
+    *db = Some(new_conn); */
 
     Ok(format!("Verschlüsselte CRDT-Datenbank erstellt",))
 }
 
 #[tauri::command]
 pub fn open_encrypted_database(
-    //app_handle: AppHandle,
+    app_handle: AppHandle,
     path: String,
     key: String,
     state: State<'_, AppState>,
 ) -> Result<String, DatabaseError> {
+    if !Path::new(&path).exists() {
+        return Err(DatabaseError::IoError {
+            path,
+            reason: "Database file not found.".to_string(),
+        });
+    }
     /* let vault_path = app_handle
     .path()
     .resolve(format!("vaults/{}", path), BaseDirectory::AppLocalData)
@@ -196,12 +201,48 @@ pub fn open_encrypted_database(
         return Err(format!("File not found {}", path).into());
     } */
 
-    let conn = core::open_and_init_db(&path, &key, false)
+    /* let conn = core::open_and_init_db(&path, &key, false)
         .map_err(|e| format!("Error during open: {}", e))?;
 
     let mut db = state.db.0.lock().map_err(|e| e.to_string())?;
 
-    *db = Some(conn);
+    *db = Some(conn); */
+
+    initialize_session(&app_handle, &path, &key, &state)?;
 
     Ok(format!("success"))
+}
+
+/// Opens the DB, initializes the HLC service, and stores both in the AppState.
+fn initialize_session(
+    app_handle: &AppHandle,
+    path: &str,
+    key: &str,
+    state: &State<'_, AppState>,
+) -> Result<(), DatabaseError> {
+    // 1. Establish the raw database connection
+    let conn = core::open_and_init_db(path, key, false)?;
+
+    // 2. Initialize the HLC service
+    let hlc_service = HlcService::try_initialize(&conn, app_handle).map_err(|e| {
+        // We convert the HlcError into a DatabaseError
+        DatabaseError::ExecutionError {
+            sql: "HLC Initialization".to_string(),
+            reason: e.to_string(),
+            table: Some(TABLE_CRDT_CONFIGS.to_string()),
+        }
+    })?;
+
+    // 3. Store everything in the global AppState
+    let mut db_guard = state.db.0.lock().map_err(|e| DatabaseError::LockError {
+        reason: e.to_string(),
+    })?;
+    *db_guard = Some(conn);
+
+    let mut hlc_guard = state.hlc.lock().map_err(|e| DatabaseError::LockError {
+        reason: e.to_string(),
+    })?;
+    *hlc_guard = hlc_service;
+
+    Ok(())
 }

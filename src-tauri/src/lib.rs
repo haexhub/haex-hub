@@ -3,27 +3,34 @@
 mod crdt;
 mod database;
 mod extension;
-mod models;
+
+//mod models;
 
 pub mod table_names {
     include!(concat!(env!("OUT_DIR"), "/tableNames.rs"));
 }
 
-use models::ExtensionState;
-
 use std::sync::{Arc, Mutex};
 
-use crate::{
+use crate::{crdt::hlc::HlcService, database::DbConnection, extension::core::ExtensionState};
+
+/* use crate::{
     crdt::hlc::HlcService,
     database::{AppState, DbConnection},
-};
+    extension::core::ExtensionState,
+}; */
+
+pub struct AppState {
+    pub db: DbConnection,
+    pub hlc: Mutex<HlcService>, // Kein Arc hier nötig, da der ganze AppState von Tauri in einem Arc verwaltet wird.
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let protocol_name = "haex-extension";
 
     tauri::Builder::default()
-        /* .register_uri_scheme_protocol(protocol_name, move |context, request| {
+        .register_uri_scheme_protocol(protocol_name, move |context, request| {
             match extension::core::extension_protocol_handler(&context, &request) {
                 Ok(response) => response, // Wenn der Handler Ok ist, gib die Response direkt zurück
                 Err(e) => {
@@ -52,7 +59,7 @@ pub fn run() {
                         })
                 }
             }
-        }) */
+        })
         /* .manage(database::DbConnection(Arc::new(Mutex::new(None))))
         .manage(crdt::hlc::HlcService::new()) */
         .manage(AppState {

@@ -1,13 +1,177 @@
+/// src-tauri/src/extension/core.rs
+use crate::extension::database::permissions::DbExtensionPermission;
+use crate::extension::error::ExtensionError;
+use crate::extension::permission_manager::ExtensionPermissions;
 use mime;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt;
 use std::fs;
 use std::path::PathBuf;
-
+use std::sync::Mutex;
+use std::time::{Duration, SystemTime};
 use tauri::{
     http::{Request, Response},
     AppHandle, Error as TauriError, Manager, Runtime, UriSchemeContext,
 };
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ExtensionManifest {
+    pub id: String,
+    pub name: String,
+    pub version: String,
+    pub author: Option<String>,
+    pub entry: String,
+    pub icon: Option<String>,
+    pub permissions: ExtensionPermissions,
+    pub homepage: Option<String>,
+    pub description: Option<String>,
+}
+
+/// Extension source type (production vs development)
+#[derive(Debug, Clone)]
+pub enum ExtensionSource {
+    Production {
+        path: PathBuf,
+        version: String,
+    },
+    Development {
+        dev_server_url: String,
+        manifest_path: PathBuf,
+        auto_reload: bool,
+    },
+}
+
+/// Complete extension data structure
+#[derive(Debug, Clone)]
+pub struct Extension {
+    pub id: String,
+    pub name: String,
+    pub source: ExtensionSource,
+    pub manifest: ExtensionManifest,
+    pub enabled: bool,
+    pub last_accessed: SystemTime,
+}
+
+/// Cached permission data for performance
+#[derive(Debug, Clone)]
+pub struct CachedPermission {
+    pub permissions: Vec<DbExtensionPermission>,
+    pub cached_at: SystemTime,
+    pub ttl: Duration,
+}
+
+/// Enhanced extension manager
+#[derive(Default)]
+pub struct ExtensionManager {
+    pub production_extensions: Mutex<HashMap<String, Extension>>,
+    pub dev_extensions: Mutex<HashMap<String, Extension>>,
+    pub permission_cache: Mutex<HashMap<String, CachedPermission>>,
+}
+
+impl ExtensionManager {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn add_production_extension(&self, extension: Extension) -> Result<(), ExtensionError> {
+        if extension.id.is_empty() {
+            return Err(ExtensionError::ValidationError {
+                reason: "Extension ID cannot be empty".to_string(),
+            });
+        }
+
+        // Validate filesystem permissions
+        /* if let Some(fs_perms) = &extension.manifest.permissions.filesystem {
+                   fs_perms.validate()?;
+               }
+        */
+        match &extension.source {
+            ExtensionSource::Production { .. } => {
+                let mut extensions = self.production_extensions.lock().unwrap();
+                extensions.insert(extension.id.clone(), extension);
+                Ok(())
+            }
+            _ => Err(ExtensionError::ValidationError {
+                reason: "Expected Production source".to_string(),
+            }),
+        }
+    }
+
+    pub fn add_dev_extension(&self, extension: Extension) -> Result<(), ExtensionError> {
+        if extension.id.is_empty() {
+            return Err(ExtensionError::ValidationError {
+                reason: "Extension ID cannot be empty".to_string(),
+            });
+        }
+
+        // Validate filesystem permissions
+        /* if let Some(fs_perms) = &extension.manifest.permissions.filesystem {
+            fs_perms.validate()?;
+        } */
+
+        match &extension.source {
+            ExtensionSource::Development { .. } => {
+                let mut extensions = self.dev_extensions.lock().unwrap();
+                extensions.insert(extension.id.clone(), extension);
+                Ok(())
+            }
+            _ => Err(ExtensionError::ValidationError {
+                reason: "Expected Development source".to_string(),
+            }),
+        }
+    }
+
+    pub fn get_extension(&self, extension_id: &str) -> Option<Extension> {
+        // Dev extensions take priority
+        let dev_extensions = self.dev_extensions.lock().unwrap();
+        if let Some(extension) = dev_extensions.get(extension_id) {
+            return Some(extension.clone());
+        }
+
+        // Then check production
+        let prod_extensions = self.production_extensions.lock().unwrap();
+        prod_extensions.get(extension_id).cloned()
+    }
+
+    pub fn remove_extension(&self, extension_id: &str) -> Result<(), ExtensionError> {
+        {
+            let mut dev_extensions = self.dev_extensions.lock().unwrap();
+            if dev_extensions.remove(extension_id).is_some() {
+                return Ok(());
+            }
+        }
+
+        {
+            let mut prod_extensions = self.production_extensions.lock().unwrap();
+            if prod_extensions.remove(extension_id).is_some() {
+                return Ok(());
+            }
+        }
+
+        Err(ExtensionError::NotFound {
+            id: extension_id.to_string(),
+        })
+    }
+}
+
+// For backward compatibility
+#[derive(Default)]
+pub struct ExtensionState {
+    pub extensions: Mutex<HashMap<String, ExtensionManifest>>,
+}
+
+impl ExtensionState {
+    pub fn add_extension(&self, path: String, manifest: ExtensionManifest) {
+        let mut extensions = self.extensions.lock().unwrap();
+        extensions.insert(path, manifest);
+    }
+
+    pub fn get_extension(&self, addon_id: &str) -> Option<ExtensionManifest> {
+        let extensions = self.extensions.lock().unwrap();
+        extensions.values().find(|p| p.name == addon_id).cloned()
+    }
+}
 
 #[derive(Deserialize, Debug)]
 struct ExtensionInfo {
