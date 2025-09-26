@@ -68,11 +68,11 @@ Further examples of extensions include calendars, (collaborative) document manag
 
 install:
 
-- [nodejs](https://nodejs.org/en/download)
+- [nodejs/nvm](https://nodejs.org/en/download)
 - [tauri](https://v2.tauri.app/start/prerequisites/)
 - [rust](https://v2.tauri.app/start/prerequisites/#rust)
-
-- install webkit2gtk + GTK3
+- [android-studio](https://developer.android.com/studio?hl=de)
+- webkit2gtk + GTK3
 
 ```bash
 # debian/ubuntu
