@@ -1,13 +1,12 @@
 <template>
-  <div class="text-base-content flex flex-col">
-    <div class="h-screen bg-amber-300">
-      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  <UPage>
+    <div class="h-screen bg-amber-300 flex-1 flex-wrap">
+      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     </div>
-    <div class="h-screen bg-teal-300">
-      abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-      availableThemes:{{ uiStore.availableThemes }}
+    <div class="h-screen bg-teal-300 flex-1">
+      abbbbbbbbbbbbbbbbbbbbb availableThemes:{{ uiStore.availableThemes }}
     </div>
-  </div>
+  </UPage>
 </template>
 
 <script setup lang="ts">

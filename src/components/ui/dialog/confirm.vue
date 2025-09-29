@@ -3,8 +3,6 @@
     v-model:open="open"
     :title
     :description
-    :fullscreen="isSmallScreen"
-    :ui="{ header: 'pt-10 sm:pt-0', footer: 'mb-10 sm:mb-0' }"
   >
     <slot>
       <!-- <UiButton
@@ -49,8 +47,6 @@
 </template>
 
 <script setup lang="ts">
-import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
-
 defineProps<{
   abortIcon?: string
   abortLabel?: string
@@ -64,11 +60,6 @@ const open = defineModel<boolean>('open', { default: false })
 
 const { t } = useI18n()
 defineEmits(['confirm'])
-
-const breakpoints = useBreakpoints(breakpointsTailwind)
-
-// "smAndDown" gilt für sm, xs usw.
-const isSmallScreen = breakpoints.smaller('sm')
 </script>
 
 <i18n lang="yaml">

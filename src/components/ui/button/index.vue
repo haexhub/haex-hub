@@ -3,7 +3,11 @@
     <UTooltip :text="buttonProps?.tooltip">
       <UButton
         class="pointer-events-auto"
-        v-bind="{ ...buttonProps, ...$attrs }"
+        v-bind="{
+          ...{ size: isSmallScreen ? 'lg' : 'md' },
+          ...buttonProps,
+          ...$attrs,
+        }"
         @click="(e) => $emit('click', e)"
       >
         <template
@@ -28,4 +32,6 @@ interface IButtonProps extends /* @vue-ignore */ ButtonProps {
 }
 const buttonProps = defineProps<IButtonProps>()
 defineEmits<{ click: [Event] }>()
+
+const { isSmallScreen } = storeToRefs(useUiStore())
 </script>

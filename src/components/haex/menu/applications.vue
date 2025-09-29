@@ -4,6 +4,8 @@
       icon="material-symbols:apps"
       color="neutral"
       variant="outline"
+      v-bind="$attrs"
+      size="xl"
     />
 
     <template #content>

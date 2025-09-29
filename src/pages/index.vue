@@ -1,6 +1,6 @@
 <template>
   <div class="items-center justify-center flex w-full h-full relative">
-    <div class="absolute top-2 right-4">
+    <div class="absolute top-8 right-8 sm:top-4 sm:right-4">
       <UiDropdownLocale @select="onSelectLocale" />
     </div>
 
@@ -16,11 +16,11 @@
       </span>
 
       <div class="flex flex-col md:flex-row gap-4 w-full h-24 md:h-auto">
-        <VaultButtonCreate />
+        <HaexVaultCreate />
 
-        <VaultButtonOpen
+        <HaexVaultOpen
           v-model:open="passwordPromptOpen"
-          :path="vaultPath"
+          :path="selectedVault?.path"
         />
       </div>
 
@@ -37,7 +37,7 @@
         >
           <div
             v-for="vault in lastVaults"
-            :key="vault.path"
+            :key="vault.name"
             class="flex items-center justify-between group overflow-x-scroll"
           >
             <UButton
@@ -47,15 +47,12 @@
               @click="
                 () => {
                   passwordPromptOpen = true
-                  vaultPath = vault.path
+                  selectedVault = vault
                 }
               "
             >
-              <span class="block md:hidden">
+              <span class="block">
                 {{ vault.name }}
-              </span>
-              <span class="hidden md:block">
-                {{ vault.path }}
               </span>
             </UButton>
             <UButton
@@ -65,7 +62,7 @@
             >
               <Icon
                 name="mdi:trash-can-outline"
-                @click="removeVaultAsync(vault.path)"
+                @click="removeVaultAsync(vault.name)"
               />
             </UButton>
           </div>
@@ -90,19 +87,21 @@
 <script setup lang="ts">
 import { openUrl } from '@tauri-apps/plugin-opener'
 import type { Locale } from 'vue-i18n'
+
 definePageMeta({
   name: 'vaultOpen',
 })
+const { t, setLocale } = useI18n()
 
 const passwordPromptOpen = ref(false)
-const vaultPath = ref('')
-
-const { t, setLocale } = useI18n()
+const selectedVault = ref<IVaultInfo>()
 
 const { syncLastVaultsAsync, removeVaultAsync } = useLastVaultStore()
 const { lastVaults } = storeToRefs(useLastVaultStore())
 
-await syncLastVaultsAsync()
+onMounted(async () => {
+  await syncLastVaultsAsync()
+})
 
 const onSelectLocale = async (locale: Locale) => {
   await setLocale(locale)

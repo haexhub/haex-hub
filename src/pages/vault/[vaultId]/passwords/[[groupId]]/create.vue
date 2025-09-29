@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="">
     <HaexPassGroup
       v-model="group"
       mode="create"

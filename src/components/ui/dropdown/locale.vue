@@ -3,6 +3,7 @@
     arrow
     :items
     :ui="{}"
+    :size="isSmallScreen ? 'lg' : 'md'"
   >
     <UButton
       :icon="items.find((item) => item.label === locale)?.icon"
@@ -35,4 +36,6 @@ const items = computed<DropdownMenuItem[]>(() =>
     },
   })),
 )
+
+const { isSmallScreen } = storeToRefs(useUiStore())
 </script>

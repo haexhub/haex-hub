@@ -5,6 +5,7 @@
     :readonly="props.readOnly"
     :leading-icon="props.leadingIcon"
     :ui="{ base: 'peer' }"
+    :size="isSmallScreen ? 'lg' : 'md'"
     @change="(e) => $emit('change', e)"
     @blur="(e) => $emit('blur', e)"
     @keyup="(e: KeyboardEvent) => $emit('keyup', e)"
@@ -48,7 +49,8 @@
 </template>
 
 <script setup lang="ts">
-import type { AcceptableValue, InputProps } from '@nuxt/ui'
+import type { InputProps } from '@nuxt/ui'
+import type { AcceptableValue } from '@nuxt/ui/runtime/types/utils.js'
 
 const value = defineModel<AcceptableValue | undefined>()
 
@@ -83,6 +85,8 @@ const filteredSlots = computed(() => {
 })
 
 watchImmediate(props, () => console.log('props', props))
+
+const { isSmallScreen } = storeToRefs(useUiStore())
 </script>
 
 <i18n lang="yaml">

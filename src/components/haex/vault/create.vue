@@ -53,33 +53,23 @@
 </template>
 
 <script setup lang="ts">
-import { save } from '@tauri-apps/plugin-dialog'
-import { BaseDirectory, readFile, writeFile } from '@tauri-apps/plugin-fs'
-import { resolveResource } from '@tauri-apps/api/path'
-
 import { vaultSchema } from './schema'
-//import type { FormSubmitEvent } from '@nuxt/ui'
 
 const { t } = useI18n()
-
-//type Schema = z.output<typeof vaultSchema>
 
 const vault = reactive<{
   name: string
   password: string
-  path: string | null
   type: 'password' | 'text'
 }>({
   name: 'HaexVault',
   password: '',
-  path: '',
   type: 'password',
 })
 
 const initVault = () => {
   vault.name = 'HaexVault'
   vault.password = ''
-  vault.path = ''
   vault.type = 'password'
 }
 
@@ -95,34 +85,16 @@ const onCreateAsync = async () => {
   const nameCheck = vaultSchema.name.safeParse(vault.name)
   const passwordCheck = vaultSchema.password.safeParse(vault.password)
 
-  console.log('checks', vault.name, nameCheck, vault.password, passwordCheck)
   if (!nameCheck.success || !passwordCheck.success) return
 
   open.value = false
   try {
-    const template_vault_path = await resolveResource('database/vault.db')
-
-    const template_vault = await readFile(template_vault_path)
-
-    vault.path = await save({
-      defaultPath: vault.name.endsWith('.db') ? vault.name : `${vault.name}.db`,
-    })
-
-    if (!vault.path) return
-
-    await writeFile('temp_vault.db', template_vault, {
-      baseDir: BaseDirectory.AppLocalData,
-    })
-
-    console.log('data', vault)
-
-    if (vault.path && vault.password) {
+    if (vault.name && vault.password) {
       const vaultId = await createAsync({
-        path: vault.path,
+        vaultName: vault.name,
         password: vault.password,
       })
 
-      console.log('vaultId', vaultId)
       if (vaultId) {
         initVault()
         await navigateTo(
@@ -132,7 +104,7 @@ const onCreateAsync = async () => {
     }
   } catch (error) {
     console.error(error)
-    add({ color: 'error', description: `${error}` })
+    add({ color: 'error', description: JSON.stringify(error) })
   }
 }
 </script>

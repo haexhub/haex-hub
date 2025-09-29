@@ -1,5 +1,8 @@
 <template>
-  <UCard v-if="group">
+  <UCard
+    v-if="group"
+    :ui="{ root: [''] }"
+  >
     <template #header>
       <div class="flex items-center gap-2">
         <Icon

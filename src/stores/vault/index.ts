@@ -40,21 +40,19 @@ export const useVaultStore = defineStore('vaultStore', () => {
     password: string
   }) => {
     try {
-      const result = await invoke<string>('open_encrypted_database', {
-        path,
+      await invoke<string>('open_encrypted_database', {
+        vaultPath: path,
         key: password,
       })
 
-      if (result !== 'success') throw new Error(result)
-
       const vaultId = await getVaultIdAsync(path)
 
-      const fileName = getFileName(path)
+      const fileName = getFileName(path) ?? path
 
       openVaults.value = {
         ...openVaults.value,
         [vaultId]: {
-          name: fileName ?? path,
+          name: fileName,
           drizzle: drizzle<typeof schema>(
             async (sql, params: unknown[], method) => {
               let rows: any[] = []
@@ -92,8 +90,6 @@ export const useVaultStore = defineStore('vaultStore', () => {
         },
       }
 
-      const { addVaultAsync } = useLastVaultStore()
-      await addVaultAsync({ path })
       return vaultId
     } catch (error) {
       console.error('Error openAsync ', error)
@@ -102,17 +98,17 @@ export const useVaultStore = defineStore('vaultStore', () => {
   }
 
   const createAsync = async ({
-    path,
+    vaultName,
     password,
   }: {
-    path: string
+    vaultName: string
     password: string
   }) => {
-    await invoke('create_encrypted_database', {
-      path,
+    const vaultPath = await invoke<string>('create_encrypted_database', {
+      vaultName,
       key: password,
     })
-    return await openAsync({ path, password })
+    return await openAsync({ path: vaultPath, password })
   }
 
   const closeAsync = async () => {
@@ -147,17 +143,3 @@ const isSelectQuery = (sql: string) => {
   const selectRegex = /^\s*SELECT\b/i
   return selectRegex.test(sql)
 }
-
-/* const trackAllHaexTablesAsync = async (vaultId: string) => {
-  const { openVaults } = useVaultStore()
-  const promises = Object.values(schema)
-    .filter(isTable)
-    .map((table) => {
-      const stmt = `SELECT crsql_as_crr('${getTableConfig(table).name}');`
-      console.log('track table', getTableConfig(table).name)
-
-      return openVaults?.[vaultId]?.drizzle.run(sql`${stmt}`.getSQL())
-    })
-
-  await Promise.allSettled(promises)
-} */

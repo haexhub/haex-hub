@@ -1,9 +1,16 @@
+import { invoke } from '@tauri-apps/api/core'
 import { load } from '@tauri-apps/plugin-store'
 
-interface ILastVault {
+/* interface ILastVault {
   lastUsed: Date
   name: string
   path: string
+} */
+
+export interface IVaultInfo {
+  name: string
+  path: string
+  lastAccess: Date
 }
 
 export const useLastVaultStore = defineStore('lastVaultStore', () => {
@@ -11,7 +18,7 @@ export const useLastVaultStore = defineStore('lastVaultStore', () => {
     public: { haexVault },
   } = useRuntimeConfig()
 
-  const lastVaults = ref<ILastVault[]>([])
+  const lastVaults = ref<IVaultInfo[]>([])
 
   const keyName = 'lastVaults'
 
@@ -20,12 +27,16 @@ export const useLastVaultStore = defineStore('lastVaultStore', () => {
   }
 
   const syncLastVaultsAsync = async () => {
-    const store = await getStoreAsync()
     lastVaults.value =
-      (await store.get<ILastVault[]>(keyName))?.sort(
-        (a, b) => +new Date(b.lastUsed) - +new Date(a.lastUsed),
+      (await listVaultsAsync()).sort(
+        (a, b) => +new Date(b.lastAccess) - +new Date(a.lastAccess),
       ) ?? []
 
+    return lastVaults.value
+  }
+
+  const listVaultsAsync = async () => {
+    lastVaults.value = await invoke<IVaultInfo[]>('list_vaults')
     return lastVaults.value
   }
 
@@ -40,7 +51,7 @@ export const useLastVaultStore = defineStore('lastVaultStore', () => {
 
     const saveName = name || getFileNameFromPath(path)
     lastVaults.value = lastVaults.value.filter((vault) => vault.path !== path)
-    lastVaults.value.push({ lastUsed: new Date(), name: saveName, path })
+    lastVaults.value.push({ lastAccess: new Date(), name: saveName, path })
     await saveLastVaultsAsync()
   }
 

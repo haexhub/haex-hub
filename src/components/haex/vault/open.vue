@@ -5,7 +5,7 @@
     :description="vault.path || path"
     @confirm="onOpenDatabase"
   >
-    <UiButton
+    <!-- <UiButton
       :label="t('vault.open')"
       :ui="{
         base: 'px-3 py-2',
@@ -15,7 +15,7 @@
       variant="outline"
       block
       @click.stop="onLoadDatabase"
-    />
+    /> -->
 
     <template #title>
       <i18n-t
@@ -51,8 +51,13 @@
 </template>
 
 <script setup lang="ts">
-import { open as openVault } from '@tauri-apps/plugin-dialog'
+/* import { open as openVault } from '@tauri-apps/plugin-dialog' */
 import { vaultSchema } from './schema'
+
+const open = defineModel<boolean>('open', { default: false })
+const props = defineProps<{
+  path?: string
+}>()
 
 const { t } = useI18n()
 
@@ -68,11 +73,7 @@ const vault = reactive<{
   type: 'password',
 })
 
-const open = defineModel('open', { type: Boolean })
-
-const { add } = useToast()
-
-const onLoadDatabase = async () => {
+/* const onLoadDatabase = async () => {
   try {
     vault.path = await openVault({
       multiple: false,
@@ -97,14 +98,10 @@ const onLoadDatabase = async () => {
     console.error('handleError', error, typeof error)
     add({ color: 'error', description: `${error}` })
   }
-}
+} */
 
 const { syncLocaleAsync, syncThemeAsync, syncVaultNameAsync } =
   useVaultSettingsStore()
-
-const props = defineProps<{
-  path: string
-}>()
 
 const check = ref(false)
 
@@ -120,13 +117,17 @@ const onAbort = () => {
   open.value = false
 }
 
+const { add } = useToast()
+
 const onOpenDatabase = async () => {
   try {
+    if (!props.path) return
+
     const { openAsync } = useVaultStore()
     const localePath = useLocalePath()
 
     check.value = true
-    const path = vault.path || props.path
+    const path = props.path
     const pathCheck = vaultSchema.path.safeParse(path)
     const passwordCheck = vaultSchema.password.safeParse(vault.password)
 

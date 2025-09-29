@@ -1,21 +1,22 @@
 <template>
-  <div class="flex-1 h-full">
-    <div class="h-full flex flex-col">
+  <div class="flex flex-1">
+    <!-- <div class="h-screen bg-accented">aaa</div> -->
+    <div class="flex flex-col flex-1">
       <HaexPassGroupBreadcrumbs
         v-show="breadCrumbs.length"
         :items="breadCrumbs"
         class="px-2 sticky -top-2 z-10"
       />
-      <div class="flex-1 py-1 flex">
-        <HaexPassMobileMenu
-          ref="listRef"
-          v-model:selected-items="selectedItems"
-          :menu-items="groupItems"
-        />
-      </div>
+      <!-- <div class="flex-1 py-1 flex"> -->
+      <HaexPassMobileMenu
+        ref="listRef"
+        v-model:selected-items="selectedItems"
+        :menu-items="groupItems"
+      />
+      <!--  </div> -->
 
       <div
-        class="fixed bottom-4 flex justify-between transition-all w-full sm:items-center items-end px-8"
+        class="fixed bottom-16 flex justify-between transition-all w-full sm:items-center items-end px-8 z-40"
       >
         <div class="w-full" />
 
@@ -26,7 +27,7 @@
           <UButton
             icon="mdi:plus"
             :ui="{
-              base: 'rotate-45 ',
+              base: 'rotate-45 z-40',
               leadingIcon: [open ? 'rotate-0' : 'rotate-45', 'transition-all'],
             }"
             size="xl"

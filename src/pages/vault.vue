@@ -1,17 +1,22 @@
 <template>
-  <div class="h-full">
+  <UPage
+    :ui="{
+      root: ['h-full w-full bg-elevated'],
+      center: ['h-full w-full'],
+    }"
+  >
     <NuxtLayout name="app">
       <NuxtPage />
     </NuxtLayout>
 
     <div class="hidden">
       <UiDialogConfirm
+        v-model:open="showNewDeviceDialog"
         :confirm-label="t('newDevice.save')"
         :title="t('newDevice.title')"
+        confirm-icon="mdi:content-save-outline"
         @abort="showNewDeviceDialog = false"
         @confirm="onSetDeviceNameAsync"
-        confirm-icon="mdi:content-save-outline"
-        v-model:open="showNewDeviceDialog"
       >
         <template #body>
           <div class="flex flex-col gap-4">
@@ -29,7 +34,7 @@
         </template>
       </UiDialogConfirm>
     </div>
-  </div>
+  </UPage>
 </template>
 
 <script setup lang="ts">
@@ -76,6 +81,7 @@ const onSetDeviceNameAsync = async () => {
     showNewDeviceDialog.value = false
     add({ color: 'success', description: t('newDevice.success') })
   } catch (error) {
+    console.error(error)
     add({ color: 'error', description: t('newDevice.error') })
   }
 }

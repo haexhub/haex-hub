@@ -4,6 +4,8 @@
       icon="mdi:menu"
       color="neutral"
       variant="outline"
+      v-bind="$attrs"
+      size="xl"
     />
   </UDropdownMenu>
 </template>

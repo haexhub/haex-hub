@@ -1,4 +1,5 @@
 //import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
+import { breakpointsTailwind } from '@vueuse/core'
 import de from './de.json'
 import en from './en.json'
 
@@ -14,6 +15,11 @@ export const useUiStore = defineStore('uiStore', () => {
   const current ScreenSize = computed(() =>
     breakpoints.active().value.length > 0 ? breakpoints.active().value : 'xs',
   ) */
+
+  const breakpoints = useBreakpoints(breakpointsTailwind)
+
+  // "smAndDown" gilt für sm, xs usw.
+  const isSmallScreen = breakpoints.smaller('sm')
 
   const { $i18n } = useNuxtApp()
 
@@ -70,5 +76,6 @@ export const useUiStore = defineStore('uiStore', () => {
     currentTheme,
     currentThemeName,
     defaultTheme,
+    isSmallScreen,
   }
 })

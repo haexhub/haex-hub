@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import type { AcceptableValue } from '@nuxt/ui'
+import type { AcceptableValue } from '@nuxt/ui/runtime/types/utils.js'
 
 defineProps<{
   label?: string

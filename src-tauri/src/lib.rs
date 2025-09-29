@@ -78,11 +78,14 @@ pub fn run() {
         //.plugin(tauri_plugin_android_fs::init())
         .invoke_handler(tauri::generate_handler![
             database::create_encrypted_database,
+            database::delete_vault,
+            database::list_vaults,
             database::open_encrypted_database,
             database::sql_execute,
             database::sql_select,
-            extension::database::extension_sql_select,
+            database::vault_exists,
             extension::database::extension_sql_execute,
+            extension::database::extension_sql_select,
             //database::update_hlc_from_remote,
             /* extension::copy_directory,
             extension::database::extension_sql_select, */
