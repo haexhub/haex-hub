@@ -28,6 +28,72 @@ pub struct ExtensionManifest {
     pub description: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ExtensionInfoResponse {
+    pub key_hash: String,
+    pub name: String,
+    pub full_id: String,
+    pub version: String,
+    pub display_name: Option<String>,
+    pub namespace: Option<String>,
+    pub allowed_origin: String,
+}
+
+impl ExtensionInfoResponse {
+    pub fn from_extension(extension: &Extension) -> Self {
+        // Bestimme die allowed_origin basierend auf Tauri-Konfiguration
+        let allowed_origin = get_tauri_origin();
+
+        Self {
+            key_hash: calculate_key_hash(&extension.manifest.id),
+            name: extension.manifest.name.clone(),
+            full_id: format!(
+                "{}/{}@{}",
+                calculate_key_hash(&extension.manifest.id),
+                extension.manifest.name,
+                extension.manifest.version
+            ),
+            version: extension.manifest.version.clone(),
+            display_name: Some(extension.manifest.name.clone()),
+            namespace: extension.manifest.author.clone(),
+            allowed_origin,
+        }
+    }
+}
+
+fn get_tauri_origin() -> String {
+    #[cfg(target_os = "windows")]
+    {
+        "https://tauri.localhost".to_string()
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        "tauri://localhost".to_string()
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        "tauri://localhost".to_string()
+    }
+
+    #[cfg(target_os = "android")]
+    {
+        "tauri://localhost".to_string()
+    }
+
+    #[cfg(target_os = "ios")]
+    {
+        "tauri://localhost".to_string()
+    }
+}
+
+// Dummy-Funktion für Key Hash (du implementierst das richtig mit SHA-256)
+fn calculate_key_hash(id: &str) -> String {
+    // TODO: Implementiere SHA-256 Hash vom Public Key
+    // Für jetzt nur Placeholder
+    format!("{:0<20}", id.chars().take(20).collect::<String>())
+}
 /// Extension source type (production vs development)
 #[derive(Debug, Clone)]
 pub enum ExtensionSource {

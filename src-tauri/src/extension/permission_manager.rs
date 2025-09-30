@@ -52,7 +52,7 @@ impl PermissionManager {
         
         let has_permission = permissions
             .iter()
-            .any(|perm| perm.path.contains(table_name));
+            .any(|perm| perm.resource.contains(table_name));
 
         if !has_permission {
             return Err(ExtensionError::permission_denied(

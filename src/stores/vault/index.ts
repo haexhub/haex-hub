@@ -1,3 +1,5 @@
+// src/stores/vault/index.ts
+
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { invoke } from '@tauri-apps/api/core'
 import * as schema from '@/../src-tauri/database/schemas/vault'

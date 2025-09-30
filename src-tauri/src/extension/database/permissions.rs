@@ -16,7 +16,6 @@ pub struct DbExtensionPermission {
     pub extension_id: String,
     pub resource: String,
     pub operation: String,
-    pub path: String,
 }
 
 /// Prüft Leseberechtigungen für eine Extension
@@ -168,7 +167,7 @@ async fn check_table_permissions(
     for table_name in table_names {
         let has_permission = permissions
             .iter()
-            .any(|perm| perm.path.contains(table_name));
+            .any(|perm| perm.resource.contains(table_name));
 
         if !has_permission {
             return Err(ExtensionError::permission_denied(
@@ -207,7 +206,6 @@ pub async fn get_extension_permissions(
                     extension_id: row.get(1)?,
                     resource: row.get(2)?,
                     operation: row.get(3)?,
-                    path: row.get(4)?,
                 })
             })
             .map_err(|e| DatabaseError::QueryError {
