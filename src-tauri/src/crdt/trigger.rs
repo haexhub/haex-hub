@@ -1,3 +1,4 @@
+// src-tauri/src/crdt/trigger.rs
 use crate::table_names::TABLE_CRDT_LOGS;
 use rusqlite::{Connection, Result as RusqliteResult, Row, Transaction};
 use serde::Serialize;
@@ -11,7 +12,7 @@ const UPDATE_TRIGGER_TPL: &str = "z_crdt_{TABLE_NAME}_update";
 
 //const SYNC_ACTIVE_KEY: &str = "sync_active";
 pub const TOMBSTONE_COLUMN: &str = "haex_tombstone";
-pub const HLC_TIMESTAMP_COLUMN: &str = "haex_hlc_timestamp";
+pub const HLC_TIMESTAMP_COLUMN: &str = "haex_timestamp";
 
 #[derive(Debug)]
 pub enum CrdtSetupError {

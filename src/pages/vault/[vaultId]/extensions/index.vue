@@ -31,18 +31,17 @@
         class="size-full md:size-2/3 md:translate-x-1/5 md:translate-y-1/3"
       />
       <div class="fixed top-30 right-10">
-        <UiTooltip :tooltip="t('extension.add')">
-          <UiButton
-            class="btn-square btn-primary btn-xl btn-gradient rotate-45"
-            @click="prepareInstallExtensionAsync"
-          >
-            <Icon
-              name="mdi:plus"
-              size="1.5em"
-              class="rotate-45"
-            />
-          </UiButton>
-        </UiTooltip>
+        <UiButton
+          class="btn-square btn-primary btn-xl btn-gradient rotate-45"
+          :tooltip="t('extension.add')"
+          @click="prepareInstallExtensionAsync"
+        >
+          <Icon
+            name="mdi:plus"
+            size="1.5em"
+            class="rotate-45"
+          />
+        </UiButton>
       </div>
     </div>
 
@@ -93,7 +92,7 @@ const extension = reactive<{
   path: '',
 })
 
-const loadExtensionManifestAsync = async () => {
+/* const loadExtensionManifestAsync = async () => {
   try {
     extension.path = await open({ directory: true, recursive: true })
     if (!extension.path) return
@@ -111,7 +110,7 @@ const loadExtensionManifestAsync = async () => {
     add({ color: 'error', description: JSON.stringify(error) })
     await addNotificationAsync({ text: JSON.stringify(error), type: 'error' })
   }
-}
+} */
 
 const { add } = useToast()
 const { addNotificationAsync } = useNotificationStore()

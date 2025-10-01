@@ -1,7 +1,7 @@
 <template>
-  <UPage
+  <div
     :ui="{
-      root: ['h-full w-full bg-elevated'],
+      root: ['h-full w-full bg-elevated lg:flex'],
       center: ['h-full w-full'],
     }"
   >
@@ -34,7 +34,7 @@
         </template>
       </UiDialogConfirm>
     </div>
-  </UPage>
+  </div>
 </template>
 
 <script setup lang="ts">

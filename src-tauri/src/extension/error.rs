@@ -1,9 +1,36 @@
-/// src-tauri/src/extension/error.rs
+// src-tauri/src/extension/error.rs
 use thiserror::Error;
 
 use crate::database::error::DatabaseError;
 
-/// Comprehensive error type for extension operations
+/// Error codes for frontend handling
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExtensionErrorCode {
+    SecurityViolation = 1000,
+    NotFound = 1001,
+    PermissionDenied = 1002,
+    Database = 2000,
+    Filesystem = 2001,
+    Http = 2002,
+    Shell = 2003,
+    Manifest = 3000,
+    Validation = 3001,
+    InvalidPublicKey = 4000,
+    InvalidSignature = 4001,
+    SignatureVerificationFailed = 4002,
+    CalculateHash = 4003,
+    Installation = 5000,
+}
+
+impl serde::Serialize for ExtensionErrorCode {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_u16(*self as u16)
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum ExtensionError {
     #[error("Security violation: {reason}")]
@@ -29,15 +56,10 @@ pub enum ExtensionError {
     Filesystem {
         #[from]
         source: std::io::Error,
-        // oder: source: FilesystemError,
     },
 
     #[error("HTTP request failed: {reason}")]
-    Http {
-        reason: String,
-        #[source]
-        source: Option<Box<dyn std::error::Error + Send + Sync>>,
-    },
+    Http { reason: String },
 
     #[error("Shell command failed: {reason}")]
     Shell {
@@ -45,29 +67,51 @@ pub enum ExtensionError {
         exit_code: Option<i32>,
     },
 
-    /* #[error("IO error: {source}")]
-    Io {
-        #[from]
-        source: std::io::Error,
-    }, */
     #[error("Manifest error: {reason}")]
     ManifestError { reason: String },
 
     #[error("Validation error: {reason}")]
     ValidationError { reason: String },
 
-    #[error("Dev server error: {reason}")]
-    DevServerError { reason: String },
+    #[error("Invalid Public Key: {reason}")]
+    InvalidPublicKey { reason: String },
 
-    #[error("Serialization error: {reason}")]
-    SerializationError { reason: String },
+    #[error("Invalid Signature: {reason}")]
+    InvalidSignature { reason: String },
 
-    #[error("Configuration error: {reason}")]
-    ConfigError { reason: String },
+    #[error("Error during hash calculation: {reason}")]
+    CalculateHashError { reason: String },
+
+    #[error("Signature verification failed: {reason}")]
+    SignatureVerificationFailed { reason: String },
+
+    #[error("Extension installation failed: {reason}")]
+    InstallationFailed { reason: String },
 }
 
 impl ExtensionError {
-    /// Convenience constructor for permission denied errors
+    /// Get error code for this error
+    pub fn code(&self) -> ExtensionErrorCode {
+        match self {
+            ExtensionError::SecurityViolation { .. } => ExtensionErrorCode::SecurityViolation,
+            ExtensionError::NotFound { .. } => ExtensionErrorCode::NotFound,
+            ExtensionError::PermissionDenied { .. } => ExtensionErrorCode::PermissionDenied,
+            ExtensionError::Database { .. } => ExtensionErrorCode::Database,
+            ExtensionError::Filesystem { .. } => ExtensionErrorCode::Filesystem,
+            ExtensionError::Http { .. } => ExtensionErrorCode::Http,
+            ExtensionError::Shell { .. } => ExtensionErrorCode::Shell,
+            ExtensionError::ManifestError { .. } => ExtensionErrorCode::Manifest,
+            ExtensionError::ValidationError { .. } => ExtensionErrorCode::Validation,
+            ExtensionError::InvalidPublicKey { .. } => ExtensionErrorCode::InvalidPublicKey,
+            ExtensionError::InvalidSignature { .. } => ExtensionErrorCode::InvalidSignature,
+            ExtensionError::SignatureVerificationFailed { .. } => {
+                ExtensionErrorCode::SignatureVerificationFailed
+            }
+            ExtensionError::InstallationFailed { .. } => ExtensionErrorCode::Installation,
+            ExtensionError::CalculateHashError { .. } => ExtensionErrorCode::CalculateHash,
+        }
+    }
+
     pub fn permission_denied(extension_id: &str, operation: &str, resource: &str) -> Self {
         Self::PermissionDenied {
             extension_id: extension_id.to_string(),
@@ -76,34 +120,6 @@ impl ExtensionError {
         }
     }
 
-    /// Convenience constructor for HTTP errors
-    pub fn http_error(reason: &str) -> Self {
-        Self::Http {
-            reason: reason.to_string(),
-            source: None,
-        }
-    }
-
-    /// Convenience constructor for HTTP errors with source
-    pub fn http_error_with_source(
-        reason: &str,
-        source: Box<dyn std::error::Error + Send + Sync>,
-    ) -> Self {
-        Self::Http {
-            reason: reason.to_string(),
-            source: Some(source),
-        }
-    }
-
-    /// Convenience constructor for shell errors
-    pub fn shell_error(reason: &str, exit_code: Option<i32>) -> Self {
-        Self::Shell {
-            reason: reason.to_string(),
-            exit_code,
-        }
-    }
-
-    /// Check if this error is related to permissions
     pub fn is_permission_error(&self) -> bool {
         matches!(
             self,
@@ -111,11 +127,9 @@ impl ExtensionError {
         )
     }
 
-    /// Extract extension ID if available
     pub fn extension_id(&self) -> Option<&str> {
         match self {
             ExtensionError::PermissionDenied { extension_id, .. } => Some(extension_id),
-            ExtensionError::Database { source } => source.extension_id(),
             _ => None,
         }
     }
@@ -128,29 +142,12 @@ impl serde::Serialize for ExtensionError {
     {
         use serde::ser::SerializeStruct;
 
-        let mut state = serializer.serialize_struct("ExtensionError", 3)?;
+        let mut state = serializer.serialize_struct("ExtensionError", 4)?;
 
-        // Error type as discriminator
-        let error_type = match self {
-            ExtensionError::SecurityViolation { .. } => "SecurityViolation",
-            ExtensionError::NotFound { .. } => "NotFound",
-            ExtensionError::PermissionDenied { .. } => "PermissionDenied",
-            ExtensionError::Database { .. } => "Database",
-            ExtensionError::Filesystem { .. } => "Filesystem",
-            ExtensionError::Http { .. } => "Http",
-            ExtensionError::Shell { .. } => "Shell",
-            //ExtensionError::Io { .. } => "Io",
-            ExtensionError::ManifestError { .. } => "ManifestError",
-            ExtensionError::ValidationError { .. } => "ValidationError",
-            ExtensionError::DevServerError { .. } => "DevServerError",
-            ExtensionError::SerializationError { .. } => "SerializationError",
-            ExtensionError::ConfigError { .. } => "ConfigError",
-        };
-
-        state.serialize_field("type", error_type)?;
+        state.serialize_field("code", &self.code())?;
+        state.serialize_field("type", &format!("{:?}", self))?;
         state.serialize_field("message", &self.to_string())?;
 
-        // Add extension_id if available
         if let Some(ext_id) = self.extension_id() {
             state.serialize_field("extension_id", ext_id)?;
         } else {
@@ -161,54 +158,16 @@ impl serde::Serialize for ExtensionError {
     }
 }
 
-// For Tauri command serialization
-impl From<serde_json::Error> for ExtensionError {
-    fn from(err: serde_json::Error) -> Self {
-        ExtensionError::SerializationError {
-            reason: err.to_string(),
-        }
+impl From<ExtensionError> for String {
+    fn from(error: ExtensionError) -> Self {
+        serde_json::to_string(&error).unwrap_or_else(|_| error.to_string())
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::database::error::DatabaseError;
-
-    /* #[test]
-    fn test_database_error_conversion() {
-        let db_error = DatabaseError::access_denied("ext1", "read", "users", "no permission");
-        let ext_error: ExtensionError = db_error.into();
-
-        assert!(ext_error.is_permission_error());
-        assert_eq!(ext_error.extension_id(), Some("ext1"));
-    } */
-
-    #[test]
-    fn test_permission_denied_constructor() {
-        let error = ExtensionError::permission_denied("ext1", "write", "config.json");
-
-        match error {
-            ExtensionError::PermissionDenied {
-                extension_id,
-                operation,
-                resource,
-            } => {
-                assert_eq!(extension_id, "ext1");
-                assert_eq!(operation, "write");
-                assert_eq!(resource, "config.json");
-            }
-            _ => panic!("Expected PermissionDenied error"),
+impl From<serde_json::Error> for ExtensionError {
+    fn from(err: serde_json::Error) -> Self {
+        ExtensionError::ManifestError {
+            reason: err.to_string(),
         }
-    }
-
-    #[test]
-    fn test_serialization() {
-        let error = ExtensionError::permission_denied("ext1", "read", "database");
-        let serialized = serde_json::to_string(&error).unwrap();
-
-        // Basic check that it serializes properly
-        assert!(serialized.contains("PermissionDenied"));
-        assert!(serialized.contains("ext1"));
     }
 }

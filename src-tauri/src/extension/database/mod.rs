@@ -1,14 +1,15 @@
 // src-tauri/src/extension/database/mod.rs
 
-pub mod permissions;
+pub mod executor;
 use crate::crdt::hlc::HlcService;
 use crate::crdt::transformer::CrdtTransformer;
 use crate::crdt::trigger;
 use crate::database::core::{parse_sql_statements, with_connection, ValueConverter};
 use crate::database::error::DatabaseError;
 use crate::extension::error::ExtensionError;
+use crate::extension::permissions::validator::SqlPermissionValidator;
 use crate::AppState;
-use permissions::{check_read_permission, check_write_permission};
+
 use rusqlite::params_from_iter;
 use rusqlite::types::Value as SqlValue;
 use rusqlite::Transaction;
@@ -116,7 +117,7 @@ pub async fn extension_sql_execute(
     hlc_service: State<'_, HlcService>,
 ) -> Result<Vec<String>, ExtensionError> {
     // Permission check
-    check_write_permission(&state.db, &extension_id, sql).await?;
+    SqlPermissionValidator::validate_sql(&state, &extension_id, sql).await?;
 
     // Parameter validation
     validate_params(sql, &params)?;
@@ -186,7 +187,7 @@ pub async fn extension_sql_select(
     state: State<'_, AppState>,
 ) -> Result<Vec<JsonValue>, ExtensionError> {
     // Permission check
-    check_read_permission(&state.db, &extension_id, sql).await?;
+    SqlPermissionValidator::validate_sql(&state, &extension_id, sql).await?;
 
     // Parameter validation
     validate_params(sql, &params)?;

@@ -10,8 +10,8 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-use tauri::{AppHandle, Wry};
-use tauri_plugin_store::{Store, StoreExt};
+use tauri::AppHandle;
+use tauri_plugin_store::StoreExt;
 use thiserror::Error;
 use uhlc::{HLCBuilder, Timestamp, HLC, ID};
 use uuid::Uuid;

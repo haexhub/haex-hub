@@ -1,7 +1,5 @@
 // src-tauri/src/database/core.rs
 
-use std::collections::HashMap;
-
 use crate::database::error::DatabaseError;
 use crate::database::DbConnection;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
@@ -14,6 +12,7 @@ use serde_json::Value as JsonValue;
 use sqlparser::ast::{Query, Select, SetExpr, Statement, TableFactor, TableObject};
 use sqlparser::dialect::SQLiteDialect;
 use sqlparser::parser::Parser;
+use std::collections::HashMap;
 
 /// Öffnet und initialisiert eine Datenbank mit Verschlüsselung
 pub fn open_and_init_db(path: &str, key: &str, create: bool) -> Result<Connection, DatabaseError> {
@@ -376,6 +375,7 @@ fn extract_tables_from_set_expr_recursive(set_expr: &SetExpr, tables: &mut Vec<S
         | SetExpr::Table(_)
         | SetExpr::Insert(_)
         | SetExpr::Update(_)
+        | SetExpr::Merge(_)
         | SetExpr::Delete(_) => {}
     }
 }

@@ -4,20 +4,9 @@
     v-bind="$attrs"
   >
     <div class="absolute top-2 right-2">
-      <UiDropdown class="btn btn-sm btn-text btn-circle">
-        <template #activator>
-          <Icon name="mdi:dots-vertical" />
-        </template>
-
-        <template #items>
-          <UiButton
-            class="btn-error btn-outline btn-sm"
-            @click="showRemoveDialog = true"
-          >
-            <Icon name="mdi:trash" /> {{ t('remove') }}
-          </UiButton>
-        </template>
-      </UiDropdown>
+      <UDropdownMenu>
+        <UiButton icon="mdi:dots-vertical" />
+      </UDropdownMenu>
     </div>
 
     <div class="card-header">
@@ -44,6 +33,7 @@
       <div class="card-actions" v-if="$slots.action">
         <slot name="action" />
       </div> -->
+      hier klicken
       <div
         class="size-20 absolute bottom-2 right-2"
         v-html="icon"

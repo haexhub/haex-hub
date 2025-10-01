@@ -1,15 +1,17 @@
-/**
- * Broadcasts context changes to all active extensions
- */
+// composables/extensionContextBroadcast.ts
 export const useExtensionContextBroadcast = () => {
-  const extensionIframes = ref<HTMLIFrameElement[]>([])
+  // Globaler State für alle aktiven IFrames
+  const extensionIframes = useState<Set<HTMLIFrameElement>>(
+    'extension-iframes',
+    () => new Set(),
+  )
 
   const registerExtensionIframe = (iframe: HTMLIFrameElement) => {
-    extensionIframes.value.push(iframe)
+    extensionIframes.value.add(iframe)
   }
 
   const unregisterExtensionIframe = (iframe: HTMLIFrameElement) => {
-    extensionIframes.value = extensionIframes.value.filter((f) => f !== iframe)
+    extensionIframes.value.delete(iframe)
   }
 
   const broadcastContextChange = (context: {

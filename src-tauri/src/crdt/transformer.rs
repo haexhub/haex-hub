@@ -755,6 +755,7 @@ impl CrdtTransformer {
                 selection: del_stmt.selection.clone(),
                 returning: None,
                 or: None,
+                limit: None,
             };
         }
         Ok(())

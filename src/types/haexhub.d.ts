@@ -25,11 +25,10 @@ export interface IHaexHubExtensionLink extends IHaexHubExtension {
 }
 
 export interface IHaexHubExtension {
-  author?: string | null
-  enabled?: boolean | null
-  icon?: string | null
   id: string
-  manifest?: IHaexHubExtensionManifest
-  name: string | null
-  version?: string | null
+  name: string
+  version: string
+  author: string | null
+  icon: string | null
+  enabled: boolean
 }

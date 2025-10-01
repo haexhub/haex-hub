@@ -25,7 +25,6 @@
     "fs:allow-download-read-recursive",
     "fs:allow-download-write-recursive",
     "fs:default",
-    "android-fs:default",
     {
       "identifier": "fs:scope",
       "allow": [{ "path": "**" }]

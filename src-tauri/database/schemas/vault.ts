@@ -4,58 +4,9 @@ import {
   primaryKey,
   sqliteTable,
   text,
-  unique,
   type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core'
 import tableNames from '../tableNames.json'
-
-export const haexSettings = sqliteTable(tableNames.haex.settings, {
-  id: text().primaryKey(),
-  key: text(),
-  type: text(),
-  value: text(),
-  haex_tombstone: integer({ mode: 'boolean' }),
-})
-export type InsertHaexSettings = typeof haexSettings.$inferInsert
-export type SelectHaexSettings = typeof haexSettings.$inferSelect
-
-export const haexExtensions = sqliteTable(tableNames.haex.extensions, {
-  id: text().primaryKey(),
-  author: text(),
-  enabled: integer({ mode: 'boolean' }),
-  icon: text(),
-  name: text(),
-  url: text(),
-  version: text(),
-  haex_tombstone: integer({ mode: 'boolean' }),
-})
-export type InsertHaexExtensions = typeof haexExtensions.$inferInsert
-export type SelectHaexExtensions = typeof haexExtensions.$inferSelect
-
-export const haexExtensionPermissions = sqliteTable(
-  tableNames.haex.extension_permissions,
-  {
-    id: text().primaryKey(),
-    extensionId: text('extension_id').references(
-      (): AnySQLiteColumn => haexExtensions.id,
-    ),
-    resource: text({ enum: ['fs', 'http', 'db', 'shell'] }),
-    operation: text({ enum: ['read', 'write', 'create'] }),
-    path: text(),
-    createdAt: text('created_at').default(sql`(CURRENT_TIMESTAMP)`),
-    updateAt: integer('updated_at', { mode: 'timestamp' }).$onUpdate(
-      () => new Date(),
-    ),
-    haex_tombstone: integer({ mode: 'boolean' }),
-  },
-  (table) => [
-    unique().on(table.extensionId, table.resource, table.operation, table.path),
-  ],
-)
-export type InserthaexExtensionPermissions =
-  typeof haexExtensionPermissions.$inferInsert
-export type SelecthaexExtensionPermissions =
-  typeof haexExtensionPermissions.$inferSelect
 
 export const haexNotifications = sqliteTable(tableNames.haex.notifications, {
   id: text().primaryKey(),
