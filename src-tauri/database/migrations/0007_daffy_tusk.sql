@@ -1,1 +1,0 @@
-ALTER TABLE `haex_passwords_groups` ADD `description` text;

@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/sqlite-proxy' // Adapter für Query Building ohne direkte Verbindung
-import * as schema from './schemas/haex' // Importiere alles aus deiner Schema-Datei
-
+import * as schema from './schemas' // Importiere alles aus deiner Schema-Datei
+export * as schema from './schemas'
 // sqlite-proxy benötigt eine (dummy) Ausführungsfunktion als Argument.
 // Diese wird in unserem Tauri-Workflow nie aufgerufen, da wir nur .toSQL() verwenden.
 // Sie muss aber vorhanden sein, um drizzle() aufrufen zu können.

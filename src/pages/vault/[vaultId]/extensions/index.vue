@@ -66,9 +66,6 @@
 </template>
 
 <script setup lang="ts">
-import { join } from '@tauri-apps/api/path'
-import { open } from '@tauri-apps/plugin-dialog'
-import { readTextFile } from '@tauri-apps/plugin-fs'
 import type {
   IHaexHubExtension,
   IHaexHubExtensionManifest,

@@ -1,7 +1,6 @@
 // src-tauri/src/extension/database/mod.rs
 
 pub mod executor;
-use crate::crdt::hlc::HlcService;
 use crate::crdt::transformer::CrdtTransformer;
 use crate::crdt::trigger;
 use crate::database::core::{parse_sql_statements, with_connection, ValueConverter};
@@ -22,15 +21,11 @@ use tauri::State;
 /// Führt Statements mit korrekter Parameter-Bindung aus
 pub struct StatementExecutor<'a> {
     transaction: &'a Transaction<'a>,
-    hlc_service: &'a HlcService,
 }
 
 impl<'a> StatementExecutor<'a> {
-    fn new(transaction: &'a Transaction<'a>, hlc_service: &'a HlcService) -> Self {
-        Self {
-            transaction,
-            hlc_service,
-        }
+    fn new(transaction: &'a Transaction<'a>) -> Self {
+        Self { transaction }
     }
 
     /// Führt ein einzelnes Statement mit Parametern aus
@@ -114,7 +109,6 @@ pub async fn extension_sql_execute(
     params: Vec<JsonValue>,
     extension_id: String,
     state: State<'_, AppState>,
-    hlc_service: State<'_, HlcService>,
 ) -> Result<Vec<String>, ExtensionError> {
     // Permission check
     SqlPermissionValidator::validate_sql(&state, &extension_id, sql).await?;
@@ -130,15 +124,17 @@ pub async fn extension_sql_execute(
         let tx = conn.transaction().map_err(DatabaseError::from)?;
 
         let transformer = CrdtTransformer::new();
-        let executor = StatementExecutor::new(&tx, &hlc_service);
+        let executor = StatementExecutor::new(&tx);
 
         // Generate HLC timestamp
-        let hlc_timestamp =
-            hlc_service
-                .new_timestamp_and_persist(&tx)
-                .map_err(|e| DatabaseError::HlcError {
-                    reason: e.to_string(),
-                })?;
+        let hlc_timestamp = state
+            .hlc
+            .lock()
+            .unwrap()
+            .new_timestamp_and_persist(&tx)
+            .map_err(|e| DatabaseError::HlcError {
+                reason: e.to_string(),
+            })?;
 
         // Transform statements
         let mut modified_schema_tables = HashSet::new();
@@ -302,13 +298,13 @@ fn count_sql_placeholders(sql: &str) -> usize {
 }
 
 /// Kürzt SQL für Fehlermeldungen
-fn truncate_sql(sql: &str, max_length: usize) -> String {
+/* fn truncate_sql(sql: &str, max_length: usize) -> String {
     if sql.len() <= max_length {
         sql.to_string()
     } else {
         format!("{}...", &sql[..max_length])
     }
-}
+} */
 
 #[cfg(test)]
 mod tests {
@@ -327,12 +323,12 @@ mod tests {
         assert_eq!(count_sql_placeholders("SELECT * FROM users"), 0);
     }
 
-    #[test]
+    /* #[test]
     fn test_truncate_sql() {
         let sql = "SELECT * FROM very_long_table_name";
         assert_eq!(truncate_sql(sql, 10), "SELECT * F...");
         assert_eq!(truncate_sql(sql, 50), sql);
-    }
+    } */
 
     #[test]
     fn test_validate_params() {

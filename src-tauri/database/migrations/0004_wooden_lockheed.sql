@@ -1,1 +1,0 @@
-ALTER TABLE `haex_notofications` RENAME TO `haex_notifications`;

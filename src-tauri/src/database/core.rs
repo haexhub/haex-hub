@@ -15,6 +15,7 @@ use sqlparser::parser::Parser;
 use std::collections::HashMap;
 
 /// Öffnet und initialisiert eine Datenbank mit Verschlüsselung
+///
 pub fn open_and_init_db(path: &str, key: &str, create: bool) -> Result<Connection, DatabaseError> {
     let flags = if create {
         OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE

@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import * as schema from '@/../src-tauri/database/schemas/vault'
+import * as schema from '@/../src-tauri/database/schemas/haex'
 import type { Locale } from 'vue-i18n'
 
 export enum VaultSettingsTypeEnum {
@@ -148,7 +148,7 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
     }
 
     return currentVault?.drizzle?.insert(schema.haexSettings).values({
-      id: crypto.randomUUID(),
+      //id: crypto.randomUUID(),
       type: VaultSettingsTypeEnum.deviceName,
       key: deviceId,
       value: deviceName,

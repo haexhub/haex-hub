@@ -1,1 +1,0 @@
-ALTER TABLE `haex_settings` ADD `type` text;

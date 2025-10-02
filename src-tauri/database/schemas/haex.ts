@@ -9,18 +9,22 @@ import {
 import tableNames from '../tableNames.json'
 
 export const haexSettings = sqliteTable(tableNames.haex.settings, {
-  id: text().primaryKey(),
+  id: text()
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   key: text(),
   type: text(),
   value: text(),
-  haex_tombstone: integer({ mode: 'boolean' }),
-  haex_timestamp: text(),
+  haexTombstone: integer('haex_tombstone', { mode: 'boolean' }),
+  haexTimestamp: text('haex_timestamp'),
 })
 export type InsertHaexSettings = typeof haexSettings.$inferInsert
 export type SelectHaexSettings = typeof haexSettings.$inferSelect
 
 export const haexExtensions = sqliteTable(tableNames.haex.extensions, {
-  id: text().primaryKey(),
+  id: text()
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   author: text(),
   description: text(),
   entry: text(),
@@ -32,8 +36,8 @@ export const haexExtensions = sqliteTable(tableNames.haex.extensions, {
   signature: text(),
   url: text(),
   version: text(),
-  haex_tombstone: integer({ mode: 'boolean' }),
-  haex_timestamp: text(),
+  haexTombstone: integer('haex_tombstone', { mode: 'boolean' }),
+  haexTimestamp: text('haex_timestamp'),
 })
 export type InsertHaexExtensions = typeof haexExtensions.$inferInsert
 export type SelectHaexExtensions = typeof haexExtensions.$inferSelect
@@ -41,7 +45,9 @@ export type SelectHaexExtensions = typeof haexExtensions.$inferSelect
 export const haexExtensionPermissions = sqliteTable(
   tableNames.haex.extension_permissions,
   {
-    id: text().primaryKey(),
+    id: text()
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
     extensionId: text('extension_id').references(
       (): AnySQLiteColumn => haexExtensions.id,
     ),
