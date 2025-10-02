@@ -1,14 +1,17 @@
+use crate::table_names::TABLE_EXTENSION_PERMISSIONS;
 use crate::AppState;
 use crate::database::core::with_connection;
 use crate::database::error::DatabaseError;
 use crate::extension::database::executor::SqlExecutor;
 use crate::extension::error::ExtensionError;
-use crate::extension::permissions::types::{Action, DbConstraints, ExtensionPermission, FsConstraints, HttpConstraints, PermissionConstraints, PermissionStatus, ResourceType, ShellConstraints};
+use crate::extension::permissions::types::{parse_constraints, Action, DbConstraints, ExtensionPermission, FsConstraints, HttpConstraints, PermissionConstraints, PermissionStatus, ResourceType, ShellConstraints};
 use serde_json;
 use serde_json::json;
 use std::path::Path;
 use tauri::State;
 use url::Url;
+use crate::database::generated::HaexExtensionPermissions; 
+use rusqlite::{params, ToSql};
 
 pub struct PermissionManager;
 
@@ -29,31 +32,29 @@ impl PermissionManager {
                     reason: "Failed to lock HLC service".to_string(),
                 })?;
 
+            let sql = format!(
+                "INSERT INTO {} (id, extension_id, resource_type, action, target, constraints, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                TABLE_EXTENSION_PERMISSIONS
+            );
+
             for perm in permissions {
-                let resource_type_str = format!("{:?}", perm.resource_type).to_lowercase();
-                let action_str = format!("{:?}", perm.action).to_lowercase();
+                // 1. Konvertiere App-Struct zu DB-Struct
+                let db_perm: HaexExtensionPermissions = perm.into();
 
-                let constraints_json = perm
-                    .constraints
-                    .as_ref()
-                    .map(|c| serde_json::to_string(c).ok())
-                    .flatten();
-
-                let sql = "INSERT INTO haex_extension_permissions 
-                     (id, extension_id, resource_type, action, target, constraints, status) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?)";
-
-                let params = vec![
-                    json!(perm.id),
-                    json!(extension_id),
-                    json!(resource_type_str),
-                    json!(action_str),
-                    json!(perm.target),
-                    json!(constraints_json),
-                    json!(perm.status.as_str()),
+                // 2. Erstelle typsichere Parameter
+                let params = params![
+                    db_perm.id,
+                    db_perm.extension_id,
+                    db_perm.resource_type,
+                    db_perm.action,
+                    db_perm.target,
+                    db_perm.constraints,
+                    db_perm.status,
                 ];
 
-                SqlExecutor::execute_internal(&tx, &hlc_service, sql, &params)?;
+                // 3. Führe mit dem typsicheren Executor aus
+                // HINWEIS: Du musst eine `execute_internal_typed` Funktion erstellen!
+                SqlExecutor::execute_internal_typed(&tx, &hlc_service, &sql, params)?;
             }
 
             tx.commit().map_err(DatabaseError::from)?;
@@ -77,32 +78,24 @@ impl PermissionManager {
                     reason: "Failed to lock HLC service".to_string(),
                 })?;
 
-            let resource_type_str = format!("{:?}", permission.resource_type).to_lowercase();
-            let action_str = format!("{:?}", permission.action).to_lowercase();
+            let db_perm: HaexExtensionPermissions = permission.into();
+            
+            let sql = format!(
+                "UPDATE {} SET resource_type = ?, action = ?, target = ?, constraints = ?, status = ? WHERE id = ?",
+                TABLE_EXTENSION_PERMISSIONS
+            );
 
-            let constraints_json = permission
-                .constraints
-                .as_ref()
-                .map(|c| serde_json::to_string(c).ok())
-                .flatten();
-
-            let sql = "UPDATE haex_extension_permissions 
-                 SET resource_type = ?, action = ?, target = ?, constraints = ?, status = ?
-                 WHERE id = ?";
-
-            let params = vec![
-                json!(resource_type_str),
-                json!(action_str),
-                json!(permission.target),
-                json!(constraints_json),
-                json!(permission.status.as_str()),
-                json!(permission.id),
+            let params = params![
+                db_perm.resource_type,
+                db_perm.action,
+                db_perm.target,
+                db_perm.constraints,
+                db_perm.status,
+                db_perm.id,
             ];
 
-            SqlExecutor::execute_internal(&tx, &hlc_service, sql, &params)?;
-
-            tx.commit().map_err(DatabaseError::from)?;
-            Ok(())
+            SqlExecutor::execute_internal_typed(&tx, &hlc_service, &sql, params)?;
+            tx.commit().map_err(DatabaseError::from)
         })
         .map_err(ExtensionError::from)
     }
@@ -123,16 +116,10 @@ impl PermissionManager {
                     reason: "Failed to lock HLC service".to_string(),
                 })?;
 
-            let sql = "UPDATE haex_extension_permissions 
-                 SET status = ?
-                 WHERE id = ?";
-
-            let params = vec![json!(new_status.as_str()), json!(permission_id)];
-
-            SqlExecutor::execute_internal(&tx, &hlc_service, sql, &params)?;
-
-            tx.commit().map_err(DatabaseError::from)?;
-            Ok(())
+            let sql = format!("UPDATE {} SET status = ? WHERE id = ?", TABLE_EXTENSION_PERMISSIONS);
+            let params = params![new_status.as_str(), permission_id];
+            SqlExecutor::execute_internal_typed(&tx, &hlc_service, &sql, params)?;
+            tx.commit().map_err(DatabaseError::from)
         })
         .map_err(ExtensionError::from)
     }
@@ -151,14 +138,9 @@ impl PermissionManager {
                 })?;
             
             // Echtes DELETE - wird vom CrdtTransformer zu UPDATE umgewandelt
-            let sql = "DELETE FROM haex_extension_permissions WHERE id = ?";
-            
-            let params = vec![json!(permission_id)];
-            
-            SqlExecutor::execute_internal(&tx, &hlc_service, sql, &params)?;
-            
-            tx.commit().map_err(DatabaseError::from)?;
-            Ok(())
+            let sql = format!("DELETE FROM {} WHERE id = ?", TABLE_EXTENSION_PERMISSIONS);
+            SqlExecutor::execute_internal_typed(&tx, &hlc_service, &sql, params![permission_id])?;
+            tx.commit().map_err(DatabaseError::from)
         }).map_err(ExtensionError::from)
     }
     
@@ -175,15 +157,9 @@ impl PermissionManager {
                     reason: "Failed to lock HLC service".to_string(),
                 })?;
             
-            // Echtes DELETE - wird vom CrdtTransformer zu UPDATE umgewandelt
-            let sql = "DELETE FROM haex_extension_permissions WHERE extension_id = ?";
-            
-            let params = vec![json!(extension_id)];
-            
-            SqlExecutor::execute_internal(&tx, &hlc_service, sql, &params)?;
-            
-            tx.commit().map_err(DatabaseError::from)?;
-            Ok(())
+             let sql = format!("DELETE FROM {} WHERE extension_id = ?", TABLE_EXTENSION_PERMISSIONS);
+            SqlExecutor::execute_internal_typed(&tx, &hlc_service, &sql, params![extension_id])?;
+            tx.commit().map_err(DatabaseError::from)
         }).map_err(ExtensionError::from)
     }
     /// Lädt alle Permissions einer Extension
@@ -192,92 +168,23 @@ impl PermissionManager {
         extension_id: &str,
     ) -> Result<Vec<ExtensionPermission>, ExtensionError> {
         with_connection(&app_state.db, |conn| {
-            let sql = "SELECT id, extension_id, resource_type, action, target, constraints, status, haex_timestamp, haex_tombstone
-                 FROM haex_extension_permissions 
-                 WHERE extension_id = ?";
+             let sql = format!("SELECT * FROM {} WHERE extension_id = ?", TABLE_EXTENSION_PERMISSIONS);
+            let mut stmt = conn.prepare(&sql).map_err(DatabaseError::from)?;
             
-            let params = vec![json!(extension_id)];
+            let perms_iter = stmt.query_map(params![extension_id], |row| {
+                HaexExtensionPermissions::from_row(row)
+            })?;
             
-            // SELECT nutzt select_internal
-            let results = SqlExecutor::select_internal(conn, sql, &params)?;
-            
-            // Parse JSON results zu ExtensionPermission
-            let permissions = results
-                .into_iter()
-                .map(|row| Self::parse_permission_from_json(row))
-                .collect::<Result<Vec<_>, _>>()?;
+            let permissions = perms_iter
+                .filter_map(Result::ok) 
+                .map(Into::into) 
+                .collect();
             
             Ok(permissions)
         }).map_err(ExtensionError::from)
     }
 
-    // Helper für JSON -> ExtensionPermission Konvertierung
-    fn parse_permission_from_json(json: serde_json::Value) -> Result<ExtensionPermission, DatabaseError> {
-
-      let obj = json.as_object().ok_or_else(|| DatabaseError::SerializationError {
-          reason: "Expected JSON object".to_string(),
-      })?;
-      
-      let resource_type = Self::parse_resource_type(
-          obj.get("resource_type")
-              .and_then(|v| v.as_str())
-              .ok_or_else(|| DatabaseError::SerializationError {
-                  reason: "Missing resource_type".to_string(),
-              })?
-      )?;
-      
-      let action = Self::parse_action(
-        obj.get("action")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| DatabaseError::SerializationError {
-                reason: "Missing action".to_string(),
-            })?
-        )?;
-        
-        let status = PermissionStatus::from_str(
-            obj.get("status")
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| DatabaseError::SerializationError {
-                    reason: "Missing status".to_string(),
-                })?
-        )?; // Jetzt funktioniert das ?
-        
-        let constraints = obj.get("constraints")
-            .and_then(|v| v.as_str())
-            .map(|json_str| Self::parse_constraints(&resource_type, json_str))
-            .transpose()?;
-        
-        Ok(ExtensionPermission {
-            id: obj.get("id")
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| DatabaseError::SerializationError {
-                    reason: "Missing id".to_string(),
-                })?
-                .to_string(),
-            extension_id: obj.get("extension_id")
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| DatabaseError::SerializationError {
-                    reason: "Missing extension_id".to_string(),
-                })?
-                .to_string(),
-            resource_type,
-            action,
-            target: obj.get("target")
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| DatabaseError::SerializationError {
-                    reason: "Missing target".to_string(),
-                })?
-                .to_string(),
-            constraints,
-            status,
-            haex_timestamp: obj.get("haex_timestamp")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string()),
-            haex_tombstone: obj.get("haex_tombstone")
-                .and_then(|v| v.as_i64())
-                .map(|i| i == 1),
-        })
-    }
+    
 
     /// Prüft Datenbankberechtigungen
    pub async fn check_database_permission(
@@ -311,7 +218,7 @@ impl PermissionManager {
         Ok(())
     }
 
-    /// Prüft Dateisystem-Berechtigungen
+/*     /// Prüft Dateisystem-Berechtigungen
     pub async fn check_filesystem_permission(
         app_state: &State<'_, AppState>,
         extension_id: &str,
@@ -471,9 +378,9 @@ impl PermissionManager {
 
         Ok(())
     }
-
+ */
     // Helper-Methoden - müssen DatabaseError statt ExtensionError zurückgeben
-    fn parse_resource_type(s: &str) -> Result<ResourceType, DatabaseError> {
+    pub fn parse_resource_type(s: &str) -> Result<ResourceType, DatabaseError> {
         match s {
             "fs" => Ok(ResourceType::Fs),
             "http" => Ok(ResourceType::Http),
@@ -485,52 +392,8 @@ impl PermissionManager {
         }
     }
 
-    fn parse_action(s: &str) -> Result<Action, DatabaseError> {
-        match s {
-            "read" => Ok(Action::Read),
-            "write" => Ok(Action::Write),
-            _ => Err(DatabaseError::SerializationError {
-                reason: format!("Unknown action: {}", s),
-            }),
-        }
-    }
-
-    fn parse_constraints(
-        resource_type: &ResourceType,
-        json: &str,
-    ) -> Result<PermissionConstraints, DatabaseError> {
-        match resource_type {
-            ResourceType::Db => {
-                let constraints: DbConstraints = serde_json::from_str(json)
-                    .map_err(|e| DatabaseError::SerializationError {
-                        reason: format!("Failed to parse DB constraints: {}", e),
-                    })?;
-                Ok(PermissionConstraints::Database(constraints))
-            }
-            ResourceType::Fs => {
-                let constraints: FsConstraints = serde_json::from_str(json)
-                    .map_err(|e| DatabaseError::SerializationError {
-                        reason: format!("Failed to parse FS constraints: {}", e),
-                    })?;
-                Ok(PermissionConstraints::Filesystem(constraints))
-            }
-            ResourceType::Http => {
-                let constraints: HttpConstraints = serde_json::from_str(json)
-                    .map_err(|e| DatabaseError::SerializationError {
-                        reason: format!("Failed to parse HTTP constraints: {}", e),
-                    })?;
-                Ok(PermissionConstraints::Http(constraints))
-            }
-            ResourceType::Shell => {
-                let constraints: ShellConstraints = serde_json::from_str(json)
-                    .map_err(|e| DatabaseError::SerializationError {
-                        reason: format!("Failed to parse Shell constraints: {}", e),
-                    })?;
-                Ok(PermissionConstraints::Shell(constraints))
-            }
-        }
-    }
-
+    
+    
     fn matches_path_pattern(pattern: &str, path: &str) -> bool {
         if pattern.ends_with("/*") {
             let prefix = &pattern[..pattern.len() - 2];
@@ -557,7 +420,7 @@ impl PermissionManager {
 }
 
 // Convenience-Funktionen für die verschiedenen Subsysteme
-impl PermissionManager {
+/* impl PermissionManager {
     // Convenience-Methoden
     pub async fn can_read_file(
         app_state: &State<'_, AppState>,
@@ -647,4 +510,4 @@ impl PermissionManager {
             .filter(|perm| perm.status == PermissionStatus::Ask)
             .collect())
     }
-}
+} */

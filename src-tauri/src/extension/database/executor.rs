@@ -5,7 +5,7 @@ use crate::crdt::transformer::CrdtTransformer;
 use crate::crdt::trigger;
 use crate::database::core::{parse_sql_statements, ValueConverter};
 use crate::database::error::DatabaseError;
-use rusqlite::{params_from_iter, Transaction};
+use rusqlite::{params_from_iter, Params, Transaction};
 use serde_json::Value as JsonValue;
 use sqlparser::ast::Statement;
 use std::collections::HashSet;
@@ -14,6 +14,62 @@ use std::collections::HashSet;
 pub struct SqlExecutor;
 
 impl SqlExecutor {
+    pub fn execute_internal_typed<P>(
+        tx: &Transaction,
+        hlc_service: &HlcService,
+        sql: &str,
+        params: P, // Akzeptiert jetzt alles, was rusqlite als Parameter versteht
+    ) -> Result<HashSet<String>, DatabaseError>
+    where
+        P: Params,
+    {
+        let mut ast_vec = parse_sql_statements(sql)?;
+
+        // Wir stellen sicher, dass wir nur EIN Statement verarbeiten. Das ist sicherer.
+        if ast_vec.len() != 1 {
+            return Err(DatabaseError::ExecutionError {
+                sql: sql.to_string(),
+                reason: "execute_internal_typed sollte nur ein einzelnes SQL-Statement erhalten"
+                    .to_string(),
+                table: None,
+            });
+        }
+        // Wir nehmen das einzige Statement aus dem Vektor.
+        let mut statement = ast_vec.pop().unwrap();
+
+        let transformer = CrdtTransformer::new();
+        let hlc_timestamp =
+            hlc_service
+                .new_timestamp_and_persist(tx)
+                .map_err(|e| DatabaseError::HlcError {
+                    reason: e.to_string(),
+                })?;
+
+        let mut modified_schema_tables = HashSet::new();
+        if let Some(table_name) =
+            transformer.transform_execute_statement(&mut statement, &hlc_timestamp)?
+        {
+            modified_schema_tables.insert(table_name);
+        }
+
+        // Führe das transformierte Statement aus.
+        // `params` wird jetzt nur noch einmal hierher bewegt, was korrekt ist.
+        let sql_str = statement.to_string();
+        tx.execute(&sql_str, params)
+            .map_err(|e| DatabaseError::ExecutionError {
+                sql: sql_str.clone(),
+                table: None,
+                reason: e.to_string(),
+            })?;
+
+        // Die Trigger-Logik für CREATE TABLE bleibt erhalten.
+        if let Statement::CreateTable(create_table_details) = statement {
+            let table_name_str = create_table_details.name.to_string();
+            trigger::setup_triggers_for_table(tx, &table_name_str, false)?;
+        }
+
+        Ok(modified_schema_tables)
+    }
     /// Führt SQL aus (mit CRDT-Transformation) - OHNE Permission-Check
     pub fn execute_internal(
         tx: &Transaction,

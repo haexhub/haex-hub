@@ -1,9 +1,68 @@
 {
   "haex": {
-    "settings": "haex_settings",
-    "extensions": "haex_extensions",
-    "extension_permissions": "haex_extension_permissions",
-    "notifications": "haex_notifications",
+    "settings": {
+      "name": "haex_settings",
+      "columns": {
+        "id": "id",
+        "key": "key",
+        "type": "type",
+        "value": "value",
+        "haexTombstone": "haex_tombstone",
+        "haexTimestamp": "haex_timestamp"
+      }
+    },
+    "extensions": {
+      "name": "haex_extensions",
+      "columns": {
+        "id": "id",
+        "author": "author",
+        "description": "description",
+        "entry": "entry",
+        "homepage": "homepage",
+        "enabled": "enabled",
+        "icon": "icon",
+        "name": "name",
+        "public_key": "public_key",
+        "signature": "signature",
+        "url": "url",
+        "version": "version",
+        "haexTombstone": "haex_tombstone",
+        "haexTimestamp": "haex_timestamp"
+      }
+    },
+    "extension_permissions": {
+      "name": "haex_extension_permissions",
+      "columns": {
+        "id": "id",
+        "extensionId": "extension_id",
+        "resourceType": "resource_type",
+        "action": "action",
+        "target": "target",
+        "constraints": "constraints",
+        "status": "status",
+        "createdAt": "created_at",
+        "updateAt": "updated_at",
+        "haexTombstone": "haex_tombstone",
+        "haexTimestamp": "haex_timestamp"
+      }
+    },
+    "notifications": {
+      "name": "haex_notifications",
+      "columns": {
+        "id": "id",
+        "alt": "alt",
+        "date": "date",
+        "icon": "icon",
+        "image": "image",
+        "read": "read",
+        "source": "source",
+        "text": "text",
+        "title": "title",
+        "type": "type",
+        "haexTombstone": "haex_tombstone",
+        "haexTimestamp": "haex_timestamp"
+      }
+    },
     "passwords": {
       "groups": "haex_passwords_groups",
       "group_items": "haex_passwords_group_items",
@@ -12,9 +71,36 @@
       "item_histories": "haex_passwords_item_history"
     },
     "crdt": {
-      "logs": "haex_crdt_logs",
-      "snapshots": "haex_crdt_snapshots",
-      "configs": "haex_crdt_configs"
+      "logs": {
+        "name": "haex_crdt_logs",
+        "columns": {
+          "id": "id",
+          "haexTimestamp": "haex_timestamp",
+          "tableName": "table_name",
+          "rowPks": "row_pks",
+          "opType": "op_type",
+          "columnName": "column_name",
+          "newValue": "new_value",
+          "oldValue": "old_value"
+        }
+      },
+      "snapshots": {
+        "name": "haex_crdt_snapshots",
+        "columns": {
+          "snapshotId": "snapshot_id",
+          "created": "created",
+          "epochHlc": "epoch_hlc",
+          "locationUrl": "location_url",
+          "fileSizeBytes": "file_size_bytes"
+        }
+      },
+      "configs": {
+        "name": "haex_crdt_configs",
+        "columns": {
+          "key": "key",
+          "value": "value"
+        }
+      }
     }
   }
 }

@@ -1,0 +1,1 @@
+ALTER TABLE `haex_notifications` ADD `haex_timestamp` text;

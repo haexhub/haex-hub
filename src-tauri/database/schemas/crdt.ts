@@ -2,18 +2,24 @@ import { integer, sqliteTable, text, index } from 'drizzle-orm/sqlite-core'
 import tableNames from '../tableNames.json'
 
 export const haexCrdtLogs = sqliteTable(
-  tableNames.haex.crdt.logs,
+  tableNames.haex.crdt.logs.name,
   {
     id: text()
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    haexTimestamp: text('haex_timestamp'),
-    tableName: text('table_name'),
-    rowPks: text('row_pks', { mode: 'json' }),
-    opType: text('op_type', { enum: ['INSERT', 'UPDATE', 'DELETE'] }),
-    columnName: text('column_name'),
-    newValue: text('new_value', { mode: 'json' }),
-    oldValue: text('old_value', { mode: 'json' }),
+    haexTimestamp: text(tableNames.haex.crdt.logs.columns.haexTimestamp),
+    tableName: text(tableNames.haex.crdt.logs.columns.tableName),
+    rowPks: text(tableNames.haex.crdt.logs.columns.rowPks, { mode: 'json' }),
+    opType: text(tableNames.haex.crdt.logs.columns.opType, {
+      enum: ['INSERT', 'UPDATE', 'DELETE'],
+    }),
+    columnName: text(tableNames.haex.crdt.logs.columns.columnName),
+    newValue: text(tableNames.haex.crdt.logs.columns.newValue, {
+      mode: 'json',
+    }),
+    oldValue: text(tableNames.haex.crdt.logs.columns.oldValue, {
+      mode: 'json',
+    }),
   },
   (table) => [
     index('idx_haex_timestamp').on(table.haexTimestamp),
@@ -23,17 +29,22 @@ export const haexCrdtLogs = sqliteTable(
 export type InsertHaexCrdtLogs = typeof haexCrdtLogs.$inferInsert
 export type SelectHaexCrdtLogs = typeof haexCrdtLogs.$inferSelect
 
-export const haexCrdtSnapshots = sqliteTable(tableNames.haex.crdt.snapshots, {
-  snapshot_id: text()
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  created: text(),
-  epoch_hlc: text(),
-  location_url: text(),
-  file_size_bytes: integer(),
-})
+export const haexCrdtSnapshots = sqliteTable(
+  tableNames.haex.crdt.snapshots.name,
+  {
+    snapshotId: text(tableNames.haex.crdt.snapshots.columns.snapshotId)
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    created: text(),
+    epochHlc: text(tableNames.haex.crdt.snapshots.columns.epochHlc),
+    locationUrl: text(tableNames.haex.crdt.snapshots.columns.locationUrl),
+    fileSizeBytes: integer(
+      tableNames.haex.crdt.snapshots.columns.fileSizeBytes,
+    ),
+  },
+)
 
-export const haexCrdtConfigs = sqliteTable(tableNames.haex.crdt.configs, {
+export const haexCrdtConfigs = sqliteTable(tableNames.haex.crdt.configs.name, {
   key: text()
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),

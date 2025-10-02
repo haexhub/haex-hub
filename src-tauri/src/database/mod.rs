@@ -2,7 +2,12 @@
 
 pub mod core;
 pub mod error;
+pub mod generated;
 
+use crate::crdt::hlc::HlcService;
+use crate::database::error::DatabaseError;
+use crate::table_names::TABLE_CRDT_CONFIGS;
+use crate::AppState;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -13,13 +18,8 @@ use std::time::UNIX_EPOCH;
 use std::{fs, sync::Arc};
 use tauri::{path::BaseDirectory, AppHandle, Manager, State};
 use tauri_plugin_fs::FsExt;
-use thiserror::Error;
 use ts_rs::TS;
 
-use crate::crdt::hlc::HlcService;
-use crate::database::error::DatabaseError;
-use crate::table_names::TABLE_CRDT_CONFIGS;
-use crate::AppState;
 pub struct DbConnection(pub Arc<Mutex<Option<Connection>>>);
 
 const VAULT_EXTENSION: &str = ".db";

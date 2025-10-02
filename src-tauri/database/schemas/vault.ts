@@ -8,24 +8,6 @@ import {
 } from 'drizzle-orm/sqlite-core'
 import tableNames from '../tableNames.json'
 
-export const haexNotifications = sqliteTable(tableNames.haex.notifications, {
-  id: text().primaryKey(),
-  alt: text(),
-  date: text(),
-  icon: text(),
-  image: text(),
-  read: integer({ mode: 'boolean' }),
-  source: text(),
-  text: text(),
-  title: text(),
-  type: text({
-    enum: ['error', 'success', 'warning', 'info', 'log'],
-  }).notNull(),
-  haex_tombstone: integer({ mode: 'boolean' }),
-})
-export type InsertHaexNotifications = typeof haexNotifications.$inferInsert
-export type SelectHaexNotifications = typeof haexNotifications.$inferSelect
-
 export const haexPasswordsItemDetails = sqliteTable(
   tableNames.haex.passwords.item_details,
   {

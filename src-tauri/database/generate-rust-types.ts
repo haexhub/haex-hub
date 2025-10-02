@@ -23,23 +23,16 @@ function drizzleToRustType(colDef: AnySQLiteColumn): {
   let isOptional = !colDef.notNull
 
   if (colDef.columnType === 'SQLiteText') {
-    // Das 'mode' Property ist ebenfalls direkt auf dem Objekt verfügbar
     if ('mode' in colDef && colDef.mode === 'json') {
       baseType = 'serde_json::Value'
     } else {
       baseType = 'String'
     }
   } else if (colDef.columnType === 'SQLiteInteger') {
-    if ('mode' in colDef && colDef.mode === 'boolean') {
-      baseType = 'bool'
-    } else if ('mode' in colDef && colDef.mode === 'timestamp') {
-      baseType = 'i64'
-    } else {
-      baseType = 'i64'
-    }
-  }
-  // ... weitere SQLite-Typen hier ...
-  else if (colDef.columnType === 'SQLiteReal') {
+    baseType = 'i64'
+  } else if (colDef.columnType === 'SQLiteBoolean') {
+    baseType = 'bool'
+  } else if (colDef.columnType === 'SQLiteReal') {
     baseType = 'f64'
   } else if (colDef.columnType === 'SQLiteBlob') {
     baseType = 'Vec<u8>'
@@ -81,6 +74,7 @@ function toSnakeCase(str: string): string {
 }
 
 function toPascalCase(str: string): string {
+  console.log('toPascalCase:', str)
   return str
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -164,15 +158,18 @@ use serde::{Deserialize, Serialize};
 `
 
   const schemas = [
-    { name: tablesNames.haex.settings, table: schema.haexSettings },
-    { name: tablesNames.haex.extensions, table: schema.haexExtensions },
+    { name: tablesNames.haex.settings.name, table: schema.haexSettings },
+    { name: tablesNames.haex.extensions.name, table: schema.haexExtensions },
     {
-      name: tablesNames.haex.extension_permissions,
+      name: tablesNames.haex.extension_permissions.name,
       table: schema.haexExtensionPermissions,
     },
-    { name: tablesNames.haex.crdt.logs, table: schema.haexCrdtLogs },
-    { name: tablesNames.haex.crdt.snapshots, table: schema.haexCrdtSnapshots },
-    { name: tablesNames.haex.crdt.configs, table: schema.haexCrdtConfigs },
+    { name: tablesNames.haex.crdt.logs.name, table: schema.haexCrdtLogs },
+    {
+      name: tablesNames.haex.crdt.snapshots.name,
+      table: schema.haexCrdtSnapshots,
+    },
+    { name: tablesNames.haex.crdt.configs.name, table: schema.haexCrdtConfigs },
   ]
 
   for (const { name, table } of schemas) {

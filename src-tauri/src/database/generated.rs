@@ -16,7 +16,7 @@ pub struct HaexSettings {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub haex_tombstone: Option<String>,
+    pub haex_tombstone: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub haex_timestamp: Option<String>,
 }
@@ -47,7 +47,7 @@ pub struct HaexExtensions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub homepage: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub enabled: Option<String>,
+    pub enabled: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -61,7 +61,7 @@ pub struct HaexExtensions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub haex_tombstone: Option<String>,
+    pub haex_tombstone: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub haex_timestamp: Option<String>,
 }
@@ -107,7 +107,7 @@ pub struct HaexExtensionPermissions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub haex_tombstone: Option<String>,
+    pub haex_tombstone: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub haex_timestamp: Option<String>,
 }

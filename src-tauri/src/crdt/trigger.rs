@@ -259,9 +259,10 @@ fn generate_insert_trigger_sql(table_name: &str, pks: &[String], cols: &[String]
     let column_inserts = if cols.is_empty() {
         // Nur PKs -> einfacher Insert ins Log
         format!(
-            "INSERT INTO {log_table} (hlc_timestamp, op_type, table_name, row_pks)
-            VALUES (hlc_new_timestamp(), 'INSERT', '{table}', json_object({pk_payload}));",
+            "INSERT INTO {log_table} (haex_timestamp, op_type, table_name, row_pks)
+            VALUES (NEW.\"{hlc_col}\", 'INSERT', '{table}', json_object({pk_payload}));",
             log_table = TABLE_CRDT_LOGS,
+            hlc_col = HLC_TIMESTAMP_COLUMN,
             table = table_name,
             pk_payload = pk_json_payload
         )
@@ -269,9 +270,10 @@ fn generate_insert_trigger_sql(table_name: &str, pks: &[String], cols: &[String]
         cols.iter().fold(String::new(), |mut acc, col| {
             writeln!(
                 &mut acc,
-                "INSERT INTO {log_table} (hlc_timestamp, op_type, table_name, row_pks, column_name, new_value)
-                VALUES (hlc_new_timestamp(), 'INSERT', '{table}', json_object({pk_payload}), '{column}', json_object('value', NEW.\"{column}\"));",
+                "INSERT INTO {log_table} (haex_timestamp, op_type, table_name, row_pks, column_name, new_value)
+                VALUES (NEW.\"{hlc_col}\", 'INSERT', '{table}', json_object({pk_payload}), '{column}', json_object('value', NEW.\"{column}\"));",
                 log_table = TABLE_CRDT_LOGS,
+                hlc_col = HLC_TIMESTAMP_COLUMN,
                 table = table_name,
                 pk_payload = pk_json_payload,
                 column = col
@@ -312,11 +314,12 @@ fn generate_update_trigger_sql(table_name: &str, pks: &[String], cols: &[String]
         for col in cols {
             writeln!(
                 &mut body,
-                "INSERT INTO {log_table} (hlc_timestamp, op_type, table_name, row_pks, column_name, new_value, old_value)
-                    SELECT hlc_new_timestamp(), 'UPDATE', '{table}', json_object({pk_payload}), '{column}',
+                "INSERT INTO {log_table} (haex_timestamp, op_type, table_name, row_pks, column_name, new_value, old_value)
+                    SELECT NEW.\"{hlc_col}\", 'UPDATE', '{table}', json_object({pk_payload}), '{column}',
                     json_object('value', NEW.\"{column}\"), json_object('value', OLD.\"{column}\")
                     WHERE NEW.\"{column}\" IS NOT OLD.\"{column}\";",
                 log_table = TABLE_CRDT_LOGS,
+                hlc_col = HLC_TIMESTAMP_COLUMN,
                 table = table_name,
                 pk_payload = pk_json_payload,
                 column = col
@@ -327,10 +330,11 @@ fn generate_update_trigger_sql(table_name: &str, pks: &[String], cols: &[String]
     // Soft-delete loggen
     writeln!(
         &mut body,
-        "INSERT INTO {log_table} (hlc_timestamp, op_type, table_name, row_pks)
-            SELECT hlc_new_timestamp(), 'DELETE', '{table}', json_object({pk_payload})
+        "INSERT INTO {log_table} (haex_timestamp, op_type, table_name, row_pks)
+            SELECT NEW.\"{hlc_col}\", 'DELETE', '{table}', json_object({pk_payload})
             WHERE NEW.\"{tombstone_col}\" = 1 AND OLD.\"{tombstone_col}\" = 0;",
         log_table = TABLE_CRDT_LOGS,
+        hlc_col = HLC_TIMESTAMP_COLUMN,
         table = table_name,
         pk_payload = pk_json_payload,
         tombstone_col = TOMBSTONE_COLUMN
