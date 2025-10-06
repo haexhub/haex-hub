@@ -9,7 +9,7 @@ use rusqlite::{
     Connection, OpenFlags, ToSql,
 };
 use serde_json::Value as JsonValue;
-use sqlparser::ast::{Query, Select, SetExpr, Statement, TableFactor, TableObject};
+use sqlparser::ast::{Expr, Query, Select, SetExpr, Statement, TableFactor, TableObject};
 use sqlparser::dialect::SQLiteDialect;
 use sqlparser::parser::Parser;
 use std::collections::HashMap;
@@ -328,8 +328,42 @@ fn extract_tables_from_select(select: &Select, tables: &mut Vec<String>) {
             extract_tables_from_table_factor(&join.relation, tables);
         }
     }
+    if let Some(selection) = &select.selection {
+        extract_tables_from_expr_recursive(selection, tables);
+    }
 }
 
+fn extract_tables_from_expr_recursive(expr: &Expr, tables: &mut Vec<String>) {
+    match expr {
+        // This is the key: we found a subquery!
+        Expr::Subquery(subquery) => {
+            extract_tables_from_query_recursive(subquery, tables);
+        }
+        // These expressions can contain other expressions
+        Expr::BinaryOp { left, right, .. } => {
+            extract_tables_from_expr_recursive(left, tables);
+            extract_tables_from_expr_recursive(right, tables);
+        }
+        Expr::UnaryOp { expr, .. } => {
+            extract_tables_from_expr_recursive(expr, tables);
+        }
+        Expr::InSubquery { expr, subquery, .. } => {
+            extract_tables_from_expr_recursive(expr, tables);
+            extract_tables_from_query_recursive(subquery, tables);
+        }
+        Expr::Between {
+            expr, low, high, ..
+        } => {
+            extract_tables_from_expr_recursive(expr, tables);
+            extract_tables_from_expr_recursive(low, tables);
+            extract_tables_from_expr_recursive(high, tables);
+        }
+        // ... other expression types can be added here if needed
+        _ => {
+            // Other expressions (like literals, column names, etc.) don't contain tables.
+        }
+    }
+}
 /// Extrahiert Tabellennamen aus TableFactor-Strukturen
 fn extract_tables_from_table_factor(table_factor: &TableFactor, tables: &mut Vec<String>) {
     match table_factor {

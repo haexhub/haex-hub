@@ -1,12 +1,12 @@
 <template>
   <div class="flex flex-col p-4 relative h-full">
-    <div
+    <!-- <div
       v-if="extensionStore.availableExtensions.length"
       class="flex"
     >
       <UiButton
-        class="fixed top-20 right-4 btn-square btn-primary"
-        @click="prepareInstallExtensionAsync"
+        class="fixed top-20 right-4"
+        @click="onSelectExtensionAsync"
       >
         <Icon
           name="mdi:plus"
@@ -20,26 +20,20 @@
         :key="_extension.id"
         @remove="onShowRemoveDialog(_extension)"
       />
-    </div>
+    </div> -->
 
-    <div
-      v-else
-      class="h-full w-full"
-    >
-      <Icon
-        name="my-icon:extensions-overview"
-        class="size-full md:size-2/3 md:translate-x-1/5 md:translate-y-1/3"
-      />
+    {{ preview }}
+    <div class="h-full w-full">
       <div class="fixed top-30 right-10">
         <UiButton
-          class="btn-square btn-primary btn-xl btn-gradient rotate-45"
           :tooltip="t('extension.add')"
-          @click="prepareInstallExtensionAsync"
+          @click="onSelectExtensionAsync"
+          square
+          size="xl"
         >
           <Icon
             name="mdi:plus"
             size="1.5em"
-            class="rotate-45"
           />
         </UiButton>
       </div>
@@ -53,7 +47,7 @@
 
     <HaexExtensionDialogInstall
       v-model:open="showConfirmation"
-      :manifest="extension.manifest"
+      :preview="preview"
       @confirm="addExtensionAsync"
     />
 
@@ -70,6 +64,8 @@ import type {
   IHaexHubExtension,
   IHaexHubExtensionManifest,
 } from '~/types/haexhub'
+import { open } from '@tauri-apps/plugin-dialog'
+import type { ExtensionPreview } from '~~/src-tauri/bindings/ExtensionPreview'
 
 definePageMeta({
   name: 'extensionOverview',
@@ -112,21 +108,27 @@ const extension = reactive<{
 const { add } = useToast()
 const { addNotificationAsync } = useNotificationStore()
 
-const prepareInstallExtensionAsync = async () => {
+const preview = ref<ExtensionPreview>()
+
+const onSelectExtensionAsync = async () => {
   try {
-    const manifest = await loadExtensionManifestAsync()
-    if (!manifest) throw new Error('No valid Manifest found')
+    extension.path = await open({ directory: false, recursive: true })
+    if (!extension.path) return
 
-    extension.manifest = manifest
+    preview.value = await extensionStore.previewManifestAsync(extension.path)
 
+    if (!preview.value) return
+
+    // Check if already installed
     const isAlreadyInstalled = await extensionStore.isExtensionInstalledAsync({
-      id: manifest.id,
-      version: manifest.version,
+      id: preview.value.manifest.id,
+      version: preview.value.manifest.version,
     })
+
     if (isAlreadyInstalled) {
       openOverwriteDialog.value = true
     } else {
-      await addExtensionAsync()
+      showConfirmation.value = true
     }
   } catch (error) {
     add({ color: 'error', description: JSON.stringify(error) })

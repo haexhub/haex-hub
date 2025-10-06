@@ -58,7 +58,7 @@ impl FilesystemPath {
     /// This would be implemented in your Tauri backend
     pub fn resolve_system_path(
         &self,
-        app_handle: &tauri::AppHandle,
+        _app_handle: &tauri::AppHandle,
     ) -> Result<String, ExtensionError> {
         /* let base_dir = match self.path_type {
             FilesystemPathType::AppData => app_handle.path().app_data_dir(),

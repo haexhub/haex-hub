@@ -5,166 +5,249 @@
     @confirm="onConfirm"
   >
     <template #title>
-      <i18n-t
-        keypath="question"
-        tag="p"
-      >
-        <template #extension>
-          <span class="font-bold text-primary">{{ manifest?.name }}</span>
-        </template>
-      </i18n-t>
+      {{ t('title') }}
     </template>
 
-    <div class="flex flex-col">
-      <nav
-        class="tabs tabs-bordered"
-        aria-label="Tabs"
-        role="tablist"
-        aria-orientation="horizontal"
-      >
-        <button
-          v-show="manifest?.permissions?.database"
-          id="tabs-basic-item-1"
-          type="button"
-          class="tab active-tab:tab-active active"
-          data-tab="#tabs-basic-1"
-          aria-controls="tabs-basic-1"
-          role="tab"
-          aria-selected="true"
-        >
-          {{ t('database') }}
-        </button>
-        <button
-          v-show="manifest?.permissions?.filesystem"
-          id="tabs-basic-item-2"
-          type="button"
-          class="tab active-tab:tab-active"
-          data-tab="#tabs-basic-2"
-          aria-controls="tabs-basic-2"
-          role="tab"
-          aria-selected="false"
-        >
-          {{ t('filesystem') }}
-        </button>
-        <button
-          v-show="manifest?.permissions?.http"
-          id="tabs-basic-item-3"
-          type="button"
-          class="tab active-tab:tab-active"
-          data-tab="#tabs-basic-3"
-          aria-controls="tabs-basic-3"
-          role="tab"
-          aria-selected="false"
-        >
-          {{ t('http') }}
-        </button>
-      </nav>
+    <template #body>
+      <div class="flex flex-col gap-6">
+        <!-- Extension Info -->
+        <UCard>
+          <div class="flex items-start gap-4">
+            <div
+              v-if="preview?.manifest.icon"
+              class="w-16 h-16 flex-shrink-0"
+            >
+              <UIcon
+                :name="preview.manifest.icon"
+                class="w-full h-full"
+              />
+            </div>
+            <div class="flex-1">
+              <h3 class="text-xl font-bold">
+                {{ preview?.manifest.name }}
+              </h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                {{ t('version') }}: {{ preview?.manifest.version }}
+              </p>
+              <p
+                v-if="preview?.manifest.author"
+                class="text-sm text-gray-500 dark:text-gray-400"
+              >
+                {{ t('author') }}: {{ preview.manifest.author }}
+              </p>
+              <p
+                v-if="preview?.manifest.description"
+                class="text-sm mt-2"
+              >
+                {{ preview.manifest.description }}
+              </p>
 
-      <div class="mt-3 min-h-40">
-        <div
-          id="tabs-basic-1"
-          role="tabpanel"
-          aria-labelledby="tabs-basic-item-1"
-        >
-          <HaexExtensionManifestPermissionsDatabase
-            :database="permissions?.database"
-          />
-        </div>
-        <div
-          id="tabs-basic-2"
-          class="hidden"
-          role="tabpanel"
-          aria-labelledby="tabs-basic-item-2"
-        >
-          <HaexExtensionManifestPermissionsFilesystem
-            :filesystem="permissions?.filesystem"
-          />
-        </div>
-        <div
-          id="tabs-basic-3"
-          class="hidden"
-          role="tabpanel"
-          aria-labelledby="tabs-basic-item-3"
-        >
-          <HaexExtensionManifestPermissionsHttp :http="permissions?.http" />
+              <!-- Signature Verification -->
+              <UBadge
+                :color="preview?.is_valid_signature ? 'success' : 'error'"
+                variant="subtle"
+                class="mt-2"
+              >
+                <template #leading>
+                  <UIcon
+                    :name="
+                      preview?.is_valid_signature
+                        ? 'i-heroicons-shield-check'
+                        : 'i-heroicons-shield-exclamation'
+                    "
+                  />
+                </template>
+                {{
+                  preview?.is_valid_signature
+                    ? t('signature.valid')
+                    : t('signature.invalid')
+                }}
+              </UBadge>
+            </div>
+          </div>
+        </UCard>
+
+        <!-- Permissions Section -->
+        <div class="flex flex-col gap-4">
+          <h4 class="text-lg font-semibold">
+            {{ t('permissions.title') }}
+          </h4>
+
+          <UAccordion
+            :items="permissionAccordionItems"
+            :ui="{ root: 'flex flex-col gap-2' }"
+          >
+            <template #database>
+              <div
+                v-if="databasePermissions"
+                class="pb-4"
+              >
+                <HaexExtensionPermissionList
+                  v-model="databasePermissions"
+                  :title="t('permissions.database')"
+                />
+              </div>
+            </template>
+
+            <template #filesystem>
+              <div
+                v-if="filesystemPermissions"
+                class="pb-4"
+              >
+                <HaexExtensionPermissionList
+                  v-model="filesystemPermissions"
+                  :title="t('permissions.filesystem')"
+                />
+              </div>
+            </template>
+
+            <template #http>
+              <div
+                v-if="httpPermissions"
+                class="pb-4"
+              >
+                <HaexExtensionPermissionList
+                  v-model="httpPermissions"
+                  :title="t('permissions.http')"
+                />
+              </div>
+            </template>
+
+            <template #shell>
+              <div
+                v-if="shellPermissions"
+                class="pb-4"
+              >
+                <HaexExtensionPermissionList
+                  v-model="shellPermissions"
+                  :title="t('permissions.shell')"
+                />
+              </div>
+            </template>
+          </UAccordion>
         </div>
       </div>
-    </div>
+    </template>
   </UiDialogConfirm>
 </template>
 
 <script setup lang="ts">
-import type { IHaexHubExtensionManifest } from '~/types/haexhub'
+import type { ExtensionPreview } from '~~/src-tauri/bindings/ExtensionPreview'
 
 const { t } = useI18n()
 
 const open = defineModel<boolean>('open', { default: false })
-const { manifest } = defineProps<{
-  manifest?: IHaexHubExtensionManifest | null
+const props = defineProps<{
+  preview?: ExtensionPreview | null
 }>()
 
-const permissions = computed(() => ({
-  database: {
-    read: manifest?.permissions.database?.read?.map((read) => ({
-      [read]: true,
-    })),
-    write: manifest?.permissions.database?.read?.map((write) => ({
-      [write]: true,
-    })),
-    create: manifest?.permissions.database?.read?.map((create) => ({
-      [create]: true,
-    })),
+const databasePermissions = ref(
+  props.preview?.editable_permissions?.database || [],
+)
+const filesystemPermissions = ref(
+  props.preview?.editable_permissions?.filesystem || [],
+)
+const httpPermissions = ref(props.preview?.editable_permissions?.http || [])
+const shellPermissions = ref(props.preview?.editable_permissions?.shell || [])
+
+// Watch for preview changes
+watch(
+  () => props.preview,
+  (newPreview) => {
+    if (newPreview?.editable_permissions) {
+      databasePermissions.value = newPreview.editable_permissions.database || []
+      filesystemPermissions.value =
+        newPreview.editable_permissions.filesystem || []
+      httpPermissions.value = newPreview.editable_permissions.http || []
+      shellPermissions.value = newPreview.editable_permissions.shell || []
+    }
   },
+  { immediate: true },
+)
 
-  filesystem: {
-    read: manifest?.permissions.filesystem?.read?.map((read) => ({
-      [read]: true,
-    })),
-    write: manifest?.permissions.filesystem?.write?.map((write) => ({
-      [write]: true,
-    })),
-  },
+const permissionAccordionItems = computed(() => {
+  const items = []
 
-  http: manifest?.permissions.http?.map((http) => ({
-    [http]: true,
-  })),
-}))
+  if (databasePermissions.value?.length) {
+    items.push({
+      label: t('permissions.database'),
+      icon: 'i-heroicons-circle-stack',
+      slot: 'database',
+      defaultOpen: true,
+    })
+  }
 
-watch(permissions, () => console.log('permissions', permissions.value))
+  if (filesystemPermissions.value?.length) {
+    items.push({
+      label: t('permissions.filesystem'),
+      icon: 'i-heroicons-folder',
+      slot: 'filesystem',
+    })
+  }
+
+  if (httpPermissions.value?.length) {
+    items.push({
+      label: t('permissions.http'),
+      icon: 'i-heroicons-globe-alt',
+      slot: 'http',
+    })
+  }
+
+  if (shellPermissions.value?.length) {
+    items.push({
+      label: t('permissions.shell'),
+      icon: 'i-heroicons-command-line',
+      slot: 'shell',
+    })
+  }
+
+  return items
+})
+
 const emit = defineEmits(['deny', 'confirm'])
 
 const onDeny = () => {
   open.value = false
-  console.log('onDeny open', open.value)
   emit('deny')
 }
 
 const onConfirm = () => {
   open.value = false
-  console.log('onConfirm open', open.value)
-  emit('confirm')
+  emit('confirm', {
+    database: databasePermissions.value,
+    filesystem: filesystemPermissions.value,
+    http: httpPermissions.value,
+    shell: shellPermissions.value,
+  })
 }
 </script>
 
-<i18n lang="json">
-{
-  "de": {
-    "title": "Erweiterung hinzufügen",
-    "question": "Erweiterung {extension} hinzufügen?",
-    "confirm": "Bestätigen",
-    "deny": "Ablehnen",
-    "database": "Datenbank",
-    "http": "Internet",
-    "filesystem": "Dateisystem"
-  },
-  "en": {
-    "title": "Confirm Permission",
-    "question": "Add Extension {extension}?",
-    "confirm": "Confirm",
-    "deny": "Deny",
-    "database": "Database",
-    "http": "Internet",
-    "filesystem": "Filesystem"
-  }
-}
+<i18n lang="yaml">
+de:
+  title: Erweiterung installieren
+  version: Version
+  author: Autor
+  signature:
+    valid: Signatur verifiziert
+    invalid: Signatur ungültig
+  permissions:
+    title: Berechtigungen
+    database: Datenbank
+    filesystem: Dateisystem
+    http: Internet
+    shell: Terminal
+
+en:
+  title: Install Extension
+  version: Version
+  author: Author
+  signature:
+    valid: Signature verified
+    invalid: Invalid signature
+  permissions:
+    title: Permissions
+    database: Database
+    filesystem: Filesystem
+    http: Internet
+    shell: Terminal
 </i18n>

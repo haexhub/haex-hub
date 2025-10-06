@@ -1,11 +1,7 @@
 mod crdt;
 mod database;
 mod extension;
-use crate::{
-    crdt::hlc::HlcService,
-    database::DbConnection,
-    extension::core::{ExtensionManager, ExtensionState},
-};
+use crate::{crdt::hlc::HlcService, database::DbConnection, extension::core::ExtensionManager};
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
@@ -60,7 +56,7 @@ pub fn run() {
             hlc: Mutex::new(HlcService::new()),
             extension_manager: ExtensionManager::new(),
         })
-        .manage(ExtensionState::default())
+        //.manage(ExtensionState::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())

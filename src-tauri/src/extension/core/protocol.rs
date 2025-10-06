@@ -12,7 +12,8 @@ use tauri::{AppHandle, State};
 
 #[derive(Deserialize, Debug)]
 struct ExtensionInfo {
-    id: String,
+    key_hash: String,
+    name: String,
     version: String,
 }
 
@@ -66,17 +67,18 @@ impl From<serde_json::Error> for DataProcessingError {
 pub fn resolve_secure_extension_asset_path(
     app_handle: &AppHandle,
     state: State<AppState>,
-    extension_id: &str,
+    key_hash: &str,
+    extension_name: &str,
     extension_version: &str,
     requested_asset_path: &str,
 ) -> Result<PathBuf, ExtensionError> {
-    if extension_id.is_empty()
-        || !extension_id
+    if extension_name.is_empty()
+        || !extension_name
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '-')
     {
         return Err(ExtensionError::ValidationError {
-            reason: format!("Invalid extension ID: {}", extension_id),
+            reason: format!("Invalid extension name: {}", extension_name),
         });
     }
 
@@ -90,10 +92,12 @@ pub fn resolve_secure_extension_asset_path(
         });
     }
 
-    let specific_extension_dir =
-        state
-            .extension_manager
-            .get_extension_dir(app_handle, extension_id, extension_version)?;
+    let specific_extension_dir = state.extension_manager.get_extension_dir(
+        app_handle,
+        key_hash,
+        extension_name,
+        extension_version,
+    )?;
 
     let clean_relative_path = requested_asset_path
         .replace('\\', "/")
@@ -169,12 +173,14 @@ pub fn extension_protocol_handler(
     match process_hex_encoded_json(&host) {
         Ok(info) => {
             println!("Daten erfolgreich verarbeitet:");
-            println!("  ID: {}", info.id);
+            println!("  KeyHash: {}", info.key_hash);
+            println!("  Name: {}", info.name);
             println!("  Version: {}", info.version);
             let absolute_secure_path = resolve_secure_extension_asset_path(
                 app_handle,
                 state,
-                &info.id,
+                &info.key_hash,
+                &info.name,
                 &info.version,
                 &asset_to_load,
             )?;

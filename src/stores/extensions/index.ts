@@ -4,6 +4,7 @@ import type {
   IHaexHubExtension,
   IHaexHubExtensionManifest,
 } from '~/types/haexhub'
+import type { ExtensionPreview } from '@bindings/ExtensionPreview'
 
 interface ExtensionInfoResponse {
   key_hash: string
@@ -302,6 +303,14 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
     return true
   }
 
+  const preview = ref<ExtensionPreview>()
+
+  const previewManifestAsync = async (extensionPath: string) => {
+    preview.value = await invoke<ExtensionPreview>('preview_extension', {
+      extensionPath,
+    })
+    return preview.value
+  }
   /* const readManifestFileAsync = async (
     extensionId: string,
     version: string,
@@ -377,6 +386,7 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
     isActive,
     isExtensionInstalledAsync,
     loadExtensionsAsync,
+    previewManifestAsync,
     removeExtensionAsync,
   }
 })

@@ -1,5 +1,11 @@
 {
   // https://nuxt.com/docs/guide/concepts/typescript
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@bindings/*": ["./src-tauri/bindings/*"]
+    }
+  },
   "files": [],
   "references": [
     {

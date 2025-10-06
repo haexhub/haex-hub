@@ -4,14 +4,10 @@ use crate::database::core::with_connection;
 use crate::database::error::DatabaseError;
 use crate::extension::database::executor::SqlExecutor;
 use crate::extension::error::ExtensionError;
-use crate::extension::permissions::types::{parse_constraints, Action, DbConstraints, ExtensionPermission, FsConstraints, HttpConstraints, PermissionConstraints, PermissionStatus, ResourceType, ShellConstraints};
-use serde_json;
-use serde_json::json;
-use std::path::Path;
+use crate::extension::permissions::types::{Action, ExtensionPermission, PermissionStatus, ResourceType};
 use tauri::State;
-use url::Url;
-use crate::database::generated::HaexExtensionPermissions; 
-use rusqlite::{params, ToSql};
+use crate::database::generated::HaexExtensionPermissions;
+use rusqlite::params;
 
 pub struct PermissionManager;
 
@@ -19,7 +15,6 @@ impl PermissionManager {
     /// Speichert alle Permissions einer Extension
     pub async fn save_permissions(
         app_state: &State<'_, AppState>,
-        extension_id: &str,
         permissions: &[ExtensionPermission],
     ) -> Result<(), ExtensionError> {
         with_connection(&app_state.db, |conn| {
@@ -151,16 +146,27 @@ impl PermissionManager {
     ) -> Result<(), ExtensionError> {
         with_connection(&app_state.db, |conn| {
             let tx = conn.transaction().map_err(DatabaseError::from)?;
-            
+
             let hlc_service = app_state.hlc.lock()
                 .map_err(|_| DatabaseError::MutexPoisoned {
                     reason: "Failed to lock HLC service".to_string(),
                 })?;
-            
+
              let sql = format!("DELETE FROM {} WHERE extension_id = ?", TABLE_EXTENSION_PERMISSIONS);
             SqlExecutor::execute_internal_typed(&tx, &hlc_service, &sql, params![extension_id])?;
             tx.commit().map_err(DatabaseError::from)
         }).map_err(ExtensionError::from)
+    }
+
+    /// Löscht alle Permissions einer Extension innerhalb einer bestehenden Transaktion
+    pub fn delete_permissions_in_transaction(
+        tx: &rusqlite::Transaction,
+        hlc_service: &crate::crdt::hlc::HlcService,
+        extension_id: &str,
+    ) -> Result<(), DatabaseError> {
+        let sql = format!("DELETE FROM {} WHERE extension_id = ?", TABLE_EXTENSION_PERMISSIONS);
+        SqlExecutor::execute_internal_typed(tx, hlc_service, &sql, params![extension_id])?;
+        Ok(())
     }
     /// Lädt alle Permissions einer Extension
     pub async fn get_permissions(
@@ -183,8 +189,6 @@ impl PermissionManager {
             Ok(permissions)
         }).map_err(ExtensionError::from)
     }
-
-    
 
     /// Prüft Datenbankberechtigungen
    pub async fn check_database_permission(

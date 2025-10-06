@@ -1,3 +1,8 @@
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
+
 // src-tauri/src/extension/crypto.rs
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use sha2::{Digest, Sha256};
@@ -45,30 +50,62 @@ impl ExtensionCrypto {
     }
 
     /// Berechnet Hash eines Verzeichnisses (für Verifikation)
-    pub fn hash_directory(dir: &std::path::Path) -> Result<String, String> {
-        use std::fs;
+    pub fn hash_directory(dir: &Path) -> Result<String, String> {
+        // 1. Alle Dateipfade rekursiv sammeln
+        let mut all_files = Vec::new();
+        Self::collect_files_recursively(dir, &mut all_files)
+            .map_err(|e| format!("Failed to collect files: {}", e))?;
+        all_files.sort();
 
         let mut hasher = Sha256::new();
-        let mut entries: Vec<_> = fs::read_dir(dir)
-            .map_err(|e| format!("Cannot read directory: {}", e))?
-            .filter_map(|e| e.ok())
-            .collect();
+        let manifest_path = dir.join("manifest.json");
 
-        // Sortieren für deterministische Hashes
-        entries.sort_by_key(|e| e.path());
+        // 2. Inhalte der sortierten Dateien hashen
+        for file_path in all_files {
+            if file_path == manifest_path {
+                // FÜR DIE MANIFEST.JSON:
+                let content_str = fs::read_to_string(&file_path)
+                    .map_err(|e| format!("Cannot read manifest file: {}", e))?;
 
-        for entry in entries {
-            let path = entry.path();
-            if path.is_file() {
-                let content = fs::read(&path)
-                    .map_err(|e| format!("Cannot read file {}: {}", path.display(), e))?;
+                // Parse zu einem generischen JSON-Wert
+                let mut manifest: serde_json::Value = serde_json::from_str(&content_str)
+                    .map_err(|e| format!("Cannot parse manifest JSON: {}", e))?;
+
+                // Entferne oder leere das Signaturfeld, um den "kanonischen Inhalt" zu erhalten
+                if let Some(obj) = manifest.as_object_mut() {
+                    obj.insert(
+                        "signature".to_string(),
+                        serde_json::Value::String("".to_string()),
+                    );
+                }
+
+                // Serialisiere das modifizierte Manifest zurück (mit 2 Spaces, wie in JS)
+                let canonical_manifest_content = serde_json::to_string_pretty(&manifest).unwrap();
+                println!("canonical_manifest_content: {}", canonical_manifest_content);
+                hasher.update(canonical_manifest_content.as_bytes());
+            } else {
+                // FÜR ALLE ANDEREN DATEIEN:
+                let content = fs::read(&file_path)
+                    .map_err(|e| format!("Cannot read file {}: {}", file_path.display(), e))?;
                 hasher.update(&content);
-            } else if path.is_dir() {
-                let subdir_hash = Self::hash_directory(&path)?;
-                hasher.update(hex::decode(&subdir_hash).unwrap());
             }
         }
 
         Ok(hex::encode(hasher.finalize()))
+    }
+
+    fn collect_files_recursively(dir: &Path, file_list: &mut Vec<PathBuf>) -> std::io::Result<()> {
+        if dir.is_dir() {
+            for entry in fs::read_dir(dir)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.is_dir() {
+                    Self::collect_files_recursively(&path, file_list)?;
+                } else {
+                    file_list.push(path);
+                }
+            }
+        }
+        Ok(())
     }
 }

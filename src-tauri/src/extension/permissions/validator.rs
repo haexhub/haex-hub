@@ -54,7 +54,7 @@ impl SqlPermissionValidator {
             PermissionManager::check_database_permission(
                 app_state,
                 extension_id,
-                Action::Read,
+                Action::Database(super::types::DbAction::Read),
                 &table_name,
             )
             .await?;
@@ -75,7 +75,7 @@ impl SqlPermissionValidator {
             PermissionManager::check_database_permission(
                 app_state,
                 extension_id,
-                Action::Write,
+                Action::Database(super::types::DbAction::ReadWrite),
                 &table_name,
             )
             .await?;
@@ -97,7 +97,7 @@ impl SqlPermissionValidator {
             PermissionManager::check_database_permission(
                 app_state,
                 extension_id,
-                Action::Write,
+                Action::Database(super::types::DbAction::Create),
                 &table_name,
             )
             .await?;
@@ -119,7 +119,7 @@ impl SqlPermissionValidator {
             PermissionManager::check_database_permission(
                 app_state,
                 extension_id,
-                Action::Write,
+                Action::Database(super::types::DbAction::AlterDrop),
                 &table_name,
             )
             .await?;

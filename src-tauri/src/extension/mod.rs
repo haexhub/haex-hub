@@ -57,11 +57,11 @@ pub fn get_all_extensions(state: State<AppState>) -> Result<Vec<ExtensionInfoRes
 #[tauri::command]
 pub async fn preview_extension(
     state: State<'_, AppState>,
-    source_path: String,
+    extension_path: String,
 ) -> Result<ExtensionPreview, ExtensionError> {
     state
         .extension_manager
-        .preview_extension_internal(source_path)
+        .preview_extension_internal(extension_path)
         .await
 }
 
@@ -160,13 +160,20 @@ pub async fn install_extension(
 #[tauri::command]
 pub async fn remove_extension(
     app_handle: AppHandle,
-    extension_id: String,
-    extension_version: String,
+    key_hash: &str,
+    extension_id: &str,
+    extension_version: &str,
     state: State<'_, AppState>,
 ) -> Result<(), ExtensionError> {
     state
         .extension_manager
-        .remove_extension_internal(&app_handle, extension_id, extension_version, &state)
+        .remove_extension_internal(
+            &app_handle,
+            key_hash,
+            extension_id,
+            extension_version,
+            &state,
+        )
         .await
 }
 

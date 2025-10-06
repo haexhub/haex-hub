@@ -9,6 +9,7 @@ pub enum ExtensionErrorCode {
     SecurityViolation = 1000,
     NotFound = 1001,
     PermissionDenied = 1002,
+    MutexPoisoned = 1003,
     Database = 2000,
     Filesystem = 2001,
     Http = 2002,
@@ -17,6 +18,7 @@ pub enum ExtensionErrorCode {
     Validation = 3001,
     InvalidPublicKey = 4000,
     InvalidSignature = 4001,
+    InvalidActionString = 4004,
     SignatureVerificationFailed = 4002,
     CalculateHash = 4003,
     Installation = 5000,
@@ -76,6 +78,12 @@ pub enum ExtensionError {
     #[error("Invalid Public Key: {reason}")]
     InvalidPublicKey { reason: String },
 
+    #[error("Invalid Action: {input} for resource {resource_type}")]
+    InvalidActionString {
+        input: String,
+        resource_type: String,
+    },
+
     #[error("Invalid Signature: {reason}")]
     InvalidSignature { reason: String },
 
@@ -87,6 +95,9 @@ pub enum ExtensionError {
 
     #[error("Extension installation failed: {reason}")]
     InstallationFailed { reason: String },
+
+    #[error("A mutex was poisoned: {reason}")]
+    MutexPoisoned { reason: String },
 }
 
 impl ExtensionError {
@@ -109,6 +120,8 @@ impl ExtensionError {
             }
             ExtensionError::InstallationFailed { .. } => ExtensionErrorCode::Installation,
             ExtensionError::CalculateHashError { .. } => ExtensionErrorCode::CalculateHash,
+            ExtensionError::MutexPoisoned { .. } => ExtensionErrorCode::MutexPoisoned,
+            ExtensionError::InvalidActionString { .. } => ExtensionErrorCode::InvalidActionString,
         }
     }
 

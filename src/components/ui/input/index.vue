@@ -84,8 +84,6 @@ const filteredSlots = computed(() => {
   )
 })
 
-watchImmediate(props, () => console.log('props', props))
-
 const { isSmallScreen } = storeToRefs(useUiStore())
 </script>
 

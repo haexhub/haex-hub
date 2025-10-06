@@ -6,15 +6,16 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare",
-    "tauri": "tauri",
-    "tauri:build:debug": "tauri build --debug",
-    "generate:rust-types": "tsx ./src-tauri/database/generate-rust-types.ts",
     "drizzle:generate": "drizzle-kit generate",
     "drizzle:migrate": "drizzle-kit migrate",
-    "eslint:fix": "eslint --fix"
+    "eslint:fix": "eslint --fix",
+    "generate:rust-types": "tsx ./src-tauri/database/generate-rust-types.ts",
+    "generate:ts-types": "cd src-tauri && cargo test",
+    "generate": "nuxt generate",
+    "postinstall": "nuxt prepare",
+    "preview": "nuxt preview",
+    "tauri:build:debug": "tauri build --debug",
+    "tauri": "tauri"
   },
   "dependencies": {
     "@nuxt/eslint": "1.9.0",

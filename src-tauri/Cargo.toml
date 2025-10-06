@@ -48,8 +48,8 @@ tauri-plugin-os = "2.3"
 tauri-plugin-persisted-scope = "2.3.2"
 tauri-plugin-store = "2.4.0"
 thiserror = "2.0.17"
-ts-rs = "11.0.1"
-uhlc = "0.8"
+ts-rs = { version = "11.0.1", features = ["serde-compat"] }
+uhlc = "0.8.2"
 uuid = { version = "1.18.1", features = ["v4"] }
 zip = "5.1.1"
 url = "2.5.7"

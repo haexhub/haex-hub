@@ -2,7 +2,7 @@ import { and, eq, or, type SQLWrapper } from 'drizzle-orm'
 import {
   haexNotifications,
   type InsertHaexNotifications,
-} from '~~/src-tauri/database/schemas/vault'
+} from '~~/src-tauri/database/schemas/haex'
 import {
   isPermissionGranted,
   requestPermission,
@@ -42,19 +42,18 @@ export const useNotificationStore = defineStore('notificationStore', () => {
 
     console.log('readNotificationsAsync', filter)
     if (filter) {
-      return await currentVault.value.drizzle
+      return await currentVault.value?.drizzle
         .select()
         .from(haexNotifications)
         .where(and(...filter))
     } else {
-      return await currentVault.value.drizzle.select().from(haexNotifications)
+      return await currentVault.value?.drizzle.select().from(haexNotifications)
     }
   }
 
   const syncNotificationsAsync = async () => {
-    notifications.value = await readNotificationsAsync([
-      eq(haexNotifications.read, false),
-    ])
+    notifications.value =
+      (await readNotificationsAsync([eq(haexNotifications.read, false)])) ?? []
   }
 
   const addNotificationAsync = async (
@@ -75,7 +74,7 @@ export const useNotificationStore = defineStore('notificationStore', () => {
         type: notification.type || 'info',
       }
 
-      await currentVault.value.drizzle
+      await currentVault.value?.drizzle
         .insert(haexNotifications)
         .values(_notification)
 
@@ -102,7 +101,7 @@ export const useNotificationStore = defineStore('notificationStore', () => {
     const filter = notificationIds.map((id) => eq(haexNotifications.id, id))
 
     console.log('deleteNotificationsAsync', notificationIds)
-    return currentVault.value.drizzle
+    return currentVault.value?.drizzle
       .delete(haexNotifications)
       .where(or(...filter))
   }
