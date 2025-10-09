@@ -20,8 +20,8 @@
       <USelectMenu
         v-model="menuEntry"
         :items="statusOptions"
-        value-attribute="value"
         class="w-44"
+        :search-input="false"
       >
         <template #leading>
           <UIcon

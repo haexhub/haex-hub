@@ -7,7 +7,7 @@ use ts_rs::TS;
 
 /// Definiert Aktionen, die auf eine Datenbank angewendet werden können.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum DbAction {
     Read,
@@ -38,9 +38,10 @@ impl FromStr for DbAction {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "read" => Ok(DbAction::Read),
-            "read_write" => Ok(DbAction::ReadWrite),
+            "readwrite" | "read_write" => Ok(DbAction::ReadWrite),
             "create" => Ok(DbAction::Create),
             "delete" => Ok(DbAction::Delete),
+            "alterdrop" | "alter_drop" => Ok(DbAction::AlterDrop),
             _ => Err(ExtensionError::InvalidActionString {
                 input: s.to_string(),
                 resource_type: "database".to_string(),
@@ -51,7 +52,7 @@ impl FromStr for DbAction {
 
 /// Definiert Aktionen, die auf das Dateisystem angewendet werden können.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum FsAction {
     Read,
@@ -76,7 +77,7 @@ impl FromStr for FsAction {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "read" => Ok(FsAction::Read),
-            "read_write" => Ok(FsAction::ReadWrite),
+            "readwrite" | "read_write" => Ok(FsAction::ReadWrite),
             _ => Err(ExtensionError::InvalidActionString {
                 input: s.to_string(),
                 resource_type: "filesystem".to_string(),

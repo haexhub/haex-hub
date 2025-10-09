@@ -1,19 +1,21 @@
 import { invoke } from '@tauri-apps/api/core'
+import { readFile } from '@tauri-apps/plugin-fs'
 
 import type {
   IHaexHubExtension,
   IHaexHubExtensionManifest,
 } from '~/types/haexhub'
 import type { ExtensionPreview } from '@bindings/ExtensionPreview'
+import type { ExtensionPermissions } from '~~/src-tauri/bindings/ExtensionPermissions'
 
 interface ExtensionInfoResponse {
-  key_hash: string
+  keyHash: string
   name: string
-  full_id: string
+  fullId: string
   version: string
-  display_name: string | null
+  displayName: string | null
   namespace: string | null
-  allowed_origin: string
+  allowedOrigin: string
 }
 
 /* const manifestFileName = 'manifest.json'
@@ -59,14 +61,32 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
     )
 
   const extensionEntry = computed(() => {
-    if (!currentExtension.value?.version || !currentExtension.value?.id)
+    if (
+      !currentExtension.value?.version ||
+      !currentExtension.value?.id ||
+      !currentExtension.value?.name
+    )
       return null
 
+    // Extract key_hash from full_extension_id (everything before first underscore)
+    const firstUnderscoreIndex = currentExtension.value.id.indexOf('_')
+    if (firstUnderscoreIndex === -1) {
+      console.error(
+        'Invalid full_extension_id format:',
+        currentExtension.value.id,
+      )
+      return null
+    }
+
+    const keyHash = currentExtension.value.id.substring(0, firstUnderscoreIndex)
+
     const encodedInfo = encodeExtensionInfo(
-      currentExtension.value.id,
+      keyHash,
+      currentExtension.value.name,
       currentExtension.value.version,
     )
-    return `extension://${encodedInfo}`
+
+    return `haex-extension://localhost/${encodedInfo}/index.html`
   })
 
   /* const getExtensionPathAsync = async (
@@ -105,8 +125,8 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
         await invoke<ExtensionInfoResponse[]>('get_all_extensions')
 
       availableExtensions.value = extensions.map((ext) => ({
-        id: ext.key_hash,
-        name: ext.display_name || ext.name,
+        id: ext.fullId,
+        name: ext.displayName || ext.name,
         version: ext.version,
         author: ext.namespace,
         icon: null,
@@ -147,13 +167,23 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
     return true
   } */
 
-  const installAsync = async (sourcePath: string | null) => {
+  const installAsync = async (
+    sourcePath: string | null,
+    permissions?: ExtensionPermissions,
+  ) => {
     if (!sourcePath) throw new Error('Kein Pfad angegeben')
 
     try {
-      const extensionId = await invoke<string>('install_extension', {
-        sourcePath,
-      })
+      // Read file as bytes (works with content URIs on Android)
+      const fileBytes = await readFile(sourcePath)
+
+      const extensionId = await invoke<string>(
+        'install_extension_with_permissions',
+        {
+          fileBytes: Array.from(fileBytes),
+          customPermissions: permissions,
+        },
+      )
       return extensionId
     } catch (error) {
       console.error('Fehler bei Extension-Installation:', error)
@@ -214,6 +244,17 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
       await invoke('remove_extension', {
         extensionId,
         extensionVersion: version,
+      })
+    } catch (error) {
+      console.error('Fehler beim Entfernen der Extension:', error)
+      throw error
+    }
+  }
+
+  const removeExtensionByFullIdAsync = async (fullExtensionId: string) => {
+    try {
+      await invoke('remove_extension_by_full_id', {
+        fullExtensionId,
       })
     } catch (error) {
       console.error('Fehler beim Entfernen der Extension:', error)
@@ -306,8 +347,11 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
   const preview = ref<ExtensionPreview>()
 
   const previewManifestAsync = async (extensionPath: string) => {
+    // Read file as bytes (works with content URIs on Android)
+    const fileBytes = await readFile(extensionPath)
+
     preview.value = await invoke<ExtensionPreview>('preview_extension', {
-      extensionPath,
+      fileBytes: Array.from(fileBytes),
     })
     return preview.value
   }
@@ -388,6 +432,7 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
     loadExtensionsAsync,
     previewManifestAsync,
     removeExtensionAsync,
+    removeExtensionByFullIdAsync,
   }
 })
 
@@ -444,8 +489,16 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
   }
 } */
 
-function encodeExtensionInfo(id: string, version: string): string {
-  const info = { id, version }
+function encodeExtensionInfo(
+  keyHash: string,
+  name: string,
+  version: string,
+): string {
+  const info = {
+    key_hash: keyHash,
+    name: name,
+    version: version,
+  }
   const jsonString = JSON.stringify(info)
   const bytes = new TextEncoder().encode(jsonString)
   return Array.from(bytes)

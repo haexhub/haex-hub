@@ -137,33 +137,46 @@ import type { ExtensionPreview } from '~~/src-tauri/bindings/ExtensionPreview'
 const { t } = useI18n()
 
 const open = defineModel<boolean>('open', { default: false })
-const props = defineProps<{
-  preview?: ExtensionPreview | null
-}>()
+const preview = defineModel<ExtensionPreview | null>('preview', {
+  default: null,
+})
 
-const databasePermissions = ref(
-  props.preview?.editable_permissions?.database || [],
-)
-const filesystemPermissions = ref(
-  props.preview?.editable_permissions?.filesystem || [],
-)
-const httpPermissions = ref(props.preview?.editable_permissions?.http || [])
-const shellPermissions = ref(props.preview?.editable_permissions?.shell || [])
-
-// Watch for preview changes
-watch(
-  () => props.preview,
-  (newPreview) => {
-    if (newPreview?.editable_permissions) {
-      databasePermissions.value = newPreview.editable_permissions.database || []
-      filesystemPermissions.value =
-        newPreview.editable_permissions.filesystem || []
-      httpPermissions.value = newPreview.editable_permissions.http || []
-      shellPermissions.value = newPreview.editable_permissions.shell || []
+const databasePermissions = computed({
+  get: () => preview.value?.editable_permissions?.database || [],
+  set: (value) => {
+    if (preview.value?.editable_permissions) {
+      preview.value.editable_permissions.database = value
     }
   },
-  { immediate: true },
-)
+})
+
+const filesystemPermissions = computed({
+  get: () => preview.value?.editable_permissions?.filesystem || [],
+  set: (value) => {
+    if (preview.value?.editable_permissions) {
+      preview.value.editable_permissions.filesystem = value
+    }
+  },
+})
+
+const httpPermissions = computed({
+  get: () => preview.value?.editable_permissions?.http || [],
+  set: (value) => {
+    if (preview.value?.editable_permissions) {
+      preview.value.editable_permissions.http = value
+    }
+  },
+})
+
+const shellPermissions = computed({
+  get: () => preview.value?.editable_permissions?.shell || [],
+  set: (value) => {
+    if (preview.value?.editable_permissions) {
+      preview.value.editable_permissions.shell = value
+    }
+  },
+})
+
 
 const permissionAccordionItems = computed(() => {
   const items = []
@@ -213,12 +226,7 @@ const onDeny = () => {
 
 const onConfirm = () => {
   open.value = false
-  emit('confirm', {
-    database: databasePermissions.value,
-    filesystem: filesystemPermissions.value,
-    http: httpPermissions.value,
-    shell: shellPermissions.value,
-  })
+  emit('confirm')
 }
 </script>
 

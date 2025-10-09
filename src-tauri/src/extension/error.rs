@@ -12,6 +12,7 @@ pub enum ExtensionErrorCode {
     MutexPoisoned = 1003,
     Database = 2000,
     Filesystem = 2001,
+    FilesystemWithPath = 2004,
     Http = 2002,
     Shell = 2003,
     Manifest = 3000,
@@ -57,6 +58,12 @@ pub enum ExtensionError {
     #[error("Filesystem operation failed: {source}")]
     Filesystem {
         #[from]
+        source: std::io::Error,
+    },
+
+    #[error("Filesystem operation failed at '{path}': {source}")]
+    FilesystemWithPath {
+        path: String,
         source: std::io::Error,
     },
 
@@ -109,6 +116,7 @@ impl ExtensionError {
             ExtensionError::PermissionDenied { .. } => ExtensionErrorCode::PermissionDenied,
             ExtensionError::Database { .. } => ExtensionErrorCode::Database,
             ExtensionError::Filesystem { .. } => ExtensionErrorCode::Filesystem,
+            ExtensionError::FilesystemWithPath { .. } => ExtensionErrorCode::FilesystemWithPath,
             ExtensionError::Http { .. } => ExtensionErrorCode::Http,
             ExtensionError::Shell { .. } => ExtensionErrorCode::Shell,
             ExtensionError::ManifestError { .. } => ExtensionErrorCode::Manifest,
@@ -144,6 +152,14 @@ impl ExtensionError {
         match self {
             ExtensionError::PermissionDenied { extension_id, .. } => Some(extension_id),
             _ => None,
+        }
+    }
+
+    /// Helper to create a filesystem error with path context
+    pub fn filesystem_with_path<P: Into<String>>(path: P, source: std::io::Error) -> Self {
+        Self::FilesystemWithPath {
+            path: path.into(),
+            source,
         }
     }
 }

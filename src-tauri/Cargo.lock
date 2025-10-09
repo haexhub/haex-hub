@@ -1696,6 +1696,7 @@ dependencies = [
  "ed25519-dalek",
  "fs_extra",
  "hex",
+ "lazy_static",
  "mime",
  "mime_guess",
  "rusqlite",

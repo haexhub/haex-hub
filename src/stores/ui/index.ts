@@ -1,21 +1,8 @@
-//import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
 import { breakpointsTailwind } from '@vueuse/core'
 import de from './de.json'
 import en from './en.json'
 
-/* export interface ITheme {
-  value: string
-  name: string
-  icon: string
-} */
-
 export const useUiStore = defineStore('uiStore', () => {
-  /* const breakpoints = useBreakpoints(breakpointsTailwind)
-
-  const current ScreenSize = computed(() =>
-    breakpoints.active().value.length > 0 ? breakpoints.active().value : 'xs',
-  ) */
-
   const breakpoints = useBreakpoints(breakpointsTailwind)
 
   // "smAndDown" gilt für sm, xs usw.

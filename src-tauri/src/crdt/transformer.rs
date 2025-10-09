@@ -687,16 +687,25 @@ impl CrdtTransformer {
         insert_stmt: &mut Insert,
         timestamp: &Timestamp,
     ) -> Result<(), DatabaseError> {
+        // Add both haex_timestamp and haex_tombstone columns
         insert_stmt
             .columns
             .push(Ident::new(self.columns.hlc_timestamp));
+        insert_stmt
+            .columns
+            .push(Ident::new(self.columns.tombstone));
 
         match insert_stmt.source.as_mut() {
             Some(query) => match &mut *query.body {
                 SetExpr::Values(values) => {
                     for row in &mut values.rows {
+                        // Add haex_timestamp value
                         row.push(Expr::Value(
                             Value::SingleQuotedString(timestamp.to_string()).into(),
+                        ));
+                        // Add haex_tombstone value (0 = not deleted)
+                        row.push(Expr::Value(
+                            Value::Number("0".to_string(), false).into(),
                         ));
                     }
                 }
@@ -704,6 +713,10 @@ impl CrdtTransformer {
                     let hlc_expr =
                         Expr::Value(Value::SingleQuotedString(timestamp.to_string()).into());
                     select.projection.push(SelectItem::UnnamedExpr(hlc_expr));
+                    // Add haex_tombstone value (0 = not deleted)
+                    let tombstone_expr =
+                        Expr::Value(Value::Number("0".to_string(), false).into());
+                    select.projection.push(SelectItem::UnnamedExpr(tombstone_expr));
                 }
                 _ => {
                     return Err(DatabaseError::UnsupportedStatement {

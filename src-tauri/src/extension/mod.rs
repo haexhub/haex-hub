@@ -28,7 +28,29 @@ pub fn get_extension_info(
 }
 
 #[tauri::command]
-pub fn get_all_extensions(state: State<AppState>) -> Result<Vec<ExtensionInfoResponse>, String> {
+pub async fn get_all_extensions(
+    app_handle: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<Vec<ExtensionInfoResponse>, String> {
+    // Check if extensions are loaded, if not load them first
+    let needs_loading = {
+        let prod_exts = state
+            .extension_manager
+            .production_extensions
+            .lock()
+            .unwrap();
+        let dev_exts = state.extension_manager.dev_extensions.lock().unwrap();
+        prod_exts.is_empty() && dev_exts.is_empty()
+    };
+
+    if needs_loading {
+        state
+            .extension_manager
+            .load_installed_extensions(&app_handle, &state)
+            .await
+            .map_err(|e| format!("Failed to load extensions: {:?}", e))?;
+    }
+
     let mut extensions = Vec::new();
 
     // Production Extensions
@@ -57,18 +79,18 @@ pub fn get_all_extensions(state: State<AppState>) -> Result<Vec<ExtensionInfoRes
 #[tauri::command]
 pub async fn preview_extension(
     state: State<'_, AppState>,
-    extension_path: String,
+    file_bytes: Vec<u8>,
 ) -> Result<ExtensionPreview, ExtensionError> {
     state
         .extension_manager
-        .preview_extension_internal(extension_path)
+        .preview_extension_internal(file_bytes)
         .await
 }
 
 #[tauri::command]
 pub async fn install_extension_with_permissions(
     app_handle: AppHandle,
-    source_path: String,
+    file_bytes: Vec<u8>,
     custom_permissions: EditablePermissions,
     state: State<'_, AppState>,
 ) -> Result<String, ExtensionError> {
@@ -76,7 +98,7 @@ pub async fn install_extension_with_permissions(
         .extension_manager
         .install_extension_with_permissions_internal(
             app_handle,
-            source_path,
+            file_bytes,
             custom_permissions,
             &state,
         )
@@ -174,6 +196,18 @@ pub async fn remove_extension(
             extension_version,
             &state,
         )
+        .await
+}
+
+#[tauri::command]
+pub async fn remove_extension_by_full_id(
+    app_handle: AppHandle,
+    full_extension_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), ExtensionError> {
+    state
+        .extension_manager
+        .remove_extension_by_full_id(&app_handle, &full_extension_id, &state)
         .await
 }
 

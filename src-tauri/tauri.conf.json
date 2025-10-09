@@ -9,6 +9,7 @@
     "beforeBuildCommand": "pnpm generate",
     "frontendDist": "../dist"
   },
+
   "app": {
     "windows": [
       {
@@ -19,25 +20,40 @@
     ],
     "security": {
       "csp": {
-        "default-src": ["'self'", "http://tauri.localhost"],
+        "default-src": ["'self'", "http://tauri.localhost", "haex-extension:"],
         "script-src": [
           "'self'",
           "http://tauri.localhost",
+          "haex-extension:",
           "'wasm-unsafe-eval'"
         ],
-        "style-src": ["'self'", "http://tauri.localhost", "'unsafe-inline'"],
+        "style-src": [
+          "'self'",
+          "http://tauri.localhost",
+          "haex-extension:",
+          "'unsafe-inline'"
+        ],
         "connect-src": [
           "'self'",
           "http://tauri.localhost",
+          "haex-extension:",
           "ipc:",
-          "http://ipc.localhost"
+          "http://ipc.localhost",
+          "ws://localhost:*"
         ],
-        "img-src": ["'self'", "http://tauri.localhost", "data:", "blob:"],
-        "font-src": ["'self'", "http://tauri.localhost"],
+        "img-src": [
+          "'self'",
+          "http://tauri.localhost",
+          "haex-extension:",
+          "data:",
+          "blob:"
+        ],
+        "font-src": ["'self'", "http://tauri.localhost", "haex-extension:"],
         "object-src": ["'none'"],
-        "media-src": ["'self'", "http://tauri.localhost"],
-        "frame-src": ["'none'"],
-        "frame-ancestors": ["'none'"]
+        "media-src": ["'self'", "http://tauri.localhost", "haex-extension:"],
+        "frame-src": ["haex-extension:"],
+        "frame-ancestors": ["'none'"],
+        "base-uri": ["'self'"]
       },
       "assetProtocol": {
         "enable": true,

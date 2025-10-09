@@ -76,6 +76,18 @@ impl ExtensionManifest {
     }
 
     pub fn full_extension_id(&self) -> Result<String, ExtensionError> {
+        // Validate that name and version don't contain underscores
+        if self.name.contains('_') {
+            return Err(ExtensionError::ValidationError {
+                reason: format!("Extension name cannot contain underscores: {}", self.name),
+            });
+        }
+        if self.version.contains('_') {
+            return Err(ExtensionError::ValidationError {
+                reason: format!("Extension version cannot contain underscores: {}", self.version),
+            });
+        }
+
         let key_hash = self.calculate_key_hash()?;
         Ok(format!("{}_{}_{}", key_hash, self.name, self.version))
     }
@@ -175,6 +187,7 @@ impl ExtensionPermissions {
 
 #[derive(Serialize, Deserialize, Clone, Debug, TS)]
 #[ts(export)]
+#[serde(rename_all = "camelCase")]
 pub struct ExtensionInfoResponse {
     pub key_hash: String,
     pub name: String,
@@ -189,10 +202,15 @@ impl ExtensionInfoResponse {
     pub fn from_extension(
         extension: &crate::extension::core::types::Extension,
     ) -> Result<Self, ExtensionError> {
-        // Annahme: get_tauri_origin ist in deinem `types`-Modul oder woanders definiert
         use crate::extension::core::types::get_tauri_origin;
 
+        // In development mode, use a wildcard for localhost to match any port
+        #[cfg(debug_assertions)]
+        let allowed_origin = "http://localhost:3003".to_string();
+
+        #[cfg(not(debug_assertions))]
         let allowed_origin = get_tauri_origin();
+
         let key_hash = extension.manifest.calculate_key_hash()?;
         let full_id = extension.manifest.full_extension_id()?;
 

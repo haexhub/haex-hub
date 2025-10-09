@@ -13,6 +13,12 @@ interface ExtensionRequest {
 let globalHandlerRegistered = false
 const iframeRegistry = new Map<HTMLIFrameElement, IHaexHubExtension>()
 
+// Store context values that need to be accessed outside setup
+let contextGetters: {
+  getTheme: () => string
+  getLocale: () => string
+} | null = null
+
 const registerGlobalMessageHandler = () => {
   if (globalHandlerRegistered) return
 
@@ -61,6 +67,8 @@ const registerGlobalMessageHandler = () => {
         result = await handlePermissionsMethodAsync(request, extension)
       } else if (request.method.startsWith('context.')) {
         result = await handleContextMethodAsync(request)
+      } else if (request.method.startsWith('storage.')) {
+        result = await handleStorageMethodAsync(request, extension)
       } else {
         throw new Error(`Unknown method: ${request.method}`)
       }
@@ -96,6 +104,18 @@ export const useExtensionMessageHandler = (
   iframeRef: Ref<HTMLIFrameElement | undefined | null>,
   extension: ComputedRef<IHaexHubExtension | undefined | null>,
 ) => {
+  // Initialize context getters (can use composables here because we're in setup)
+  const { currentTheme } = storeToRefs(useUiStore())
+  const { locale } = useI18n()
+
+  // Store getters for use outside setup context
+  if (!contextGetters) {
+    contextGetters = {
+      getTheme: () => currentTheme.value?.value || 'system',
+      getLocale: () => locale.value,
+    }
+  }
+
   // Registriere globalen Handler beim ersten Aufruf
   registerGlobalMessageHandler()
 
@@ -112,6 +132,28 @@ export const useExtensionMessageHandler = (
       iframeRegistry.delete(iframeRef.value)
     }
   })
+}
+
+// Export Funktion für manuelle IFrame-Registrierung (kein Composable!)
+export const registerExtensionIFrame = (
+  iframe: HTMLIFrameElement,
+  extension: IHaexHubExtension,
+) => {
+  // Stelle sicher, dass der globale Handler registriert ist
+  registerGlobalMessageHandler()
+
+  // Warnung wenn Context Getters nicht initialisiert wurden
+  if (!contextGetters) {
+    console.warn(
+      'Context getters not initialized. Make sure useExtensionMessageHandler was called in setup context first.',
+    )
+  }
+
+  iframeRegistry.set(iframe, extension)
+}
+
+export const unregisterExtensionIFrame = (iframe: HTMLIFrameElement) => {
+  iframeRegistry.delete(iframe)
 }
 
 // ==========================================
@@ -243,14 +285,16 @@ async function handlePermissionsMethodAsync(
 // ==========================================
 
 async function handleContextMethodAsync(request: ExtensionRequest) {
-  const { currentTheme } = storeToRefs(useUiStore())
-  const { locale } = useI18n()
-
   switch (request.method) {
     case 'context.get':
+      if (!contextGetters) {
+        throw new Error(
+          'Context not initialized. Make sure useExtensionMessageHandler is called in a component.',
+        )
+      }
       return {
-        theme: currentTheme.value || 'system',
-        locale: locale.value,
+        theme: contextGetters.getTheme(),
+        locale: contextGetters.getLocale(),
         platform: detectPlatform(),
       }
 
@@ -264,4 +308,54 @@ function detectPlatform(): 'desktop' | 'mobile' | 'tablet' {
   if (width < 768) return 'mobile'
   if (width < 1024) return 'tablet'
   return 'desktop'
+}
+
+// ==========================================
+// Storage Methods
+// ==========================================
+
+async function handleStorageMethodAsync(
+  request: ExtensionRequest,
+  extension: IHaexHubExtension,
+) {
+  const storageKey = `ext_${extension.id}_`
+  console.log(`[HaexHub Storage] ${request.method} for extension ${extension.id}`)
+
+  switch (request.method) {
+    case 'storage.getItem': {
+      const key = request.params.key as string
+      return localStorage.getItem(storageKey + key)
+    }
+
+    case 'storage.setItem': {
+      const key = request.params.key as string
+      const value = request.params.value as string
+      localStorage.setItem(storageKey + key, value)
+      return null
+    }
+
+    case 'storage.removeItem': {
+      const key = request.params.key as string
+      localStorage.removeItem(storageKey + key)
+      return null
+    }
+
+    case 'storage.clear': {
+      // Remove only extension-specific keys
+      const keys = Object.keys(localStorage).filter(k => k.startsWith(storageKey))
+      keys.forEach(k => localStorage.removeItem(k))
+      return null
+    }
+
+    case 'storage.keys': {
+      // Return only extension-specific keys (without prefix)
+      const keys = Object.keys(localStorage)
+        .filter(k => k.startsWith(storageKey))
+        .map(k => k.substring(storageKey.length))
+      return keys
+    }
+
+    default:
+      throw new Error(`Unknown storage method: ${request.method}`)
+  }
 }

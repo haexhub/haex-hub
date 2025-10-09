@@ -80,6 +80,8 @@ export default defineNuxtConfig({
       redirectOn: 'root', // recommended
     },
     types: 'composition',
+
+    vueI18n: './i18n.config.ts',
   },
 
   zodI18n: {

@@ -3,4 +3,4 @@
 /**
  * Definiert Aktionen, die auf das Dateisystem angewendet werden können.
  */
-export type FsAction = "read" | "readwrite";
+export type FsAction = "read" | "readWrite";

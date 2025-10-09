@@ -81,6 +81,7 @@ pub fn run() {
             extension::is_extension_installed,
             extension::preview_extension,
             extension::remove_extension,
+            extension::remove_extension_by_full_id,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -3,4 +3,4 @@
 /**
  * Definiert Aktionen, die auf eine Datenbank angewendet werden können.
  */
-export type DbAction = "read" | "readwrite" | "create" | "delete" | "alterdrop";
+export type DbAction = "read" | "readWrite" | "create" | "delete" | "alterDrop";

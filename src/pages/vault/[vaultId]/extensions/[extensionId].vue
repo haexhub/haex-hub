@@ -1,46 +1,49 @@
 <template>
-  <div class="h-full flex flex-col">
+  <div class="h-screen w-screen flex flex-col">
     <!-- Tab Bar -->
-    <div class="flex gap-2 p-2 bg-default overflow-x-auto border-b">
-      <div
+    <div
+      class="flex gap-2 bg-base-200 overflow-x-auto border-b border-base-300 flex-shrink-0"
+    >
+      <UButton
         v-for="tab in tabsStore.sortedTabs"
         :key="tab.extension.id"
         :class="[
-          'btn btn-sm gap-2',
-          tabsStore.activeTabId === tab.extension.id
-            ? 'btn-primary'
-            : 'btn-ghost',
+          'gap-2',
+          tabsStore.activeTabId === tab.extension.id ? 'primary' : 'neutral',
         ]"
         @click="tabsStore.setActiveTab(tab.extension.id)"
       >
         {{ tab.extension.name }}
-        <button
-          class="ml-1 hover:text-error"
-          @click.stop="tabsStore.closeTab(tab.extension.id)"
-        >
-          <Icon
-            name="mdi:close"
-            size="16"
-          />
-        </button>
-      </div>
+
+        <template #trailing>
+          <div
+            class="ml-1 hover:text-error"
+            @click.stop="tabsStore.closeTab(tab.extension.id)"
+          >
+            <Icon
+              name="mdi:close"
+              size="16"
+            />
+          </div>
+        </template>
+      </UButton>
     </div>
 
     <!-- IFrame Container -->
-    <div class="flex-1 relative overflow-hidden">
+    <div class="flex-1 relative min-h-0">
       <div
         v-for="tab in tabsStore.sortedTabs"
         :key="tab.extension.id"
         :style="{ display: tab.isVisible ? 'block' : 'none' }"
-        class="w-full h-full"
+        class="absolute inset-0"
       >
         <iframe
           :ref="
             (el) => registerIFrame(tab.extension.id, el as HTMLIFrameElement)
           "
-          class="w-full h-full"
+          class="w-full h-full border-0"
           :src="getExtensionUrl(tab.extension)"
-          sandbox="allow-scripts"
+          sandbox="allow-scripts allow-storage-access-by-user-activation allow-forms"
           allow="autoplay; speaker-selection; encrypted-media;"
         />
       </div>
@@ -48,7 +51,7 @@
       <!-- Loading State -->
       <div
         v-if="tabsStore.tabCount === 0"
-        class="flex items-center justify-center h-full"
+        class="absolute inset-0 flex items-center justify-center"
       >
         <p>{{ t('loading') }}</p>
       </div>
@@ -57,9 +60,14 @@
 </template>
 
 <script setup lang="ts">
-import { useExtensionMessageHandler } from '~/composables/extensionMessageHandler'
+import {
+  useExtensionMessageHandler,
+  registerExtensionIFrame,
+  unregisterExtensionIFrame,
+} from '~/composables/extensionMessageHandler'
 import { useExtensionTabsStore } from '~/stores/extensions/tabs'
 import type { IHaexHubExtension } from '~/types/haexhub'
+import { platform } from '@tauri-apps/plugin-os'
 
 definePageMeta({
   name: 'haexExtension',
@@ -79,43 +87,77 @@ watchEffect(() => {
   }
 })
 
-const messageHandlers = new Map<string, boolean>()
-
-watch(
-  () => tabsStore.openTabs,
-  (tabs) => {
-    tabs.forEach((tab, id) => {
-      if (tab.iframe && !messageHandlers.has(id)) {
-        const iframeRef = ref(tab.iframe)
-        const extensionRef = computed(() => tab.extension)
-        useExtensionMessageHandler(iframeRef, extensionRef)
-        messageHandlers.set(id, true)
-      }
-    })
-  },
-  { deep: true },
-)
-
-// IFrame Registrierung und Message Handler Setup
-/* const iframeRefs = new Map<string, HTMLIFrameElement>()
-const setupMessageHandlers = new Set<string>() */
+// Setup global message handler EINMAL im Setup-Kontext
+// Dies registriert den globalen Event Listener
+const dummyIframeRef = ref<HTMLIFrameElement | null>(null)
+const dummyExtensionRef = computed(() => null)
+useExtensionMessageHandler(dummyIframeRef, dummyExtensionRef)
 
 const registerIFrame = (extensionId: string, el: HTMLIFrameElement | null) => {
   if (!el) return
+
+  // Registriere IFrame im Store
   tabsStore.registerIFrame(extensionId, el)
+
+  // Registriere IFrame im globalen Message Handler Registry
+  const tab = tabsStore.openTabs.get(extensionId)
+  if (tab?.extension) {
+    registerExtensionIFrame(el, tab.extension)
+  }
 }
+
+// Cleanup wenn Tabs geschlossen werden
+watch(
+  () => tabsStore.openTabs,
+  (newTabs, oldTabs) => {
+    if (oldTabs) {
+      // Finde gelöschte Tabs
+      oldTabs.forEach((tab, id) => {
+        if (!newTabs.has(id) && tab.iframe) {
+          unregisterExtensionIFrame(tab.iframe)
+        }
+      })
+    }
+  },
+  { deep: true },
+)
+const os = await platform()
+
 // Extension URL generieren
 const getExtensionUrl = (extension: IHaexHubExtension) => {
-  const info = { id: extension.id, version: extension.version }
+  // Extract key_hash from full_extension_id (everything before first underscore)
+  const firstUnderscoreIndex = extension.id.indexOf('_')
+  if (firstUnderscoreIndex === -1) {
+    console.error('Invalid full_extension_id format:', extension.id)
+    return ''
+  }
+
+  const keyHash = extension.id.substring(0, firstUnderscoreIndex)
+
+  const info = {
+    key_hash: keyHash,
+    name: extension.name,
+    version: extension.version,
+  }
+
   const jsonString = JSON.stringify(info)
   const bytes = new TextEncoder().encode(jsonString)
-  const encoded = Array.from(bytes)
+  const encodedInfo = Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
 
-  const url = `haex-extension://${encoded}/index.html`
-  console.log('Extension URL:', url, 'for', extension.name)
-  return url
+  // 'android', 'ios', 'windows' etc.
+  let schemeUrl: string
+
+  if (os === 'android' || os === 'windows') {
+    // Android/Windows: http://<scheme>.localhost/path
+    schemeUrl = `http://haex-extension.localhost/${encodedInfo}/index.html`
+  } else {
+    // macOS/Linux/iOS: Klassisch scheme://localhost/path
+    schemeUrl = `haex-extension://localhost/${encodedInfo}/index.html`
+  }
+
+  return schemeUrl
 }
 
 // Context Changes an alle Tabs broadcasten
