@@ -68,6 +68,7 @@ import {
 import { useExtensionTabsStore } from '~/stores/extensions/tabs'
 import type { IHaexHubExtension } from '~/types/haexhub'
 import { platform } from '@tauri-apps/plugin-os'
+import { EXTENSION_PROTOCOL_NAME, EXTENSION_PROTOCOL_PREFIX } from '~/config/constants'
 
 definePageMeta({
   name: 'haexExtension',
@@ -151,10 +152,10 @@ const getExtensionUrl = (extension: IHaexHubExtension) => {
 
   if (os === 'android' || os === 'windows') {
     // Android/Windows: http://<scheme>.localhost/path
-    schemeUrl = `http://haex-extension.localhost/${encodedInfo}/index.html`
+    schemeUrl = `http://${EXTENSION_PROTOCOL_NAME}.localhost/${encodedInfo}/index.html`
   } else {
     // macOS/Linux/iOS: Klassisch scheme://localhost/path
-    schemeUrl = `haex-extension://localhost/${encodedInfo}/index.html`
+    schemeUrl = `${EXTENSION_PROTOCOL_PREFIX}localhost/${encodedInfo}/index.html`
   }
 
   return schemeUrl

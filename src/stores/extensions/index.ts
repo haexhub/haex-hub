@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import { readFile } from '@tauri-apps/plugin-fs'
+import { EXTENSION_PROTOCOL_PREFIX } from '~/config/constants'
 
 import type {
   IHaexHubExtension,
@@ -86,7 +87,7 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
       currentExtension.value.version,
     )
 
-    return `haex-extension://localhost/${encodedInfo}/index.html`
+    return `${EXTENSION_PROTOCOL_PREFIX}localhost/${encodedInfo}/index.html`
   })
 
   /* const getExtensionPathAsync = async (

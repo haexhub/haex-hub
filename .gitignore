@@ -25,3 +25,4 @@ dist-ssr
 .nuxt
 src-tauri/target
 nogit*
+.claude

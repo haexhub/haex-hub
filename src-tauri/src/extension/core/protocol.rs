@@ -6,7 +6,6 @@ use crate::AppState;
 use mime;
 use serde::Deserialize;
 use serde::Serialize;
-use std::collections::HashMap;
 use std::fmt;
 use std::fs;
 use std::path::PathBuf;
@@ -15,9 +14,11 @@ use tauri::http::Uri;
 use tauri::http::{Request, Response};
 use tauri::{AppHandle, State};
 
-// Cache for modified HTML files (extension_id -> modified content)
+// Extension protocol name constant
+pub const EXTENSION_PROTOCOL_NAME: &str = "haex-extension";
+
+// Cache for extension info (used for asset loading without origin header)
 lazy_static::lazy_static! {
-    static ref HTML_CACHE: Mutex<HashMap<String, Vec<u8>>> = Mutex::new(HashMap::new());
     static ref EXTENSION_CACHE: Mutex<Option<ExtensionInfo>> = Mutex::new(None);
 }
 
@@ -86,7 +87,7 @@ impl From<serde_json::Error> for DataProcessingError {
 
 pub fn resolve_secure_extension_asset_path(
     app_handle: &AppHandle,
-    state: State<AppState>,
+    state: &State<AppState>,
     key_hash: &str,
     extension_name: &str,
     extension_version: &str,
@@ -179,10 +180,10 @@ pub fn extension_protocol_handler(
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
 
-    // Only allow same-protocol requests (haex-extension://) or tauri origin
+    // Only allow same-protocol requests or tauri origin
     // For null/empty origin (initial load), use wildcard
-    let allowed_origin = if origin.starts_with("haex-extension://") || origin == get_tauri_origin()
-    {
+    let protocol_prefix = format!("{}://", EXTENSION_PROTOCOL_NAME);
+    let allowed_origin = if origin.starts_with(&protocol_prefix) || origin == get_tauri_origin() {
         origin
     } else if origin.is_empty() || origin == "null" {
         "*" // Allow initial load without origin
@@ -217,19 +218,6 @@ pub fn extension_protocol_handler(
     println!("Origin: {}", origin);
     println!("Referer: {}", referer);
 
-    /* let encoded_info =
-    match parse_encoded_info_from_origin_or_uri_or_referer(&origin, uri_ref, &referer) {
-        Ok(info) => info,
-        Err(e) => {
-            eprintln!("Fehler beim Parsen des Origin für Extension-Info: {}", e);
-            return Response::builder()
-                .status(400)
-                .header("Access-Control-Allow-Origin", allowed_origin)
-                .body(Vec::from(format!("Ungültiger Origin: {}", e)))
-                .map_err(|e| e.into());
-        }
-    }; */
-
     let info =
         match parse_encoded_info_from_origin_or_uri_or_referer_or_cache(&origin, uri_ref, &referer)
         {
@@ -261,30 +249,12 @@ pub fn extension_protocol_handler(
     let resource_segments: Vec<&str> = segments_iter.collect();
     let raw_asset_path = resource_segments.join("/");
 
-    // Handle SPA routing - serve index.html for all non-asset paths
+    // Simple asset loading: if path is empty, serve index.html, otherwise try to load the asset
+    // This is framework-agnostic and lets the file system determine if it exists
     let asset_to_load = if raw_asset_path.is_empty() {
         "index.html"
-    } else if raw_asset_path.starts_with("_nuxt/")
-        || raw_asset_path.ends_with(".js")
-        || raw_asset_path.ends_with(".css")
-        || raw_asset_path.ends_with(".json")
-        || raw_asset_path.ends_with(".ico")
-        || raw_asset_path.ends_with(".txt")
-        || raw_asset_path.ends_with(".svg")
-        || raw_asset_path.ends_with(".png")
-        || raw_asset_path.ends_with(".jpg")
-        || raw_asset_path.ends_with(".jpeg")
-        || raw_asset_path.ends_with(".gif")
-        || raw_asset_path.ends_with(".woff")
-        || raw_asset_path.ends_with(".woff2")
-        || raw_asset_path.ends_with(".ttf")
-        || raw_asset_path.ends_with(".eot")
-    {
-        // Serve actual asset
-        &raw_asset_path
     } else {
-        // SPA fallback - serve index.html for routes
-        "index.html"
+        &raw_asset_path
     };
 
     println!("Path: {}", path_str);
@@ -561,7 +531,7 @@ pub fn extension_protocol_handler(
 
     let absolute_secure_path = resolve_secure_extension_asset_path(
         app_handle,
-        state,
+        &state,
         &info.key_hash,
         &info.name,
         &info.version,
@@ -573,307 +543,13 @@ pub fn extension_protocol_handler(
 
     if absolute_secure_path.exists() && absolute_secure_path.is_file() {
         match fs::read(&absolute_secure_path) {
-            Ok(mut content) => {
+            Ok(content) => {
                 let mime_type = mime_guess::from_path(&absolute_secure_path)
                     .first_or(mime::APPLICATION_OCTET_STREAM)
                     .to_string();
 
-                // Für index.html – injiziere <base> Tag + localStorage-Polyfill
-                if asset_to_load == "index.html" && mime_type.contains("html") {
-                    // Cache-Key erstellen (extension-host + asset)
-                    let host = uri_ref
-                        .host()
-                        .map_or("unknown".to_string(), |h| h.to_string());
-                    let cache_key = format!("{}_{}", host, asset_to_load);
-
-                    // Cache checken (aus deinem alten Code)
-                    if let Ok(cache_guard) = HTML_CACHE.lock() {
-                        if let Some(cached_content) = cache_guard.get(&cache_key) {
-                            println!("Serving cached HTML for: {}", cache_key);
-                            let content_length = cached_content.len();
-                            return Response::builder()
-                                .status(200)
-                                .header("Content-Type", &mime_type)
-                                .header("Content-Length", content_length.to_string())
-                                .header("Accept-Ranges", "bytes")
-                                .header("X-HaexHub-Cache", "HIT")
-                                .header("Access-Control-Allow-Origin", allowed_origin)
-                                .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-                                .header("Access-Control-Allow-Headers", "*")
-                                .header("Access-Control-Allow-Credentials", "true")
-                                .body(cached_content.clone())
-                                .map_err(|e| e.into());
-                        }
-                    }
-
-                    // Nicht gecacht: Modifiziere HTML
-                    if let Ok(html_str) = String::from_utf8(content.clone()) {
-                        // 1. Polyfill injizieren (als ERSTES in <head>)
-                        let polyfill_script = r#"<script>
-(function() {
-  'use strict';
-
-    console.log('[HaexHub] Storage Polyfill loading immediately');
-
-  // Test ob localStorage verfügbar ist
-  let localStorageWorks = false;
-  try {
-    const testKey = '__ls_test__';
-    localStorage.setItem(testKey, testKey);
-    localStorage.removeItem(testKey);
-    localStorageWorks = true;
-  } catch (e) {
-    console.warn('[HaexHub] localStorage blocked – using in-memory fallback');
-  }
-
-  // Wenn blockiert: Ersetze mit In-Memory Storage
-  if (!localStorageWorks) {
-    const lsStorage = new Map();
-    const localStoragePoly = {
-      getItem: function(key) {
-        return lsStorage.get(key) || null;
-      },
-      setItem: function(key, value) {
-        lsStorage.set(key, String(value));
-      },
-      removeItem: function(key) {
-        lsStorage.delete(key);
-      },
-      clear: function() {
-        lsStorage.clear();
-      },
-      get length() {
-        return lsStorage.size;
-      },
-      key: function(index) {
-        return Array.from(lsStorage.keys())[index] || null;
-      }
-    };
-
-    try {
-      Object.defineProperty(window, 'localStorage', {
-        value: localStoragePoly,
-        writable: true,
-        configurable: true
-      });
-    } catch (e) {
-      // Fallback: Direct assignment
-      window.localStorage = localStoragePoly;
-    }
-  }
-
-  // SessionStorage Polyfill (immer ersetzen)
-  try {
-    const sessionStoragePoly = {
-      getItem: function(key) { return null; },
-      setItem: function() {},
-      removeItem: function() {},
-      clear: function() {},
-      get length() { return 0; },
-      key: function() { return null; }
-    };
-
-    Object.defineProperty(window, 'sessionStorage', {
-      value: sessionStoragePoly,
-      writable: true,
-      configurable: true
-    });
-  } catch (e) {
-    // Fallback: Direct assignment
-    window.sessionStorage = {
-      getItem: function(key) { return null; },
-      setItem: function() {},
-      removeItem: function() {},
-      clear: function() {},
-      get length() { return 0; },
-      key: function() { return null; }
-    };
-  }
-
-  // Cookie Polyfill - Test if cookies are available
-  let cookiesWork = false;
-  try {
-    document.cookie = '__cookie_test__=1';
-    cookiesWork = document.cookie.indexOf('__cookie_test__') !== -1;
-    document.cookie = '__cookie_test__=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-  } catch (e) {
-    console.warn('[HaexHub] Cookies blocked – using in-memory fallback');
-  }
-
-  if (!cookiesWork) {
-    const cookieStore = new Map();
-
-    const parseCookie = function(str) {
-      return str.split(';').reduce((acc, pair) => {
-        const [key, value] = pair.trim().split('=');
-        if (key) acc[key] = value || '';
-        return acc;
-      }, {});
-    };
-
-    const serializeCookie = function(key, value, options = {}) {
-      let cookie = `${key}=${value}`;
-
-      if (options.expires) {
-        cookie += `; expires=${options.expires}`;
-      }
-      if (options.path) {
-        cookie += `; path=${options.path}`;
-      }
-      if (options.domain) {
-        cookie += `; domain=${options.domain}`;
-      }
-      if (options.secure) {
-        cookie += '; secure';
-      }
-      if (options.httpOnly) {
-        cookie += '; httponly';
-      }
-      if (options.sameSite) {
-        cookie += `; samesite=${options.sameSite}`;
-      }
-
-      return cookie;
-    };
-
-    Object.defineProperty(document, 'cookie', {
-      get: function() {
-        const cookies = [];
-        cookieStore.forEach((value, key) => {
-          cookies.push(`${key}=${value}`);
-        });
-        return cookies.join('; ');
-      },
-      set: function(cookieString) {
-        const parts = cookieString.split(';').map(p => p.trim());
-        const [keyValue] = parts;
-        const [key, value] = keyValue.split('=');
-
-        if (!key) return;
-
-        // Parse options
-        const options = {};
-        for (let i = 1; i < parts.length; i++) {
-          const [optKey, optValue] = parts[i].split('=');
-          options[optKey.toLowerCase()] = optValue || true;
-        }
-
-        // Check for deletion (expires in past)
-        if (options.expires) {
-          const expiresDate = new Date(options.expires);
-          if (expiresDate < new Date()) {
-            cookieStore.delete(key);
-            return;
-          }
-        }
-
-        // Check for max-age=0 deletion
-        if (options['max-age'] === '0' || options['max-age'] === 0) {
-          cookieStore.delete(key);
-          return;
-        }
-
-        // Store cookie
-        cookieStore.set(key, value || '');
-      },
-      configurable: true
-    });
-
-    console.log('[HaexHub] Cookie polyfill installed');
-  }
-
-  // HISTORY PATCH - läuft auch sofort
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('[HaexHub] History Patch loading');
-
-    // HISTORY PATCH (erweitert für Nuxt)
-    const originalPushState = history.pushState;
-    const originalReplaceState = history.replaceState;
-    let skipNextPush = false;
-    let skipNextReplace = false;
-
-    history.pushState = function(state, title, url) {
-      console.log('[HaexHub] pushState called:', url, 'skip:', skipNextPush);
-
-      if (skipNextPush) {
-        skipNextPush = false;
-        console.log('[HaexHub] pushState skipped');
-        return;
-      }
-
-      try {
-        return originalPushState.call(this, state, title, url);
-      } catch (e) {
-        if (e.name === 'SecurityError') {
-          // Remove duplicate /#/ prefix
-          let hashUrl = url.replace(/^\/#/, '');
-          hashUrl = hashUrl.startsWith('#') ? hashUrl : '#' + hashUrl;
-          console.log('[HaexHub] SecurityError - setting hash to:', hashUrl);
-          skipNextPush = true;
-          window.location.hash = hashUrl.replace(/^#/, '');
-          return;  // Silent
-        }
-        throw e;
-      }
-    };
-
-    history.replaceState = function(state, title, url) {
-      console.log('[HaexHub] replaceState called:', url, 'skip:', skipNextReplace);
-
-      if (skipNextReplace) {
-        skipNextReplace = false;
-        console.log('[HaexHub] replaceState skipped');
-        return;
-      }
-
-      try {
-        return originalReplaceState.call(this, state, title, url);
-      } catch (e) {
-        if (e.name === 'SecurityError') {
-          // Remove duplicate /#/ prefix
-          let hashUrl = url.replace(/^\/#/, '');
-          hashUrl = hashUrl.startsWith('#') ? hashUrl : '#' + hashUrl;
-          console.log('[HaexHub] SecurityError - setting hash to:', hashUrl);
-          skipNextReplace = true;
-          window.location.hash = hashUrl.replace(/^#/, '');
-          return;  // Silent
-        }
-        throw e;
-      }
-    };
-
-    console.log('[HaexHub] Polyfill loaded – Storage & History patched');
-  }, { once: true });  // DOMContentLoaded only once
-})();
-</script>"#;
-
-                        // 2. Base-Tag erstellen
-                        let base_tag = format!(r#"<base href="/{}/">"#, encode_hex_for_log(&info));
-
-                        // 3. Beide in <head> injizieren: Polyfill zuerst, dann Base-Tag
-                        let modified_html = if let Some(head_pos) = html_str.find("<head>") {
-                            let insert_pos = head_pos + 6; // Nach <head>
-                            format!(
-                                "{}{}{}{}",
-                                &html_str[..insert_pos],
-                                polyfill_script,
-                                base_tag,
-                                &html_str[insert_pos..]
-                            )
-                        } else {
-                            // Kein <head> gefunden - prepend
-                            format!("{}{}{}", polyfill_script, base_tag, html_str)
-                        };
-
-                        content = modified_html.into_bytes();
-
-                        // Cache die modifizierte HTML (aus deinem alten Code)
-                        if let Ok(mut cache_guard) = HTML_CACHE.lock() {
-                            cache_guard.insert(cache_key, content.clone());
-                            println!("Cached modified HTML for future requests");
-                        }
-                    }
-                }
+                // Note: Base tag and polyfills are now injected by the SDK at runtime
+                // No server-side HTML modification needed
 
                 let content_length = content.len();
                 println!(
@@ -887,14 +563,6 @@ pub fn extension_protocol_handler(
                     .header("Content-Type", &mime_type)
                     .header("Content-Length", content_length.to_string())
                     .header("Accept-Ranges", "bytes")
-                    .header(
-                        "X-HaexHub-Cache",
-                        if asset_to_load == "index.html" && mime_type.contains("html") {
-                            "MISS"
-                        } else {
-                            "N/A"
-                        },
-                    )
                     .header("Access-Control-Allow-Origin", allowed_origin)
                     .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
                     .header("Access-Control-Allow-Headers", "*")
@@ -925,6 +593,51 @@ pub fn extension_protocol_handler(
             }
         }
     } else {
+        // Asset not found - try index.html fallback for SPA routing
+        // This allows client-side routing to work (e.g., /settings -> index.html)
+        if asset_to_load != "index.html" {
+            eprintln!(
+                "Asset nicht gefunden: {}, versuche index.html fallback für SPA routing",
+                absolute_secure_path.display()
+            );
+
+            let index_path = resolve_secure_extension_asset_path(
+                app_handle,
+                &state,
+                &info.key_hash,
+                &info.name,
+                &info.version,
+                "index.html",
+            )?;
+
+            if index_path.exists() && index_path.is_file() {
+                match fs::read(&index_path) {
+                    Ok(content) => {
+                        let mime_type = "text/html";
+
+                        // Note: Base tag and polyfills are injected by SDK at runtime
+
+                        let content_length = content.len();
+                        return Response::builder()
+                            .status(200)
+                            .header("Content-Type", mime_type)
+                            .header("Content-Length", content_length.to_string())
+                            .header("Accept-Ranges", "bytes")
+                            .header("Access-Control-Allow-Origin", allowed_origin)
+                            .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                            .header("Access-Control-Allow-Headers", "*")
+                            .header("Access-Control-Allow-Credentials", "true")
+                            .body(content)
+                            .map_err(|e| e.into());
+                    }
+                    Err(_) => {
+                        // Fall through to 404
+                    }
+                }
+            }
+        }
+
+        // No fallback available - return 404
         eprintln!(
             "Asset nicht gefunden oder ist kein File: {}",
             absolute_secure_path.display()

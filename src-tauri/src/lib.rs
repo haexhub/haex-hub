@@ -17,10 +17,10 @@ pub struct AppState {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let protocol_name = "haex-extension";
+    use extension::core::EXTENSION_PROTOCOL_NAME;
 
     tauri::Builder::default()
-        .register_uri_scheme_protocol(protocol_name, move |context, request| {
+        .register_uri_scheme_protocol(EXTENSION_PROTOCOL_NAME, move |context, request| {
             // Hole den AppState aus dem Context
             let app_handle = context.app_handle();
             let state = app_handle.state::<AppState>();
