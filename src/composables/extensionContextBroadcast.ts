@@ -1,17 +1,22 @@
 // composables/extensionContextBroadcast.ts
+// NOTE: This composable is deprecated. Use tabsStore.broadcastToAllTabs() instead.
+// Keeping for backwards compatibility.
+
+import { getExtensionWindow } from './extensionMessageHandler'
+
 export const useExtensionContextBroadcast = () => {
-  // Globaler State für alle aktiven IFrames
-  const extensionIframes = useState<Set<HTMLIFrameElement>>(
-    'extension-iframes',
+  // Globaler State für Extension IDs statt IFrames
+  const extensionIds = useState<Set<string>>(
+    'extension-ids',
     () => new Set(),
   )
 
-  const registerExtensionIframe = (iframe: HTMLIFrameElement) => {
-    extensionIframes.value.add(iframe)
+  const registerExtensionIframe = (_iframe: HTMLIFrameElement, extensionId: string) => {
+    extensionIds.value.add(extensionId)
   }
 
-  const unregisterExtensionIframe = (iframe: HTMLIFrameElement) => {
-    extensionIframes.value.delete(iframe)
+  const unregisterExtensionIframe = (_iframe: HTMLIFrameElement, extensionId: string) => {
+    extensionIds.value.delete(extensionId)
   }
 
   const broadcastContextChange = (context: {
@@ -25,8 +30,11 @@ export const useExtensionContextBroadcast = () => {
       timestamp: Date.now(),
     }
 
-    extensionIframes.value.forEach((iframe) => {
-      iframe.contentWindow?.postMessage(message, '*')
+    extensionIds.value.forEach((extensionId) => {
+      const win = getExtensionWindow(extensionId)
+      if (win) {
+        win.postMessage(message, '*')
+      }
     })
   }
 
@@ -40,8 +48,11 @@ export const useExtensionContextBroadcast = () => {
       timestamp: Date.now(),
     }
 
-    extensionIframes.value.forEach((iframe) => {
-      iframe.contentWindow?.postMessage(message, '*')
+    extensionIds.value.forEach((extensionId) => {
+      const win = getExtensionWindow(extensionId)
+      if (win) {
+        win.postMessage(message, '*')
+      }
     })
   }
 

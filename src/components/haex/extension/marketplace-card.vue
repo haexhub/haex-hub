@@ -57,10 +57,17 @@
           {{ extension.description }}
         </p>
 
-        <!-- Stats -->
+        <!-- Stats and Status -->
         <div
           class="flex items-center gap-4 mt-3 text-sm text-gray-500 dark:text-gray-400"
         >
+          <div
+            v-if="isInstalled"
+            class="flex items-center gap-1 text-success font-medium"
+          >
+            <UIcon name="i-heroicons-check-circle-solid" />
+            <span>{{ t('installed') }}</span>
+          </div>
           <div
             v-if="extension.downloads"
             class="flex items-center gap-1"

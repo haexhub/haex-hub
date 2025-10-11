@@ -20,10 +20,9 @@ export interface IHaexHubExtensionManifest {
   }
 }
 
-export interface IHaexHubExtensionLink extends IHaexHubExtension {
-  installed: boolean
-}
-
+/**
+ * Installed extension from database/backend
+ */
 export interface IHaexHubExtension {
   id: string
   name: string
@@ -31,4 +30,20 @@ export interface IHaexHubExtension {
   author: string | null
   icon: string | null
   enabled: boolean
+  description: string | null
+  homepage: string | null
+}
+
+/**
+ * Marketplace extension with additional metadata
+ * Extends IHaexHubExtension with marketplace-specific fields
+ */
+export interface IMarketplaceExtension extends Omit<IHaexHubExtension, 'enabled'> {
+  downloads: number
+  rating: number
+  verified: boolean
+  tags: string[]
+  category: string
+  downloadUrl: string
+  isInstalled: boolean
 }

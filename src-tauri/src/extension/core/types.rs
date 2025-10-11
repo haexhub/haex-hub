@@ -47,7 +47,9 @@ pub fn get_tauri_origin() -> String {
 
     #[cfg(target_os = "android")]
     {
-        "tauri://localhost".to_string()
+        // On Android, with http://*.localhost URLs, the origin is "null"
+        // This is a browser security feature for local/file protocols
+        "null".to_string()
     }
 
     #[cfg(target_os = "ios")]

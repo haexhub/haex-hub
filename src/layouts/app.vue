@@ -28,7 +28,7 @@
       </template>
 
       <template #links>
-        <HaexMenuApplications :block="isSmallScreen" />
+        <HaexExtensionLauncher :block="isSmallScreen" />
         <UiDropdownVault :block="isSmallScreen" />
       </template>
     </UPageHeader>

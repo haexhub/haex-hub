@@ -27,14 +27,34 @@
           </div>
         </template>
       </UButton>
+
+      <!-- Console Tab -->
+      <UButton
+        :class="['gap-2', showConsole ? 'primary' : 'neutral']"
+        @click="showConsole = !showConsole"
+      >
+        <Icon
+          name="mdi:console"
+          size="16"
+        />
+        Console
+        <UBadge
+          v-if="visibleLogs.length > 0"
+          size="xs"
+          color="primary"
+        >
+          {{ visibleLogs.length }}
+        </UBadge>
+      </UButton>
     </div>
 
     <!-- IFrame Container -->
     <div class="flex-1 relative min-h-0">
+      <!-- Extension IFrames -->
       <div
         v-for="tab in tabsStore.sortedTabs"
         :key="tab.extension.id"
-        :style="{ display: tab.isVisible ? 'block' : 'none' }"
+        :style="{ display: tab.isVisible && !showConsole ? 'block' : 'none' }"
         class="absolute inset-0"
       >
         <iframe
@@ -46,6 +66,81 @@
           sandbox="allow-scripts allow-storage-access-by-user-activation allow-forms"
           allow="autoplay; speaker-selection; encrypted-media;"
         />
+      </div>
+
+      <!-- Console View -->
+      <div
+        v-if="showConsole"
+        class="absolute inset-0 bg-base-100 flex flex-col"
+      >
+        <!-- Console Header -->
+        <div
+          class="p-2 border-b border-base-300 flex justify-between items-center"
+        >
+          <h3 class="font-semibold">Console Output</h3>
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            @click="$clearConsoleLogs()"
+          >
+            Clear
+          </UButton>
+        </div>
+
+        <!-- Console Logs -->
+        <div class="flex-1 overflow-y-auto p-2 font-mono text-sm">
+          <!-- Info banner if logs are limited -->
+          <div
+            v-if="consoleLogs.length > maxVisibleLogs"
+            class="mb-2 p-2 bg-warning/10 border border-warning/30 rounded text-xs"
+          >
+            Showing last {{ maxVisibleLogs }} of {{ consoleLogs.length }} logs
+          </div>
+
+          <!-- Simple log list instead of accordion for better performance -->
+          <div
+            v-if="visibleLogs.length > 0"
+            class="space-y-1"
+          >
+            <div
+              v-for="(log, index) in visibleLogs"
+              :key="index"
+              class="border-b border-base-200 pb-2"
+            >
+              <!-- Log header with timestamp and level -->
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-xs opacity-60">
+                  [{{ log.timestamp }}] [{{ log.level.toUpperCase() }}]
+                </span>
+                <UButton
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  icon="i-heroicons-clipboard-document"
+                  @click="copyToClipboard(log.message)"
+                />
+              </div>
+              <!-- Log message -->
+              <pre
+                :class="[
+                  'text-xs whitespace-pre-wrap break-all',
+                  log.level === 'error' ? 'text-error' : '',
+                  log.level === 'warn' ? 'text-warning' : '',
+                  log.level === 'info' ? 'text-info' : '',
+                  log.level === 'debug' ? 'text-base-content/70' : '',
+                ]"
+              >{{ log.message }}</pre>
+            </div>
+          </div>
+
+          <div
+            v-if="visibleLogs.length === 0"
+            class="text-center text-base-content/50 py-8"
+          >
+            No console messages yet
+          </div>
+        </div>
       </div>
 
       <!-- Loading State -->
@@ -68,7 +163,10 @@ import {
 import { useExtensionTabsStore } from '~/stores/extensions/tabs'
 import type { IHaexHubExtension } from '~/types/haexhub'
 import { platform } from '@tauri-apps/plugin-os'
-import { EXTENSION_PROTOCOL_NAME, EXTENSION_PROTOCOL_PREFIX } from '~/config/constants'
+import {
+  EXTENSION_PROTOCOL_NAME,
+  EXTENSION_PROTOCOL_PREFIX,
+} from '~/config/constants'
 
 definePageMeta({
   name: 'haexExtension',
@@ -77,6 +175,23 @@ definePageMeta({
 const { t } = useI18n()
 
 const tabsStore = useExtensionTabsStore()
+
+// Console logging - use global logs from plugin
+const { $consoleLogs, $clearConsoleLogs } = useNuxtApp()
+const showConsole = ref(false)
+const maxVisibleLogs = ref(100) // Limit for performance on mobile
+const consoleLogs = $consoleLogs as Ref<
+  Array<{
+    timestamp: string
+    level: 'log' | 'info' | 'warn' | 'error' | 'debug'
+    message: string
+  }>
+>
+
+// Only show last N logs for performance
+const visibleLogs = computed(() => {
+  return consoleLogs.value.slice(-maxVisibleLogs.value)
+})
 
 // Extension aus Route öffnen
 //const extensionId = computed(() => route.params.extensionId as string)
@@ -94,8 +209,23 @@ const dummyIframeRef = ref<HTMLIFrameElement | null>(null)
 const dummyExtensionRef = computed(() => null)
 useExtensionMessageHandler(dummyIframeRef, dummyExtensionRef)
 
+// Track which iframes have been registered to prevent duplicate registrations
+const registeredIFrames = new WeakSet<HTMLIFrameElement>()
+
 const registerIFrame = (extensionId: string, el: HTMLIFrameElement | null) => {
   if (!el) return
+
+  // Prevent duplicate registration (Vue calls ref functions on every render)
+  if (registeredIFrames.has(el)) {
+    return
+  }
+
+  console.log('[Vue Debug] ========== registerIFrame called ==========')
+  console.log('[Vue Debug] Extension ID:', extensionId)
+  console.log('[Vue Debug] Element:', 'HTMLIFrameElement')
+
+  // Mark as registered
+  registeredIFrames.add(el)
 
   // Registriere IFrame im Store
   tabsStore.registerIFrame(extensionId, el)
@@ -103,9 +233,46 @@ const registerIFrame = (extensionId: string, el: HTMLIFrameElement | null) => {
   // Registriere IFrame im globalen Message Handler Registry
   const tab = tabsStore.openTabs.get(extensionId)
   if (tab?.extension) {
+    console.log('[Vue Debug] Registering iframe in message handler for:', tab.extension.name)
     registerExtensionIFrame(el, tab.extension)
+    console.log('[Vue Debug] Registration complete!')
+  } else {
+    console.error('[Vue Debug] ❌ No tab found for extension ID:', extensionId)
+  }
+  console.log('[Vue Debug] ========================================')
+}
+
+// Listen for console messages from extensions (via postMessage)
+const handleExtensionConsole = (event: MessageEvent) => {
+  if (event.data?.type === 'console.forward') {
+    const { timestamp, level, message } = event.data.data
+    consoleLogs.value.push({
+      timestamp,
+      level,
+      message: `[Extension] ${message}`,
+    })
+
+    // Limit to last 1000 logs
+    if (consoleLogs.value.length > 1000) {
+      consoleLogs.value = consoleLogs.value.slice(-1000)
+    }
   }
 }
+
+onMounted(() => {
+  window.addEventListener('message', handleExtensionConsole)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('message', handleExtensionConsole)
+
+  // Unregister all iframes when the page unmounts
+  tabsStore.openTabs.forEach((tab) => {
+    if (tab.iframe) {
+      unregisterExtensionIFrame(tab.iframe)
+    }
+  })
+})
 
 // Cleanup wenn Tabs geschlossen werden
 watch(
@@ -184,11 +351,16 @@ watch([currentTheme, locale], () => {
   })
 })
 
-// Cleanup beim Verlassen
-onBeforeUnmount(() => {
-  // Optional: Alle Tabs schließen oder offen lassen
-  // tabsStore.closeAllTabs()
-})
+// Copy to clipboard function
+const copyToClipboard = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    // Optional: Show success toast
+    console.log('Copied to clipboard')
+  } catch (err) {
+    console.error('Failed to copy:', err)
+  }
+}
 </script>
 
 <i18n lang="yaml">

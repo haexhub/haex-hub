@@ -12,6 +12,10 @@ interface ExtensionRequest {
 // Globaler Handler - nur einmal registriert
 let globalHandlerRegistered = false
 const iframeRegistry = new Map<HTMLIFrameElement, IHaexHubExtension>()
+// Map event.source (WindowProxy) to extension for sandbox-compatible matching
+const sourceRegistry = new Map<Window, IHaexHubExtension>()
+// Reverse map: extension ID to Window for broadcasting
+const extensionToWindowMap = new Map<string, Window>()
 
 // Store context values that need to be accessed outside setup
 let contextGetters: {
@@ -22,35 +26,43 @@ let contextGetters: {
 const registerGlobalMessageHandler = () => {
   if (globalHandlerRegistered) return
 
-  window.addEventListener('message', async (event: MessageEvent) => {
-    // Finde die Extension für dieses IFrame
-    let extension: IHaexHubExtension | undefined
-    let sourceIframe: HTMLIFrameElement | undefined
+  console.log('[Parent Debug] ⭐ NEW VERSION LOADED - NO MORE CONTENTWINDOW ⭐')
 
-    for (const [iframe, ext] of iframeRegistry.entries()) {
-      if (event.source === iframe.contentWindow) {
-        extension = ext
-        sourceIframe = iframe
-        break
-      }
+  window.addEventListener('message', async (event: MessageEvent) => {
+    // Ignore console.forward messages - they're handled elsewhere
+    if (event.data?.type === 'console.forward') {
+      return
     }
 
-    if (!extension || !sourceIframe) {
+    // Finde die Extension für dieses event.source (sandbox-compatible)
+    let extension = sourceRegistry.get(event.source as Window)
+
+    // If not registered yet, register on first message from this source
+    if (!extension && iframeRegistry.size === 1) {
+      // If we only have one iframe, assume this message is from it
+      const entry = Array.from(iframeRegistry.entries())[0]
+      if (entry) {
+        const [_, ext] = entry
+        const windowSource = event.source as Window
+        sourceRegistry.set(windowSource, ext)
+        extensionToWindowMap.set(ext.id, windowSource)
+        extension = ext
+      }
+    } else if (extension && !extensionToWindowMap.has(extension.id)) {
+      // Also register in reverse map for broadcasting
+      extensionToWindowMap.set(extension.id, event.source as Window)
+    }
+
+    if (!extension) {
       return // Message ist nicht von einem registrierten IFrame
     }
 
     const request = event.data as ExtensionRequest
 
     if (!request.id || !request.method) {
-      console.error('Invalid extension request:', request)
+      console.error('[ExtensionHandler] Invalid extension request:', request)
       return
     }
-
-    console.log(
-      `[HaexHub] ${extension.name} request:`,
-      request.method,
-      request.params,
-    )
 
     try {
       let result: unknown
@@ -73,17 +85,25 @@ const registerGlobalMessageHandler = () => {
         throw new Error(`Unknown method: ${request.method}`)
       }
 
-      sourceIframe.contentWindow?.postMessage(
+      // Use event.source instead of contentWindow to work with sandboxed iframes
+      // For sandboxed iframes, event.origin is "null" (string), which is not valid for postMessage
+      const targetOrigin = event.origin === 'null' ? '*' : (event.origin || '*')
+
+      ;(event.source as Window)?.postMessage(
         {
           id: request.id,
           result,
         },
-        '*',
+        targetOrigin,
       )
     } catch (error) {
-      console.error('[HaexHub] Extension request error:', error)
+      console.error('[ExtensionHandler] Extension request error:', error)
 
-      sourceIframe.contentWindow?.postMessage(
+      // Use event.source instead of contentWindow to work with sandboxed iframes
+      // For sandboxed iframes, event.origin is "null" (string), which is not valid for postMessage
+      const targetOrigin = event.origin === 'null' ? '*' : (event.origin || '*')
+
+      ;(event.source as Window)?.postMessage(
         {
           id: request.id,
           error: {
@@ -92,7 +112,7 @@ const registerGlobalMessageHandler = () => {
             details: error,
           },
         },
-        '*',
+        targetOrigin,
       )
     }
   })
@@ -153,7 +173,24 @@ export const registerExtensionIFrame = (
 }
 
 export const unregisterExtensionIFrame = (iframe: HTMLIFrameElement) => {
+  // Also remove from source registry
+  const ext = iframeRegistry.get(iframe)
+  if (ext) {
+    // Find and remove all sources pointing to this extension
+    for (const [source, extension] of sourceRegistry.entries()) {
+      if (extension === ext) {
+        sourceRegistry.delete(source)
+      }
+    }
+    // Remove from extension-to-window map
+    extensionToWindowMap.delete(ext.id)
+  }
   iframeRegistry.delete(iframe)
+}
+
+// Export function to get Window for an extension (for broadcasting)
+export const getExtensionWindow = (extensionId: string): Window | undefined => {
+  return extensionToWindowMap.get(extensionId)
 }
 
 // ==========================================
@@ -165,10 +202,18 @@ async function handleExtensionMethodAsync(
   extension: IHaexHubExtension, // Direkter Typ, kein ComputedRef mehr
 ) {
   switch (request.method) {
-    case 'extension.getInfo':
-      return await invoke('get_extension_info', {
+    case 'extension.getInfo': {
+      const info = await invoke('get_extension_info', {
         extensionId: extension.id,
-      })
+      }) as Record<string, unknown>
+      // Override allowedOrigin with the actual window origin
+      // This fixes the dev-mode issue where Rust returns "tauri://localhost"
+      // but the actual origin is "http://localhost:3003"
+      return {
+        ...info,
+        allowedOrigin: window.location.origin,
+      }
+    }
     default:
       throw new Error(`Unknown extension method: ${request.method}`)
   }

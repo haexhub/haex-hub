@@ -8,16 +8,7 @@ import type {
 } from '~/types/haexhub'
 import type { ExtensionPreview } from '@bindings/ExtensionPreview'
 import type { ExtensionPermissions } from '~~/src-tauri/bindings/ExtensionPermissions'
-
-interface ExtensionInfoResponse {
-  keyHash: string
-  name: string
-  fullId: string
-  version: string
-  displayName: string | null
-  namespace: string | null
-  allowedOrigin: string
-}
+import type { ExtensionInfoResponse } from '~~/src-tauri/bindings/ExtensionInfoResponse'
 
 /* const manifestFileName = 'manifest.json'
 const logoFileName = 'icon.svg' */
@@ -130,8 +121,10 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
         name: ext.displayName || ext.name,
         version: ext.version,
         author: ext.namespace,
-        icon: null,
-        enabled: true,
+        icon: ext.icon,
+        enabled: ext.enabled,
+        description: ext.description,
+        homepage: ext.homepage,
       }))
     } catch (error) {
       console.error('Fehler beim Laden der Extensions:', error)
@@ -191,54 +184,6 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
       throw error
     }
   }
-
-  /* const installAsync = async (extensionDirectory: string | null) => {
-    try {
-      if (!extensionDirectory)
-        throw new Error('Kein Ordner für Erweiterung angegeben')
-      const manifestPath = await join(extensionDirectory, manifestFileName)
-      const manifest = (await JSON.parse(
-        await readTextFile(manifestPath),
-      )) as IHaexHubExtensionManifest
-
-      const destination = await getExtensionPathAsync(
-        manifest.id,
-        manifest.version,
-      )
-
-      await checkSourceExtensionDirectoryAsync(extensionDirectory)
-
-      await invoke('copy_directory', {
-        source: extensionDirectory,
-        destination,
-      })
-
-      const logoFilePath = await join(destination, logoFileName)
-      const logo = await readTextFile(logoFilePath)
-
-      const { currentVault } = storeToRefs(useVaultStore())
-      const res = await currentVault.value?.drizzle
-        .insert(haexExtensions)
-        .values({
-          id: manifest.id,
-          name: manifest.name,
-          author: manifest.author,
-          enabled: true,
-          url: manifest.url,
-          version: manifest.version,
-          icon: logo,
-        })
-
-      console.log('insert extensions', res)
-      addNotificationAsync({
-        type: 'success',
-        text: `${manifest.name} wurde installiert`,
-      })
-    } catch (error) {
-      addNotificationAsync({ type: 'error', text: JSON.stringify(error) })
-      throw error
-    }
-  } */
 
   const removeExtensionAsync = async (extensionId: string, version: string) => {
     try {
@@ -356,70 +301,6 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
     })
     return preview.value
   }
-  /* const readManifestFileAsync = async (
-    extensionId: string,
-    version: string,
-  ) => {
-    try {
-      if (!(await isExtensionInstalledAsync({ id: extensionId, version })))
-        return null
-
-      const extensionPath = await getExtensionPathAsync(
-        extensionId,
-        `${version}`,
-      )
-      const manifestPath = await join(extensionPath, manifestFileName)
-      const manifest = (await JSON.parse(
-        await readTextFile(manifestPath),
-      )) as IHaexHubExtensionManifest
-
-      return manifest
-    } catch (error) {
-      addNotificationAsync({ type: 'error', text: JSON.stringify(error) })
-      console.error('ERROR readManifestFileAsync', error)
-    }
-  } */
-
-  /* const extensionEntry = computedAsync(
-    async () => {
-      try {
-
-
-        if (!currentExtension.value?.id || !currentExtension.value.version) {
-          console.log('extension id or entry missing', currentExtension.value)
-          return '' // "no mani: " + currentExtension.value;
-        }
-
-        const extensionPath = await getExtensionPathAsync(
-          currentExtension.value?.id,
-          currentExtension.value?.version,
-        ) //await join(await resourceDir(), currentExtension.value.. extensionDir, entryFileName);
-
-        console.log('extensionEntry extensionPath', extensionPath)
-        const manifest = await readManifestFileAsync(
-          currentExtension.value.id,
-          currentExtension.value.version,
-        )
-
-        if (!manifest) return '' //"no manifest readable";
-
-        //const entryPath = await join(extensionPath, manifest.entry)
-
-        const hexName = stringToHex(
-          JSON.stringify({
-            id: currentExtension.value.id,
-            version: currentExtension.value.version,
-          }),
-        )
-
-        return `haex-extension://${hexName}`
-      } catch (error) {
-        console.error('ERROR extensionEntry', error)
-      }
-    },
-    null,
-    { lazy: true },
-  ) */
 
   return {
     availableExtensions,

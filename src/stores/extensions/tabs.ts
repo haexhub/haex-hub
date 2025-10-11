@@ -1,5 +1,6 @@
 // stores/extensions/tabs.ts
 import type { IHaexHubExtension } from '~/types/haexhub'
+import { getExtensionWindow } from '~/composables/extensionMessageHandler'
 
 interface ExtensionTab {
   extension: IHaexHubExtension
@@ -37,6 +38,12 @@ export const useExtensionTabsStore = defineStore('extensionTabsStore', () => {
 
     if (!extension) {
       console.error(`Extension ${extensionId} nicht gefunden`)
+      return
+    }
+
+    // Check if extension is enabled
+    if (!extension.enabled) {
+      console.warn(`Extension ${extensionId} ist deaktiviert und kann nicht geöffnet werden`)
       return
     }
 
@@ -78,8 +85,25 @@ export const useExtensionTabsStore = defineStore('extensionTabsStore', () => {
     // Zeige neuen Tab
     const newTab = openTabs.value.get(extensionId)
     if (newTab) {
+      const now = Date.now()
+      const inactiveDuration = now - newTab.lastAccessed
+      const TEN_MINUTES = 10 * 60 * 1000
+
+      // Reload iframe if inactive for more than 10 minutes
+      if (inactiveDuration > TEN_MINUTES && newTab.iframe) {
+        console.log(`[TabStore] Reloading extension ${extensionId} after ${Math.round(inactiveDuration / 1000)}s inactivity`)
+        const currentSrc = newTab.iframe.src
+        newTab.iframe.src = 'about:blank'
+        // Small delay to ensure reload
+        setTimeout(() => {
+          if (newTab.iframe) {
+            newTab.iframe.src = currentSrc
+          }
+        }, 50)
+      }
+
       newTab.isVisible = true
-      newTab.lastAccessed = Date.now()
+      newTab.lastAccessed = now
       activeTabId.value = extensionId
     }
   }
@@ -113,8 +137,12 @@ export const useExtensionTabsStore = defineStore('extensionTabsStore', () => {
   }
 
   const broadcastToAllTabs = (message: unknown) => {
-    openTabs.value.forEach(({ iframe }) => {
-      iframe?.contentWindow?.postMessage(message, '*')
+    openTabs.value.forEach(({ extension }) => {
+      // Use sandbox-compatible window reference
+      const win = getExtensionWindow(extension.id)
+      if (win) {
+        win.postMessage(message, '*')
+      }
     })
   }
 

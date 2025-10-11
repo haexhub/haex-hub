@@ -67,27 +67,15 @@
         v-if="filteredExtensions.length"
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
       >
-        <template
+        <!-- Marketplace Extension Card -->
+        <HaexExtensionMarketplaceCard
           v-for="ext in filteredExtensions"
           :key="ext.id"
-        >
-          <!-- Installed Extension Card -->
-          <HaexExtensionInstalledCard
-            v-if="ext.isInstalled"
-            :extension="ext"
-            @open="navigateToExtension(ext.id)"
-            @settings="onShowExtensionSettings(ext)"
-            @remove="onShowRemoveDialog(ext)"
-          />
-          <!-- Marketplace Extension Card -->
-          <HaexExtensionMarketplaceCard
-            v-else
-            :extension="ext"
-            :is-installed="isExtensionInstalled(ext.id)"
-            @install="onInstallFromMarketplace(ext)"
-            @details="onShowExtensionDetails(ext)"
-          />
-        </template>
+          :extension="ext"
+          :is-installed="ext.isInstalled"
+          @install="onInstallFromMarketplace(ext)"
+          @details="onShowExtensionDetails(ext)"
+        />
       </div>
 
       <!-- Empty State -->
@@ -132,6 +120,7 @@
 import type {
   IHaexHubExtension,
   IHaexHubExtensionManifest,
+  IMarketplaceExtension,
 } from '~/types/haexhub'
 import { open } from '@tauri-apps/plugin-dialog'
 import type { ExtensionPreview } from '~~/src-tauri/bindings/ExtensionPreview'
@@ -208,7 +197,7 @@ const categories = computed(() => [
 ])
 
 // Dummy Marketplace Extensions (später von API laden)
-const marketplaceExtensions = ref([
+const marketplaceExtensions = ref<IMarketplaceExtension[]>([
   {
     id: 'haex-passy',
     name: 'HaexPassDummy',
@@ -217,12 +206,14 @@ const marketplaceExtensions = ref([
     description:
       'Sicherer Passwort-Manager mit Ende-zu-Ende-Verschlüsselung und Autofill-Funktion.',
     icon: 'i-heroicons-lock-closed',
+    homepage: null,
     downloads: 15420,
     rating: 4.8,
     verified: true,
     tags: ['security', 'password', 'productivity'],
     category: 'security',
     downloadUrl: '/extensions/haex-pass-1.0.0.haextension',
+    isInstalled: false,
   },
   {
     id: 'haex-notes',
@@ -232,12 +223,14 @@ const marketplaceExtensions = ref([
     description:
       'Markdown-basierter Notizen-Editor mit Syntax-Highlighting und Live-Preview.',
     icon: 'i-heroicons-document-text',
+    homepage: null,
     downloads: 8930,
     rating: 4.5,
     verified: true,
     tags: ['productivity', 'notes', 'markdown'],
     category: 'productivity',
     downloadUrl: '/extensions/haex-notes-2.1.0.haextension',
+    isInstalled: false,
   },
   {
     id: 'haex-backup',
@@ -247,12 +240,14 @@ const marketplaceExtensions = ref([
     description:
       'Automatische Backups deiner Daten mit Cloud-Sync-Unterstützung.',
     icon: 'i-heroicons-cloud-arrow-up',
+    homepage: null,
     downloads: 5240,
     rating: 4.6,
     verified: false,
     tags: ['backup', 'cloud', 'utilities'],
     category: 'utilities',
     downloadUrl: '/extensions/haex-backup-1.5.2.haextension',
+    isInstalled: false,
   },
   {
     id: 'haex-calendar',
@@ -262,12 +257,14 @@ const marketplaceExtensions = ref([
     description:
       'Integrierter Kalender mit Event-Management und Synchronisation.',
     icon: 'i-heroicons-calendar',
+    homepage: null,
     downloads: 12100,
     rating: 4.7,
     verified: true,
     tags: ['productivity', 'calendar', 'events'],
     category: 'productivity',
     downloadUrl: '/extensions/haex-calendar-3.0.1.haextension',
+    isInstalled: false,
   },
   {
     id: 'haex-2fa',
@@ -277,12 +274,14 @@ const marketplaceExtensions = ref([
     description:
       '2-Faktor-Authentifizierung Manager mit TOTP und Backup-Codes.',
     icon: 'i-heroicons-shield-check',
+    homepage: null,
     downloads: 7800,
     rating: 4.9,
     verified: true,
     tags: ['security', '2fa', 'authentication'],
     category: 'security',
     downloadUrl: '/extensions/haex-2fa-1.2.0.haextension',
+    isInstalled: false,
   },
   {
     id: 'haex-github',
@@ -292,39 +291,26 @@ const marketplaceExtensions = ref([
     description:
       'Direkter Zugriff auf GitHub Repositories, Issues und Pull Requests.',
     icon: 'i-heroicons-code-bracket',
+    homepage: null,
     downloads: 4120,
     rating: 4.3,
     verified: false,
     tags: ['integration', 'github', 'development'],
     category: 'integration',
     downloadUrl: '/extensions/haex-github-1.0.5.haextension',
+    isInstalled: false,
   },
 ])
 
-// Combine installed extensions with marketplace extensions
-const allExtensions = computed(() => {
-  // Map installed extensions to marketplace format
-  const installed = extensionStore.availableExtensions.map((ext) => ({
-    id: ext.id,
-    name: ext.name,
-    version: ext.version,
-    author: ext.author || 'Unknown',
-    description: 'Installed Extension',
-    icon: ext.icon || 'i-heroicons-puzzle-piece',
-    downloads: 0,
-    rating: 0,
-    verified: false,
-    tags: [],
-    category: 'utilities',
-    downloadUrl: '',
-    isInstalled: true,
+// Mark marketplace extensions as installed if they exist in availableExtensions
+const allExtensions = computed((): IMarketplaceExtension[] => {
+  return marketplaceExtensions.value.map((ext) => ({
+    ...ext,
+    // Check if this marketplace extension is already installed
+    isInstalled: extensionStore.availableExtensions.some(
+      (installed) => installed.name === ext.name,
+    ),
   }))
-
-  console.log('Installed extensions count:', installed.length)
-  console.log('All extensions:', [...installed, ...marketplaceExtensions.value])
-
-  // Merge with marketplace extensions
-  return [...installed, ...marketplaceExtensions.value]
 })
 
 // Filtered Extensions
@@ -333,7 +319,7 @@ const filteredExtensions = computed(() => {
     const matchesSearch =
       !searchQuery.value ||
       ext.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      ext.description.toLowerCase().includes(searchQuery.value.toLowerCase())
+      ext.description?.toLowerCase().includes(searchQuery.value.toLowerCase())
 
     const matchesCategory =
       selectedCategory.value === 'all' ||
@@ -342,14 +328,6 @@ const filteredExtensions = computed(() => {
     return matchesSearch && matchesCategory
   })
 })
-
-// Check if extension is installed
-const isExtensionInstalled = (extensionId: string) => {
-  return (
-    extensionStore.availableExtensions.some((ext) => ext.id === extensionId) ||
-    allExtensions.value.some((ext) => ext.id === extensionId)
-  )
-}
 
 // Install from marketplace
 const onInstallFromMarketplace = async (ext: unknown) => {
@@ -364,35 +342,6 @@ const onShowExtensionDetails = (ext: unknown) => {
   // TODO: Show extension details modal
 }
 
-// Navigate to installed extension
-const router = useRouter()
-const route = useRoute()
-const localePath = useLocalePath()
-
-const navigateToExtension = (extensionId: string) => {
-  router.push(
-    localePath({
-      name: 'haexExtension',
-      params: {
-        vaultId: route.params.vaultId,
-        extensionId,
-      },
-    }),
-  )
-}
-
-// Show extension settings
-const onShowExtensionSettings = (ext: unknown) => {
-  console.log('Show settings:', ext)
-  // TODO: Show extension settings modal
-}
-
-// Show remove dialog
-const onShowRemoveDialog = (ext: any) => {
-  extensionToBeRemoved.value = ext
-  showRemoveDialog.value = true
-}
-
 const onSelectExtensionAsync = async () => {
   try {
     extension.path = await open({ directory: false, recursive: true })
@@ -405,7 +354,7 @@ const onSelectExtensionAsync = async () => {
     // Check if already installed using full_extension_id
     const fullExtensionId = `${preview.value.key_hash}_${preview.value.manifest.name}_${preview.value.manifest.version}`
     const isAlreadyInstalled = extensionStore.availableExtensions.some(
-      ext => ext.id === fullExtensionId
+      (ext) => ext.id === fullExtensionId,
     )
 
     if (isAlreadyInstalled) {

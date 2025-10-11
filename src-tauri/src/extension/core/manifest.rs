@@ -196,6 +196,10 @@ pub struct ExtensionInfoResponse {
     pub display_name: Option<String>,
     pub namespace: Option<String>,
     pub allowed_origin: String,
+    pub enabled: bool,
+    pub description: Option<String>,
+    pub homepage: Option<String>,
+    pub icon: Option<String>,
 }
 
 impl ExtensionInfoResponse {
@@ -204,11 +208,7 @@ impl ExtensionInfoResponse {
     ) -> Result<Self, ExtensionError> {
         use crate::extension::core::types::get_tauri_origin;
 
-        // In development mode, use a wildcard for localhost to match any port
-        #[cfg(debug_assertions)]
-        let allowed_origin = "http://localhost:3003".to_string();
-
-        #[cfg(not(debug_assertions))]
+        // Always use the current Tauri origin to support all platforms (Desktop, Android, iOS)
         let allowed_origin = get_tauri_origin();
 
         let key_hash = extension.manifest.calculate_key_hash()?;
@@ -222,6 +222,10 @@ impl ExtensionInfoResponse {
             display_name: Some(extension.manifest.name.clone()),
             namespace: extension.manifest.author.clone(),
             allowed_origin,
+            enabled: extension.enabled,
+            description: extension.manifest.description.clone(),
+            homepage: extension.manifest.homepage.clone(),
+            icon: extension.manifest.icon.clone(),
         })
     }
 }
