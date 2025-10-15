@@ -72,7 +72,6 @@
           v-for="ext in filteredExtensions"
           :key="ext.id"
           :extension="ext"
-          :is-installed="ext.isInstalled"
           @install="onInstallFromMarketplace(ext)"
           @details="onShowExtensionDetails(ext)"
         />
@@ -203,6 +202,7 @@ const marketplaceExtensions = ref<IMarketplaceExtension[]>([
     name: 'HaexPassDummy',
     version: '1.0.0',
     author: 'HaexHub Team',
+    public_key: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
     description:
       'Sicherer Passwort-Manager mit Ende-zu-Ende-Verschlüsselung und Autofill-Funktion.',
     icon: 'i-heroicons-lock-closed',
@@ -220,6 +220,7 @@ const marketplaceExtensions = ref<IMarketplaceExtension[]>([
     name: 'HaexNotes',
     version: '2.1.0',
     author: 'HaexHub Team',
+    public_key: 'b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3',
     description:
       'Markdown-basierter Notizen-Editor mit Syntax-Highlighting und Live-Preview.',
     icon: 'i-heroicons-document-text',
@@ -237,6 +238,7 @@ const marketplaceExtensions = ref<IMarketplaceExtension[]>([
     name: 'HaexBackup',
     version: '1.5.2',
     author: 'Community',
+    public_key: 'c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4',
     description:
       'Automatische Backups deiner Daten mit Cloud-Sync-Unterstützung.',
     icon: 'i-heroicons-cloud-arrow-up',
@@ -254,6 +256,7 @@ const marketplaceExtensions = ref<IMarketplaceExtension[]>([
     name: 'HaexCalendar',
     version: '3.0.1',
     author: 'HaexHub Team',
+    public_key: 'd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5',
     description:
       'Integrierter Kalender mit Event-Management und Synchronisation.',
     icon: 'i-heroicons-calendar',
@@ -271,6 +274,7 @@ const marketplaceExtensions = ref<IMarketplaceExtension[]>([
     name: 'Haex2FA',
     version: '1.2.0',
     author: 'Security Team',
+    public_key: 'e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6',
     description:
       '2-Faktor-Authentifizierung Manager mit TOTP und Backup-Codes.',
     icon: 'i-heroicons-shield-check',
@@ -288,6 +292,7 @@ const marketplaceExtensions = ref<IMarketplaceExtension[]>([
     name: 'GitHub Integration',
     version: '1.0.5',
     author: 'Community',
+    public_key: 'f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7',
     description:
       'Direkter Zugriff auf GitHub Repositories, Issues und Pull Requests.',
     icon: 'i-heroicons-code-bracket',
@@ -304,13 +309,27 @@ const marketplaceExtensions = ref<IMarketplaceExtension[]>([
 
 // Mark marketplace extensions as installed if they exist in availableExtensions
 const allExtensions = computed((): IMarketplaceExtension[] => {
-  return marketplaceExtensions.value.map((ext) => ({
-    ...ext,
-    // Check if this marketplace extension is already installed
-    isInstalled: extensionStore.availableExtensions.some(
-      (installed) => installed.name === ext.name,
-    ),
-  }))
+  return marketplaceExtensions.value.map((ext) => {
+    // Extensions are uniquely identified by public_key + name
+    const installedExt = extensionStore.availableExtensions.find((installed) => {
+      return installed.publicKey === ext.publicKey && installed.name === ext.name
+    })
+
+    if (installedExt) {
+      return {
+        ...ext,
+        isInstalled: true,
+        // Show installed version if it differs from marketplace version
+        installedVersion: installedExt.version !== ext.version ? installedExt.version : undefined,
+      }
+    }
+
+    return {
+      ...ext,
+      isInstalled: false,
+      installedVersion: undefined,
+    }
+  })
 })
 
 // Filtered Extensions
@@ -349,12 +368,13 @@ const onSelectExtensionAsync = async () => {
 
     preview.value = await extensionStore.previewManifestAsync(extension.path)
 
-    if (!preview.value) return
+    if (!preview.value?.manifest) return
 
-    // Check if already installed using full_extension_id
-    const fullExtensionId = `${preview.value.key_hash}_${preview.value.manifest.name}_${preview.value.manifest.version}`
+    // Check if already installed using public_key + name
     const isAlreadyInstalled = extensionStore.availableExtensions.some(
-      (ext) => ext.id === fullExtensionId,
+      (ext) =>
+        ext.publicKey === preview.value!.manifest.public_key &&
+        ext.name === preview.value!.manifest.name
     )
 
     if (isAlreadyInstalled) {
@@ -403,13 +423,23 @@ const addExtensionAsync = async () => {
 
 const reinstallExtensionAsync = async () => {
   try {
-    if (!preview.value) return
+    if (!preview.value?.manifest) return
 
-    // Calculate full_extension_id
-    const fullExtensionId = `${preview.value.key_hash}_${preview.value.manifest.name}_${preview.value.manifest.version}`
+    // Find the installed extension to get its current version
+    const installedExt = extensionStore.availableExtensions.find(
+      (ext) =>
+        ext.publicKey === preview.value!.manifest.public_key &&
+        ext.name === preview.value!.manifest.name
+    )
 
-    // Remove old extension first
-    await extensionStore.removeExtensionByFullIdAsync(fullExtensionId)
+    if (installedExt) {
+      // Remove old extension first
+      await extensionStore.removeExtensionAsync(
+        installedExt.publicKey,
+        installedExt.name,
+        installedExt.version
+      )
+    }
 
     // Then install new version
     await addExtensionAsync()
@@ -440,7 +470,7 @@ onMounted(async () => {
 } */
 
 const removeExtensionAsync = async () => {
-  if (!extensionToBeRemoved.value?.id) {
+  if (!extensionToBeRemoved.value?.publicKey || !extensionToBeRemoved.value?.name || !extensionToBeRemoved.value?.version) {
     add({
       color: 'error',
       description: 'Erweiterung kann nicht gelöscht werden',
@@ -449,9 +479,10 @@ const removeExtensionAsync = async () => {
   }
 
   try {
-    // Use removeExtensionByFullIdAsync since ext.id is already the full_extension_id
-    await extensionStore.removeExtensionByFullIdAsync(
-      extensionToBeRemoved.value.id,
+    await extensionStore.removeExtensionAsync(
+      extensionToBeRemoved.value.publicKey,
+      extensionToBeRemoved.value.name,
+      extensionToBeRemoved.value.version,
     )
     await extensionStore.loadExtensionsAsync()
     add({

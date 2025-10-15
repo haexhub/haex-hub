@@ -1,6 +1,11 @@
 // composables/extensionMessageHandler.ts
 import { invoke } from '@tauri-apps/api/core'
 import type { IHaexHubExtension } from '~/types/haexhub'
+import {
+  EXTENSION_PROTOCOL_NAME,
+  EXTENSION_PROTOCOL_PREFIX,
+} from '~/config/constants'
+import type { Platform } from '@tauri-apps/plugin-os'
 
 interface ExtensionRequest {
   id: string
@@ -21,12 +26,11 @@ const extensionToWindowMap = new Map<string, Window>()
 let contextGetters: {
   getTheme: () => string
   getLocale: () => string
+  getPlatform: () => Platform | undefined
 } | null = null
 
 const registerGlobalMessageHandler = () => {
   if (globalHandlerRegistered) return
-
-  console.log('[Parent Debug] ⭐ NEW VERSION LOADED - NO MORE CONTENTWINDOW ⭐')
 
   window.addEventListener('message', async (event: MessageEvent) => {
     // Ignore console.forward messages - they're handled elsewhere
@@ -34,30 +38,106 @@ const registerGlobalMessageHandler = () => {
       return
     }
 
-    // Finde die Extension für dieses event.source (sandbox-compatible)
-    let extension = sourceRegistry.get(event.source as Window)
+    const request = event.data as ExtensionRequest
 
-    // If not registered yet, register on first message from this source
-    if (!extension && iframeRegistry.size === 1) {
-      // If we only have one iframe, assume this message is from it
-      const entry = Array.from(iframeRegistry.entries())[0]
-      if (entry) {
-        const [_, ext] = entry
-        const windowSource = event.source as Window
-        sourceRegistry.set(windowSource, ext)
-        extensionToWindowMap.set(ext.id, windowSource)
-        extension = ext
+    // Find extension by decoding event.origin (works with sandboxed iframes)
+    // Origin formats:
+    // - Desktop: haex-extension://<base64>
+    // - Android: http://haex-extension.localhost (need to check request URL for base64)
+    let extension: IHaexHubExtension | undefined
+
+    console.log(
+      '[ExtensionHandler] Received message from origin:',
+      event.origin,
+    )
+
+    // Try to decode extension info from origin
+    if (event.origin) {
+      let base64Host: string | null = null
+
+      if (event.origin.startsWith(EXTENSION_PROTOCOL_PREFIX)) {
+        // Desktop format: haex-extension://<base64>
+        base64Host = event.origin.replace(EXTENSION_PROTOCOL_PREFIX, '')
+        console.log(
+          '[ExtensionHandler] Extracted base64 (custom protocol):',
+          base64Host,
+        )
+      } else if (
+        event.origin === `http://${EXTENSION_PROTOCOL_NAME}.localhost`
+      ) {
+        // Android format: http://haex-extension.localhost/{base64} (origin doesn't contain extension info)
+        // We need to identify extension by iframe source or fallback to single-extension mode
+        console.log(
+          `[ExtensionHandler] Android format detected (http://${EXTENSION_PROTOCOL_NAME}.localhost)`,
+        )
+        // Fallback to single iframe mode
+        if (iframeRegistry.size === 1) {
+          const entry = Array.from(iframeRegistry.entries())[0]
+          if (entry) {
+            const [_, ext] = entry
+            extension = ext
+            sourceRegistry.set(event.source as Window, ext)
+            extensionToWindowMap.set(ext.id, event.source as Window)
+          }
+        }
       }
-    } else if (extension && !extensionToWindowMap.has(extension.id)) {
-      // Also register in reverse map for broadcasting
-      extensionToWindowMap.set(extension.id, event.source as Window)
+
+      if (base64Host && base64Host !== 'localhost') {
+        try {
+          const decodedInfo = JSON.parse(atob(base64Host)) as {
+            name: string
+            publicKey: string
+            version: string
+          }
+
+          // Find matching extension in registry
+          for (const [_, ext] of iframeRegistry.entries()) {
+            if (
+              ext.name === decodedInfo.name &&
+              ext.publicKey === decodedInfo.publicKey &&
+              ext.version === decodedInfo.version
+            ) {
+              extension = ext
+              // Register for future lookups
+              sourceRegistry.set(event.source as Window, ext)
+              extensionToWindowMap.set(ext.id, event.source as Window)
+              break
+            }
+          }
+        } catch (e) {
+          console.error('[ExtensionHandler] Failed to decode origin:', e)
+        }
+      }
+    }
+
+    // Fallback: Try to find extension by event.source (for localhost origin or legacy)
+    if (!extension) {
+      extension = sourceRegistry.get(event.source as Window)
+
+      // If not registered yet, register on first message from this source
+      if (!extension && iframeRegistry.size === 1) {
+        // If we only have one iframe, assume this message is from it
+        const entry = Array.from(iframeRegistry.entries())[0]
+        if (entry) {
+          const [_, ext] = entry
+          const windowSource = event.source as Window
+          sourceRegistry.set(windowSource, ext)
+          extensionToWindowMap.set(ext.id, windowSource)
+          extension = ext
+        }
+      } else if (extension && !extensionToWindowMap.has(extension.id)) {
+        // Also register in reverse map for broadcasting
+        extensionToWindowMap.set(extension.id, event.source as Window)
+      }
     }
 
     if (!extension) {
+      console.warn(
+        '[ExtensionHandler] Could not identify extension for message:',
+        event.origin,
+      )
       return // Message ist nicht von einem registrierten IFrame
     }
-
-    const request = event.data as ExtensionRequest
 
     if (!request.id || !request.method) {
       console.error('[ExtensionHandler] Invalid extension request:', request)
@@ -87,7 +167,7 @@ const registerGlobalMessageHandler = () => {
 
       // Use event.source instead of contentWindow to work with sandboxed iframes
       // For sandboxed iframes, event.origin is "null" (string), which is not valid for postMessage
-      const targetOrigin = event.origin === 'null' ? '*' : (event.origin || '*')
+      const targetOrigin = event.origin === 'null' ? '*' : event.origin || '*'
 
       ;(event.source as Window)?.postMessage(
         {
@@ -101,7 +181,7 @@ const registerGlobalMessageHandler = () => {
 
       // Use event.source instead of contentWindow to work with sandboxed iframes
       // For sandboxed iframes, event.origin is "null" (string), which is not valid for postMessage
-      const targetOrigin = event.origin === 'null' ? '*' : (event.origin || '*')
+      const targetOrigin = event.origin === 'null' ? '*' : event.origin || '*'
 
       ;(event.source as Window)?.postMessage(
         {
@@ -127,12 +207,13 @@ export const useExtensionMessageHandler = (
   // Initialize context getters (can use composables here because we're in setup)
   const { currentTheme } = storeToRefs(useUiStore())
   const { locale } = useI18n()
-
+  const { platform } = useDeviceStore()
   // Store getters for use outside setup context
   if (!contextGetters) {
     contextGetters = {
       getTheme: () => currentTheme.value?.value || 'system',
       getLocale: () => locale.value,
+      getPlatform: () => platform,
     }
   }
 
@@ -203,9 +284,10 @@ async function handleExtensionMethodAsync(
 ) {
   switch (request.method) {
     case 'extension.getInfo': {
-      const info = await invoke('get_extension_info', {
-        extensionId: extension.id,
-      }) as Record<string, unknown>
+      const info = (await invoke('get_extension_info', {
+        publicKey: extension.publicKey,
+        name: extension.name,
+      })) as Record<string, unknown>
       // Override allowedOrigin with the actual window origin
       // This fixes the dev-mode issue where Rust returns "tauri://localhost"
       // but the actual origin is "http://localhost:3003"
@@ -364,7 +446,9 @@ async function handleStorageMethodAsync(
   extension: IHaexHubExtension,
 ) {
   const storageKey = `ext_${extension.id}_`
-  console.log(`[HaexHub Storage] ${request.method} for extension ${extension.id}`)
+  console.log(
+    `[HaexHub Storage] ${request.method} for extension ${extension.id}`,
+  )
 
   switch (request.method) {
     case 'storage.getItem': {
@@ -387,16 +471,18 @@ async function handleStorageMethodAsync(
 
     case 'storage.clear': {
       // Remove only extension-specific keys
-      const keys = Object.keys(localStorage).filter(k => k.startsWith(storageKey))
-      keys.forEach(k => localStorage.removeItem(k))
+      const keys = Object.keys(localStorage).filter((k) =>
+        k.startsWith(storageKey),
+      )
+      keys.forEach((k) => localStorage.removeItem(k))
       return null
     }
 
     case 'storage.keys': {
       // Return only extension-specific keys (without prefix)
       const keys = Object.keys(localStorage)
-        .filter(k => k.startsWith(storageKey))
-        .map(k => k.substring(storageKey.length))
+        .filter((k) => k.startsWith(storageKey))
+        .map((k) => k.substring(storageKey.length))
       return keys
     }
 

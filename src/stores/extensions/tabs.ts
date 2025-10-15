@@ -28,10 +28,10 @@ export const useExtensionTabsStore = defineStore('extensionTabsStore', () => {
     )
   })
 
+  const extensionsStore = useExtensionsStore()
+
   // Actions
   const openTab = (extensionId: string) => {
-    // Hole Extension-Info aus dem anderen Store
-    const extensionsStore = useExtensionsStore()
     const extension = extensionsStore.availableExtensions.find(
       (ext) => ext.id === extensionId,
     )
@@ -43,7 +43,9 @@ export const useExtensionTabsStore = defineStore('extensionTabsStore', () => {
 
     // Check if extension is enabled
     if (!extension.enabled) {
-      console.warn(`Extension ${extensionId} ist deaktiviert und kann nicht geöffnet werden`)
+      console.warn(
+        `Extension ${extensionId} ist deaktiviert und kann nicht geöffnet werden`,
+      )
       return
     }
 
@@ -91,7 +93,9 @@ export const useExtensionTabsStore = defineStore('extensionTabsStore', () => {
 
       // Reload iframe if inactive for more than 10 minutes
       if (inactiveDuration > TEN_MINUTES && newTab.iframe) {
-        console.log(`[TabStore] Reloading extension ${extensionId} after ${Math.round(inactiveDuration / 1000)}s inactivity`)
+        console.log(
+          `[TabStore] Reloading extension ${extensionId} after ${Math.round(inactiveDuration / 1000)}s inactivity`,
+        )
         const currentSrc = newTab.iframe.src
         newTab.iframe.src = 'about:blank'
         // Small delay to ensure reload

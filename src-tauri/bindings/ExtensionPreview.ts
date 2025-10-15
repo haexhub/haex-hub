@@ -2,4 +2,4 @@
 import type { ExtensionManifest } from "./ExtensionManifest";
 import type { ExtensionPermissions } from "./ExtensionPermissions";
 
-export type ExtensionPreview = { manifest: ExtensionManifest, is_valid_signature: boolean, key_hash: string, editable_permissions: ExtensionPermissions, };
+export type ExtensionPreview = { manifest: ExtensionManifest, is_valid_signature: boolean, editable_permissions: ExtensionPermissions, };

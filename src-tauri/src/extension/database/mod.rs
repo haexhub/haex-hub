@@ -107,11 +107,21 @@ impl<'a> StatementExecutor<'a> {
 pub async fn extension_sql_execute(
     sql: &str,
     params: Vec<JsonValue>,
-    extension_id: String,
+    public_key: String,
+    name: String,
     state: State<'_, AppState>,
 ) -> Result<Vec<String>, ExtensionError> {
+    // Get extension to retrieve its ID
+    let extension = state
+        .extension_manager
+        .get_extension_by_public_key_and_name(&public_key, &name)?
+        .ok_or_else(|| ExtensionError::NotFound {
+            public_key: public_key.clone(),
+            name: name.clone(),
+        })?;
+
     // Permission check
-    SqlPermissionValidator::validate_sql(&state, &extension_id, sql).await?;
+    SqlPermissionValidator::validate_sql(&state, &extension.id, sql).await?;
 
     // Parameter validation
     validate_params(sql, &params)?;
@@ -179,11 +189,21 @@ pub async fn extension_sql_execute(
 pub async fn extension_sql_select(
     sql: &str,
     params: Vec<JsonValue>,
-    extension_id: String,
+    public_key: String,
+    name: String,
     state: State<'_, AppState>,
 ) -> Result<Vec<JsonValue>, ExtensionError> {
+    // Get extension to retrieve its ID
+    let extension = state
+        .extension_manager
+        .get_extension_by_public_key_and_name(&public_key, &name)?
+        .ok_or_else(|| ExtensionError::NotFound {
+            public_key: public_key.clone(),
+            name: name.clone(),
+        })?;
+
     // Permission check
-    SqlPermissionValidator::validate_sql(&state, &extension_id, sql).await?;
+    SqlPermissionValidator::validate_sql(&state, &extension.id, sql).await?;
 
     // Parameter validation
     validate_params(sql, &params)?;

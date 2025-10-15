@@ -62,11 +62,12 @@
           class="flex items-center gap-4 mt-3 text-sm text-gray-500 dark:text-gray-400"
         >
           <div
-            v-if="isInstalled"
+            v-if="extension.isInstalled"
             class="flex items-center gap-1 text-success font-medium"
           >
             <UIcon name="i-heroicons-check-circle-solid" />
-            <span>{{ t('installed') }}</span>
+            <span v-if="!extension.installedVersion">{{ t('installed') }}</span>
+            <span v-else>{{ t('installedVersion', { version: extension.installedVersion }) }}</span>
           </div>
           <div
             v-if="extension.downloads"
@@ -112,11 +113,11 @@
     <template #footer>
       <div class="flex items-center justify-between gap-2">
         <UButton
-          :label="isInstalled ? t('installed') : t('install')"
-          :color="isInstalled ? 'neutral' : 'primary'"
-          :disabled="isInstalled"
+          :label="getInstallButtonLabel()"
+          :color="extension.isInstalled && !extension.installedVersion ? 'neutral' : 'primary'"
+          :disabled="extension.isInstalled && !extension.installedVersion"
           :icon="
-            isInstalled ? 'i-heroicons-check' : 'i-heroicons-arrow-down-tray'
+            extension.isInstalled && !extension.installedVersion ? 'i-heroicons-check' : 'i-heroicons-arrow-down-tray'
           "
           size="sm"
           @click.stop="$emit('install')"
@@ -134,23 +135,10 @@
 </template>
 
 <script setup lang="ts">
-interface MarketplaceExtension {
-  id: string
-  name: string
-  version: string
-  author?: string
-  description?: string
-  icon?: string
-  downloads?: number
-  rating?: number
-  verified?: boolean
-  tags?: string[]
-  downloadUrl?: string
-}
+import type { IMarketplaceExtension } from '~/types/haexhub'
 
-defineProps<{
-  extension: MarketplaceExtension
-  isInstalled?: boolean
+const props = defineProps<{
+  extension: IMarketplaceExtension
 }>()
 
 defineEmits(['click', 'install', 'details'])
@@ -162,6 +150,16 @@ const formatNumber = (num: number) => {
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`
   return num.toString()
 }
+
+const getInstallButtonLabel = () => {
+  if (!props.extension.isInstalled) {
+    return t('install')
+  }
+  if (props.extension.installedVersion) {
+    return t('update')
+  }
+  return t('installed')
+}
 </script>
 
 <i18n lang="yaml">
@@ -169,12 +167,16 @@ de:
   by: von
   install: Installieren
   installed: Installiert
+  installedVersion: 'Installiert (v{version})'
+  update: Aktualisieren
   details: Details
   verified: Verifiziert
 en:
   by: by
   install: Install
   installed: Installed
+  installedVersion: 'Installed (v{version})'
+  update: Update
   details: Details
   verified: Verified
 </i18n>

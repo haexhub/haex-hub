@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import { readFile } from '@tauri-apps/plugin-fs'
-import { EXTENSION_PROTOCOL_PREFIX } from '~/config/constants'
+import { getExtensionUrl } from '~/utils/extension'
 
 import type {
   IHaexHubExtension,
@@ -55,30 +55,18 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
   const extensionEntry = computed(() => {
     if (
       !currentExtension.value?.version ||
-      !currentExtension.value?.id ||
+      !currentExtension.value?.publicKey ||
       !currentExtension.value?.name
     )
       return null
 
-    // Extract key_hash from full_extension_id (everything before first underscore)
-    const firstUnderscoreIndex = currentExtension.value.id.indexOf('_')
-    if (firstUnderscoreIndex === -1) {
-      console.error(
-        'Invalid full_extension_id format:',
-        currentExtension.value.id,
-      )
-      return null
-    }
-
-    const keyHash = currentExtension.value.id.substring(0, firstUnderscoreIndex)
-
-    const encodedInfo = encodeExtensionInfo(
-      keyHash,
+    return getExtensionUrl(
+      currentExtension.value.publicKey,
       currentExtension.value.name,
       currentExtension.value.version,
+      'index.html',
+      currentExtension.value.devServerUrl ?? undefined
     )
-
-    return `${EXTENSION_PROTOCOL_PREFIX}localhost/${encodedInfo}/index.html`
   })
 
   /* const getExtensionPathAsync = async (
@@ -116,16 +104,8 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
       const extensions =
         await invoke<ExtensionInfoResponse[]>('get_all_extensions')
 
-      availableExtensions.value = extensions.map((ext) => ({
-        id: ext.fullId,
-        name: ext.displayName || ext.name,
-        version: ext.version,
-        author: ext.namespace,
-        icon: ext.icon,
-        enabled: ext.enabled,
-        description: ext.description,
-        homepage: ext.homepage,
-      }))
+      // ExtensionInfoResponse is now directly compatible with IHaexHubExtension
+      availableExtensions.value = extensions
     } catch (error) {
       console.error('Fehler beim Laden der Extensions:', error)
       throw error
@@ -185,22 +165,16 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
     }
   }
 
-  const removeExtensionAsync = async (extensionId: string, version: string) => {
+  const removeExtensionAsync = async (
+    publicKey: string,
+    name: string,
+    version: string,
+  ) => {
     try {
       await invoke('remove_extension', {
-        extensionId,
-        extensionVersion: version,
-      })
-    } catch (error) {
-      console.error('Fehler beim Entfernen der Extension:', error)
-      throw error
-    }
-  }
-
-  const removeExtensionByFullIdAsync = async (fullExtensionId: string) => {
-    try {
-      await invoke('remove_extension_by_full_id', {
-        fullExtensionId,
+        publicKey,
+        name,
+        version,
       })
     } catch (error) {
       console.error('Fehler beim Entfernen der Extension:', error)
@@ -219,15 +193,18 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
   } */
 
   const isExtensionInstalledAsync = async ({
-    id,
+    publicKey,
+    name,
     version,
   }: {
-    id: string
+    publicKey: string
+    name: string
     version: string
   }) => {
     try {
       return await invoke<boolean>('is_extension_installed', {
-        extensionId: id,
+        publicKey,
+        name,
         extensionVersion: version,
       })
     } catch (error) {
@@ -314,7 +291,6 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
     loadExtensionsAsync,
     previewManifestAsync,
     removeExtensionAsync,
-    removeExtensionByFullIdAsync,
   }
 })
 
@@ -370,20 +346,3 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
     throw new Error(JSON.stringify(error))
   }
 } */
-
-function encodeExtensionInfo(
-  keyHash: string,
-  name: string,
-  version: string,
-): string {
-  const info = {
-    key_hash: keyHash,
-    name: name,
-    version: version,
-  }
-  const jsonString = JSON.stringify(info)
-  const bytes = new TextEncoder().encode(jsonString)
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
-}

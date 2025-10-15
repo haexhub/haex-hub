@@ -1,38 +1,6 @@
-export interface IHaexHubExtensionManifest {
-  name: string
-  id: string
-  entry: string
-  author: string
-  url: string
-  version: string
-  icon: string
-  permissions: {
-    database?: {
-      read?: string[]
-      write?: string[]
-      create?: string[]
-    }
-    http?: string[]
-    filesystem?: {
-      read?: string[]
-      write?: string[]
-    }
-  }
-}
-
-/**
- * Installed extension from database/backend
- */
-export interface IHaexHubExtension {
-  id: string
-  name: string
-  version: string
-  author: string | null
-  icon: string | null
-  enabled: boolean
-  description: string | null
-  homepage: string | null
-}
+// Re-export types from bindings for backwards compatibility
+export type { ExtensionManifest as IHaexHubExtensionManifest } from '~~/src-tauri/bindings/ExtensionManifest'
+export type { ExtensionInfoResponse as IHaexHubExtension } from '~~/src-tauri/bindings/ExtensionInfoResponse'
 
 /**
  * Marketplace extension with additional metadata
@@ -46,4 +14,5 @@ export interface IMarketplaceExtension extends Omit<IHaexHubExtension, 'enabled'
   category: string
   downloadUrl: string
   isInstalled: boolean
+  installedVersion?: string // The version that is currently installed (if different from marketplace version)
 }

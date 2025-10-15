@@ -12,6 +12,14 @@ use tauri::State;
 pub struct SqlPermissionValidator;
 
 impl SqlPermissionValidator {
+    /// Prüft ob eine Tabelle zur Extension gehört (basierend auf keyHash Präfix)
+    /// Format: {keyHash}_{extensionName}_{tableName}
+    fn is_own_table(extension_id: &str, table_name: &str) -> bool {
+        // Tabellennamen sind im Format: {keyHash}_{extensionName}_{tableName}
+        // extension_id ist der keyHash der Extension
+        table_name.starts_with(&format!("{}_", extension_id))
+    }
+
     /// Validiert ein SQL-Statement gegen die Permissions einer Extension
     pub async fn validate_sql(
         app_state: &State<'_, AppState>,

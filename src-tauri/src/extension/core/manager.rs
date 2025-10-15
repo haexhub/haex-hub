@@ -28,13 +28,14 @@ pub struct CachedPermission {
 
 #[derive(Debug, Clone)]
 pub struct MissingExtension {
-    pub full_extension_id: String,
+    pub id: String,
+    pub public_key: String,
     pub name: String,
     pub version: String,
 }
 
 struct ExtensionDataFromDb {
-    full_extension_id: String,
+    id: String,
     manifest: ExtensionManifest,
     enabled: bool,
 }
@@ -153,55 +154,19 @@ impl ExtensionManager {
     pub fn get_extension_dir(
         &self,
         app_handle: &AppHandle,
-        key_hash: &str,
+        public_key: &str,
         extension_name: &str,
         extension_version: &str,
     ) -> Result<PathBuf, ExtensionError> {
         let specific_extension_dir = self
             .get_base_extension_dir(app_handle)?
-            .join(key_hash)
+            .join(public_key)
             .join(extension_name)
             .join(extension_version);
 
         Ok(specific_extension_dir)
     }
 
-    pub fn get_extension_path_by_full_extension_id(
-        &self,
-        app_handle: &AppHandle,
-        full_extension_id: &str,
-    ) -> Result<PathBuf, ExtensionError> {
-        // Parse full_extension_id: key_hash_name_version
-        // Split on first underscore to get key_hash
-        let first_underscore =
-            full_extension_id
-                .find('_')
-                .ok_or_else(|| ExtensionError::ValidationError {
-                    reason: format!("Invalid full_extension_id format: {}", full_extension_id),
-                })?;
-
-        let key_hash = &full_extension_id[..first_underscore];
-        let rest = &full_extension_id[first_underscore + 1..];
-
-        // Split on last underscore to get version
-        let last_underscore = rest
-            .rfind('_')
-            .ok_or_else(|| ExtensionError::ValidationError {
-                reason: format!("Invalid full_extension_id format: {}", full_extension_id),
-            })?;
-
-        let name = &rest[..last_underscore];
-        let version = &rest[last_underscore + 1..];
-
-        // Build hierarchical path: key_hash/name/version/
-        let specific_extension_dir = self
-            .get_base_extension_dir(app_handle)?
-            .join(key_hash)
-            .join(name)
-            .join(version);
-
-        Ok(specific_extension_dir)
-    }
 
     pub fn add_production_extension(&self, extension: Extension) -> Result<(), ExtensionError> {
         if extension.id.is_empty() {
@@ -251,63 +216,106 @@ impl ExtensionManager {
         prod_extensions.get(extension_id).cloned()
     }
 
-    pub fn remove_extension(&self, extension_id: &str) -> Result<(), ExtensionError> {
-        {
-            let mut dev_extensions = self.dev_extensions.lock().unwrap();
-            if dev_extensions.remove(extension_id).is_some() {
-                return Ok(());
+    /// Find extension ID by public_key and name (checks dev extensions first, then production)
+    fn find_extension_id_by_public_key_and_name(
+        &self,
+        public_key: &str,
+        name: &str,
+    ) -> Result<Option<(String, Extension)>, ExtensionError> {
+        // 1. Check dev extensions first (higher priority)
+        let dev_extensions = self.dev_extensions.lock().map_err(|e| {
+            ExtensionError::MutexPoisoned {
+                reason: e.to_string(),
+            }
+        })?;
+
+        for (id, ext) in dev_extensions.iter() {
+            if ext.manifest.public_key == public_key && ext.manifest.name == name {
+                return Ok(Some((id.clone(), ext.clone())));
             }
         }
 
-        {
-            let mut prod_extensions = self.production_extensions.lock().unwrap();
-            if prod_extensions.remove(extension_id).is_some() {
-                return Ok(());
+        // 2. Check production extensions
+        let prod_extensions = self.production_extensions.lock().map_err(|e| {
+            ExtensionError::MutexPoisoned {
+                reason: e.to_string(),
+            }
+        })?;
+
+        for (id, ext) in prod_extensions.iter() {
+            if ext.manifest.public_key == public_key && ext.manifest.name == name {
+                return Ok(Some((id.clone(), ext.clone())));
             }
         }
 
-        Err(ExtensionError::NotFound {
-            id: extension_id.to_string(),
-        })
+        Ok(None)
     }
 
-    pub async fn remove_extension_by_full_id(
+    /// Get extension by public_key and name (used by frontend)
+    pub fn get_extension_by_public_key_and_name(
         &self,
-        app_handle: &AppHandle,
-        full_extension_id: &str,
-        state: &State<'_, AppState>,
-    ) -> Result<(), ExtensionError> {
-        // Parse full_extension_id: key_hash_name_version
-        // Since _ is not allowed in name and version, we can split safely
-        let parts: Vec<&str> = full_extension_id.split('_').collect();
+        public_key: &str,
+        name: &str,
+    ) -> Result<Option<Extension>, ExtensionError> {
+        Ok(self
+            .find_extension_id_by_public_key_and_name(public_key, name)?
+            .map(|(_, ext)| ext))
+    }
 
-        if parts.len() != 3 {
-            return Err(ExtensionError::ValidationError {
-                reason: format!(
-                    "Invalid full_extension_id format (expected 3 parts): {}",
-                    full_extension_id
-                ),
-            });
+    pub fn remove_extension(
+        &self,
+        public_key: &str,
+        name: &str,
+    ) -> Result<(), ExtensionError> {
+        let (id, _) = self
+            .find_extension_id_by_public_key_and_name(public_key, name)?
+            .ok_or_else(|| ExtensionError::NotFound {
+                public_key: public_key.to_string(),
+                name: name.to_string(),
+            })?;
+
+        // Remove from dev extensions first
+        {
+            let mut dev_extensions = self.dev_extensions.lock().map_err(|e| {
+                ExtensionError::MutexPoisoned {
+                    reason: e.to_string(),
+                }
+            })?;
+            if dev_extensions.remove(&id).is_some() {
+                return Ok(());
+            }
         }
 
-        let key_hash = parts[0];
-        let name = parts[1];
-        let version = parts[2];
+        // Remove from production extensions
+        {
+            let mut prod_extensions = self.production_extensions.lock().map_err(|e| {
+                ExtensionError::MutexPoisoned {
+                    reason: e.to_string(),
+                }
+            })?;
+            prod_extensions.remove(&id);
+        }
 
-        self.remove_extension_internal(app_handle, key_hash, name, version, state)
-            .await
+        Ok(())
     }
 
     pub async fn remove_extension_internal(
         &self,
         app_handle: &AppHandle,
-        key_hash: &str,
+        public_key: &str,
         extension_name: &str,
         extension_version: &str,
         state: &State<'_, AppState>,
     ) -> Result<(), ExtensionError> {
-        // Erstelle full_extension_id: key_hash_name_version
-        let full_extension_id = format!("{}_{}_{}",key_hash, extension_name, extension_version);
+        // Get the extension from memory to get its ID
+        let extension = self
+            .get_extension_by_public_key_and_name(public_key, extension_name)?
+            .ok_or_else(|| ExtensionError::NotFound {
+                public_key: public_key.to_string(),
+                name: extension_name.to_string(),
+            })?;
+
+
 
         // Lösche Permissions und Extension-Eintrag in einer Transaktion
         with_connection(&state.db, |conn| {
@@ -317,31 +325,31 @@ impl ExtensionManager {
                 reason: "Failed to lock HLC service".to_string(),
             })?;
 
-            // Lösche alle Permissions mit full_extension_id
+            // Lösche alle Permissions mit extension_id
             PermissionManager::delete_permissions_in_transaction(
                 &tx,
                 &hlc_service,
-                &full_extension_id,
+                &extension.id,
             )?;
 
-            // Lösche Extension-Eintrag mit full_extension_id
+            // Lösche Extension-Eintrag mit extension_id
             let sql = format!("DELETE FROM {} WHERE id = ?", TABLE_EXTENSIONS);
             SqlExecutor::execute_internal_typed(
                 &tx,
                 &hlc_service,
                 &sql,
-                rusqlite::params![full_extension_id],
+                rusqlite::params![&extension.id],
             )?;
 
             tx.commit().map_err(DatabaseError::from)
         })?;
 
-        // Entferne aus dem In-Memory-Manager mit full_extension_id
-        self.remove_extension(&full_extension_id)?;
+        // Entferne aus dem In-Memory-Manager
+        self.remove_extension(public_key, extension_name)?;
 
-        // Lösche nur den spezifischen Versions-Ordner: key_hash/name/version
+        // Lösche nur den spezifischen Versions-Ordner: public_key/name/version
         let extension_dir =
-            self.get_extension_dir(app_handle, key_hash, extension_name, extension_version)?;
+            self.get_extension_dir(app_handle, public_key, extension_name, extension_version)?;
 
         if extension_dir.exists() {
             std::fs::remove_dir_all(&extension_dir).map_err(|e| {
@@ -388,13 +396,11 @@ impl ExtensionManager {
         )
         .is_ok();
 
-        let key_hash = extracted.manifest.calculate_key_hash()?;
         let editable_permissions = extracted.manifest.to_editable_permissions();
 
         Ok(ExtensionPreview {
             manifest: extracted.manifest.clone(),
             is_valid_signature,
-            key_hash,
             editable_permissions,
         })
     }
@@ -416,11 +422,9 @@ impl ExtensionManager {
         )
         .map_err(|e| ExtensionError::SignatureVerificationFailed { reason: e })?;
 
-        let full_extension_id = extracted.manifest.full_extension_id()?;
-
         let extensions_dir = self.get_extension_dir(
             &app_handle,
-            &extracted.manifest.calculate_key_hash()?,
+            &extracted.manifest.public_key,
             &extracted.manifest.name,
             &extracted.manifest.version,
         )?;
@@ -451,7 +455,9 @@ impl ExtensionManager {
             }
         }
 
-        let permissions = custom_permissions.to_internal_permissions(&full_extension_id);
+        // Generate UUID for extension (Drizzle's $defaultFn only works from JS, not raw SQL)
+        let extension_id = uuid::Uuid::new_v4().to_string();
+        let permissions = custom_permissions.to_internal_permissions(&extension_id);
 
         // Extension-Eintrag und Permissions in einer Transaktion speichern
         with_connection(&state.db, |conn| {
@@ -461,9 +467,9 @@ impl ExtensionManager {
                 reason: "Failed to lock HLC service".to_string(),
             })?;
 
-            // 1. Extension-Eintrag erstellen (oder aktualisieren falls schon vorhanden)
+            // 1. Extension-Eintrag erstellen mit generierter UUID
             let insert_ext_sql = format!(
-                "INSERT OR REPLACE INTO {} (id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO {} (id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 TABLE_EXTENSIONS
             );
 
@@ -472,7 +478,7 @@ impl ExtensionManager {
                 &hlc_service,
                 &insert_ext_sql,
                 rusqlite::params![
-                    full_extension_id,
+                    extension_id,
                     extracted.manifest.name,
                     extracted.manifest.version,
                     extracted.manifest.author,
@@ -512,12 +518,12 @@ impl ExtensionManager {
                 )?;
             }
 
-            tx.commit().map_err(DatabaseError::from)
+            tx.commit().map_err(DatabaseError::from)?;
+            Ok(extension_id.clone())
         })?;
 
         let extension = Extension {
-            id: full_extension_id.clone(),
-            name: extracted.manifest.name.clone(),
+            id: extension_id.clone(),
             source: ExtensionSource::Production {
                 path: extensions_dir.clone(),
                 version: extracted.manifest.version.clone(),
@@ -529,7 +535,7 @@ impl ExtensionManager {
 
         self.add_production_extension(extension)?;
 
-        Ok(full_extension_id)
+        Ok(extension_id)
     }
 
     /// Scannt das Dateisystem beim Start und lädt alle installierten Erweiterungen.
@@ -569,7 +575,7 @@ impl ExtensionManager {
 
             let mut data = Vec::new();
             for result in results {
-                let full_extension_id = result["id"]
+                let id = result["id"]
                     .as_str()
                     .ok_or_else(|| DatabaseError::SerializationError {
                         reason: "Missing id field".to_string(),
@@ -577,12 +583,6 @@ impl ExtensionManager {
                     .to_string();
 
                 let manifest = ExtensionManifest {
-                    id: result["name"]
-                        .as_str()
-                        .ok_or_else(|| DatabaseError::SerializationError {
-                            reason: "Missing name field".to_string(),
-                        })?
-                        .to_string(),
                     name: result["name"]
                         .as_str()
                         .ok_or_else(|| DatabaseError::SerializationError {
@@ -611,7 +611,7 @@ impl ExtensionManager {
                     .unwrap_or(false);
 
                 data.push(ExtensionDataFromDb {
-                    full_extension_id,
+                    id,
                     manifest,
                     enabled,
                 });
@@ -625,15 +625,21 @@ impl ExtensionManager {
         eprintln!("DEBUG: Found {} extensions in database", extensions.len());
 
         for extension_data in extensions {
-            let full_extension_id = extension_data.full_extension_id;
-            eprintln!("DEBUG: Processing extension: {}", full_extension_id);
-            let extension_path =
-                self.get_extension_path_by_full_extension_id(app_handle, &full_extension_id)?;
+            let extension_id = extension_data.id;
+            eprintln!("DEBUG: Processing extension: {}", extension_id);
+
+            // Use public_key/name/version path structure
+            let extension_path = self.get_extension_dir(
+                app_handle,
+                &extension_data.manifest.public_key,
+                &extension_data.manifest.name,
+                &extension_data.manifest.version,
+            )?;
 
             if !extension_path.exists() || !extension_path.join("manifest.json").exists() {
                 eprintln!(
                     "DEBUG: Extension files missing for: {} at {:?}",
-                    full_extension_id, extension_path
+                    extension_id, extension_path
                 );
                 self.missing_extensions
                     .lock()
@@ -641,7 +647,8 @@ impl ExtensionManager {
                         reason: e.to_string(),
                     })?
                     .push(MissingExtension {
-                        full_extension_id: full_extension_id.clone(),
+                        id: extension_id.clone(),
+                        public_key: extension_data.manifest.public_key.clone(),
                         name: extension_data.manifest.name.clone(),
                         version: extension_data.manifest.version.clone(),
                     });
@@ -650,12 +657,11 @@ impl ExtensionManager {
 
             eprintln!(
                 "DEBUG: Extension loaded successfully: {}",
-                full_extension_id
+                extension_id
             );
 
             let extension = Extension {
-                id: full_extension_id.clone(),
-                name: extension_data.manifest.name.clone(),
+                id: extension_id.clone(),
                 source: ExtensionSource::Production {
                     path: extension_path,
                     version: extension_data.manifest.version.clone(),
@@ -665,7 +671,7 @@ impl ExtensionManager {
                 last_accessed: SystemTime::now(),
             };
 
-            loaded_extension_ids.push(full_extension_id.clone());
+            loaded_extension_ids.push(extension_id.clone());
             self.add_production_extension(extension)?;
         }
 

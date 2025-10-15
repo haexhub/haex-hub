@@ -21,11 +21,15 @@ pub enum ExtensionSource {
 /// Complete extension data structure
 #[derive(Debug, Clone)]
 pub struct Extension {
+    /// UUID from database (primary key)
     pub id: String,
-    pub name: String,
+    /// Extension source (production path or dev server)
     pub source: ExtensionSource,
+    /// Extension manifest containing all metadata (name, version, public_key, etc.)
     pub manifest: ExtensionManifest,
+    /// Whether the extension is enabled
     pub enabled: bool,
+    /// Last time the extension was accessed
     pub last_accessed: SystemTime,
 }
 

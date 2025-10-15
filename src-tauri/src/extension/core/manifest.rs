@@ -1,4 +1,3 @@
-use crate::extension::crypto::ExtensionCrypto;
 use crate::extension::error::ExtensionError;
 use crate::extension::permissions::types::{
     Action, DbAction, ExtensionPermission, FsAction, HttpAction, PermissionConstraints,
@@ -33,7 +32,6 @@ pub struct PermissionEntry {
 pub struct ExtensionPreview {
     pub manifest: ExtensionManifest,
     pub is_valid_signature: bool,
-    pub key_hash: String,
     pub editable_permissions: EditablePermissions,
 }
 /// Definiert die einheitliche Struktur für alle Berechtigungsarten im Manifest und UI.
@@ -56,7 +54,6 @@ pub type EditablePermissions = ExtensionPermissions;
 #[derive(Serialize, Deserialize, Clone, Debug, TS)]
 #[ts(export)]
 pub struct ExtensionManifest {
-    pub id: String,
     pub name: String,
     pub version: String,
     pub author: Option<String>,
@@ -70,28 +67,6 @@ pub struct ExtensionManifest {
 }
 
 impl ExtensionManifest {
-    pub fn calculate_key_hash(&self) -> Result<String, ExtensionError> {
-        ExtensionCrypto::calculate_key_hash(&self.public_key)
-            .map_err(|e| ExtensionError::InvalidPublicKey { reason: e })
-    }
-
-    pub fn full_extension_id(&self) -> Result<String, ExtensionError> {
-        // Validate that name and version don't contain underscores
-        if self.name.contains('_') {
-            return Err(ExtensionError::ValidationError {
-                reason: format!("Extension name cannot contain underscores: {}", self.name),
-            });
-        }
-        if self.version.contains('_') {
-            return Err(ExtensionError::ValidationError {
-                reason: format!("Extension version cannot contain underscores: {}", self.version),
-            });
-        }
-
-        let key_hash = self.calculate_key_hash()?;
-        Ok(format!("{}_{}_{}", key_hash, self.name, self.version))
-    }
-
     /// Konvertiert die Manifest-Berechtigungen in das bearbeitbare UI-Modell,
     /// indem der Standardstatus `Granted` gesetzt wird.
     pub fn to_editable_permissions(&self) -> EditablePermissions {
@@ -189,43 +164,41 @@ impl ExtensionPermissions {
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct ExtensionInfoResponse {
-    pub key_hash: String,
+    pub id: String,
+    pub public_key: String,
     pub name: String,
-    pub full_id: String,
     pub version: String,
-    pub display_name: Option<String>,
-    pub namespace: Option<String>,
-    pub allowed_origin: String,
+    pub author: Option<String>,
     pub enabled: bool,
     pub description: Option<String>,
     pub homepage: Option<String>,
     pub icon: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dev_server_url: Option<String>,
 }
 
 impl ExtensionInfoResponse {
     pub fn from_extension(
         extension: &crate::extension::core::types::Extension,
     ) -> Result<Self, ExtensionError> {
-        use crate::extension::core::types::get_tauri_origin;
+        use crate::extension::core::types::ExtensionSource;
 
-        // Always use the current Tauri origin to support all platforms (Desktop, Android, iOS)
-        let allowed_origin = get_tauri_origin();
-
-        let key_hash = extension.manifest.calculate_key_hash()?;
-        let full_id = extension.manifest.full_extension_id()?;
+        let dev_server_url = match &extension.source {
+            ExtensionSource::Development { dev_server_url, .. } => Some(dev_server_url.clone()),
+            ExtensionSource::Production { .. } => None,
+        };
 
         Ok(Self {
-            key_hash,
+            id: extension.id.clone(),
+            public_key: extension.manifest.public_key.clone(),
             name: extension.manifest.name.clone(),
-            full_id,
             version: extension.manifest.version.clone(),
-            display_name: Some(extension.manifest.name.clone()),
-            namespace: extension.manifest.author.clone(),
-            allowed_origin,
+            author: extension.manifest.author.clone(),
             enabled: extension.enabled,
             description: extension.manifest.description.clone(),
             homepage: extension.manifest.homepage.clone(),
             icon: extension.manifest.icon.clone(),
+            dev_server_url,
         })
     }
 }

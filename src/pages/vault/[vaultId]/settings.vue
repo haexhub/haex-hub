@@ -1,38 +1,43 @@
 <template>
-  <div
-    class="grid grid-rows-2 sm:grid-cols-2 sm:gap-2 p-2 max-w-2xl w-full h-fit"
-  >
-    <div class="p-2">{{ t('language') }}</div>
-    <div><UiDropdownLocale @select="onSelectLocaleAsync" /></div>
+  <div>
+    <div
+      class="grid grid-rows-2 sm:grid-cols-2 sm:gap-2 p-2 max-w-2xl w-full h-fit"
+    >
+      <div class="p-2">{{ t('language') }}</div>
+      <div><UiDropdownLocale @select="onSelectLocaleAsync" /></div>
 
-    <div class="p-2">{{ t('design') }}</div>
-    <div><UiDropdownTheme @select="onSelectThemeAsync" /></div>
+      <div class="p-2">{{ t('design') }}</div>
+      <div><UiDropdownTheme @select="onSelectThemeAsync" /></div>
 
-    <div class="p-2">{{ t('vaultName.label') }}</div>
-    <div>
-      <UiInput
-        v-model="currentVaultName"
-        :placeholder="t('vaultName.label')"
-        @change="onSetVaultNameAsync"
-      />
+      <div class="p-2">{{ t('vaultName.label') }}</div>
+      <div>
+        <UiInput
+          v-model="currentVaultName"
+          :placeholder="t('vaultName.label')"
+          @change="onSetVaultNameAsync"
+        />
+      </div>
+
+      <div class="p-2">{{ t('notifications.label') }}</div>
+      <div>
+        <UiButton
+          :label="t('notifications.requestPermission')"
+          @click="requestNotificationPermissionAsync"
+        />
+      </div>
+
+      <div class="p-2">{{ t('deviceName.label') }}</div>
+      <div>
+        <UiInput
+          v-model="deviceName"
+          :placeholder="t('deviceName.label')"
+          @change="onUpdateDeviceNameAsync"
+        />
+      </div>
     </div>
 
-    <div class="p-2">{{ t('notifications.label') }}</div>
-    <div>
-      <UiButton
-        :label="t('notifications.requestPermission')"
-        @click="requestNotificationPermissionAsync"
-      />
-    </div>
-
-    <div class="p-2">{{ t('deviceName.label') }}</div>
-    <div>
-      <UiInput
-        v-model="deviceName"
-        :placeholder="t('deviceName.label')"
-        @change="onUpdateDeviceNameAsync"
-      />
-    </div>
+    <!-- Child routes (like developer.vue) will be rendered here -->
+    <NuxtPage />
   </div>
 </template>
 

@@ -15,6 +15,13 @@
       "when": 1759418087677,
       "tag": "0001_green_stark_industries",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1760272083150,
+      "tag": "0002_amazing_iron_fist",
+      "breakpoints": true
     }
   ]
 }

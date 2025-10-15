@@ -39,8 +39,8 @@ pub enum ExtensionError {
     #[error("Security violation: {reason}")]
     SecurityViolation { reason: String },
 
-    #[error("Extension not found: {id}")]
-    NotFound { id: String },
+    #[error("Extension not found: {name} (public_key: {public_key})")]
+    NotFound { public_key: String, name: String },
 
     #[error("Permission denied: {extension_id} cannot {operation} on {resource}")]
     PermissionDenied {

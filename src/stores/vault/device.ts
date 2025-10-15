@@ -1,8 +1,13 @@
 import { load } from '@tauri-apps/plugin-store'
-import { hostname as tauriHostname } from '@tauri-apps/plugin-os'
+import {
+  hostname as tauriHostname,
+  platform as tauriPlatform,
+} from '@tauri-apps/plugin-os'
 
 export const useDeviceStore = defineStore('vaultInstanceStore', () => {
   const deviceId = ref<string>()
+
+  const platform = computedAsync(() => tauriPlatform())
 
   const hostname = computedAsync(() => tauriHostname())
 
@@ -95,6 +100,7 @@ export const useDeviceStore = defineStore('vaultInstanceStore', () => {
     deviceName,
     hostname,
     isKnownDeviceAsync,
+    platform,
     readDeviceNameAsync,
     setDeviceIdAsync,
     setDeviceIdIfNotExistsAsync,

@@ -23,26 +23,32 @@ export const haexSettings = sqliteTable(tableNames.haex.settings.name, {
 export type InsertHaexSettings = typeof haexSettings.$inferInsert
 export type SelectHaexSettings = typeof haexSettings.$inferSelect
 
-export const haexExtensions = sqliteTable(tableNames.haex.extensions.name, {
-  id: text()
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  author: text(),
-  description: text(),
-  entry: text(),
-  homepage: text(),
-  enabled: integer({ mode: 'boolean' }),
-  icon: text(),
-  name: text(),
-  public_key: text(),
-  signature: text(),
-  url: text(),
-  version: text(),
-  haexTombstone: integer(tableNames.haex.extensions.columns.haexTombstone, {
-    mode: 'boolean',
-  }),
-  haexTimestamp: text(tableNames.haex.extensions.columns.haexTimestamp),
-})
+export const haexExtensions = sqliteTable(
+  tableNames.haex.extensions.name,
+  {
+    id: text()
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    public_key: text().notNull(),
+    name: text().notNull(),
+    version: text().notNull(),
+    author: text(),
+    description: text(),
+    entry: text().notNull().default('index.html'),
+    homepage: text(),
+    enabled: integer({ mode: 'boolean' }).default(true),
+    icon: text(),
+    signature: text().notNull(),
+    haexTombstone: integer(tableNames.haex.extensions.columns.haexTombstone, {
+      mode: 'boolean',
+    }),
+    haexTimestamp: text(tableNames.haex.extensions.columns.haexTimestamp),
+  },
+  (table) => [
+    // UNIQUE constraint: Pro Developer (public_key) kann nur eine Extension mit diesem Namen existieren
+    unique().on(table.public_key, table.name),
+  ],
+)
 export type InsertHaexExtensions = typeof haexExtensions.$inferInsert
 export type SelectHaexExtensions = typeof haexExtensions.$inferSelect
 

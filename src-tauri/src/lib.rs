@@ -76,12 +76,14 @@ pub fn run() {
             extension::database::extension_sql_execute,
             extension::database::extension_sql_select,
             extension::get_all_extensions,
+            extension::get_all_dev_extensions,
             extension::get_extension_info,
             extension::install_extension_with_permissions,
             extension::is_extension_installed,
+            extension::load_dev_extension,
             extension::preview_extension,
+            extension::remove_dev_extension,
             extension::remove_extension,
-            extension::remove_extension_by_full_id,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

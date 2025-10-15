@@ -38,28 +38,21 @@ impl HaexSettings {
 #[serde(rename_all = "camelCase")]
 pub struct HaexExtensions {
     pub id: String,
+    pub public_key: String,
+    pub name: String,
+    pub version: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub author: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub entry: Option<String>,
+    pub entry: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub homepage: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enabled: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub public_key: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub signature: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub version: Option<String>,
+    pub signature: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub haex_tombstone: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -70,19 +63,18 @@ impl HaexExtensions {
     pub fn from_row(row: &rusqlite::Row) -> rusqlite::Result<Self> {
         Ok(Self {
             id: row.get(0)?,
-            author: row.get(1)?,
-            description: row.get(2)?,
-            entry: row.get(3)?,
-            homepage: row.get(4)?,
-            enabled: row.get(5)?,
-            icon: row.get(6)?,
-            name: row.get(7)?,
-            public_key: row.get(8)?,
-            signature: row.get(9)?,
-            url: row.get(10)?,
-            version: row.get(11)?,
-            haex_tombstone: row.get(12)?,
-            haex_timestamp: row.get(13)?,
+            public_key: row.get(1)?,
+            name: row.get(2)?,
+            version: row.get(3)?,
+            author: row.get(4)?,
+            description: row.get(5)?,
+            entry: row.get(6)?,
+            homepage: row.get(7)?,
+            enabled: row.get(8)?,
+            icon: row.get(9)?,
+            signature: row.get(10)?,
+            haex_tombstone: row.get(11)?,
+            haex_timestamp: row.get(12)?,
         })
     }
 }

@@ -57,14 +57,58 @@
         :style="{ display: tab.isVisible && !showConsole ? 'block' : 'none' }"
         class="absolute inset-0"
       >
+        <!-- Error overlay for dev extensions when server is not reachable -->
+        <div
+          v-if="tab.extension.devServerUrl && iframe.errors[tab.extension.id]"
+          class="absolute inset-0 bg-base-100 flex items-center justify-center p-8"
+        >
+          <div class="max-w-md space-y-4 text-center">
+            <Icon
+              name="mdi:alert-circle-outline"
+              size="64"
+              class="mx-auto text-warning"
+            />
+            <h3 class="text-lg font-semibold">
+              {{ t('devServer.notReachable.title') }}
+            </h3>
+            <p class="text-sm opacity-70">
+              {{
+                t('devServer.notReachable.description', {
+                  url: tab.extension.devServerUrl,
+                })
+              }}
+            </p>
+            <div class="bg-base-200 p-4 rounded text-left text-xs font-mono">
+              <p class="opacity-70 mb-2">
+                {{ t('devServer.notReachable.howToStart') }}
+              </p>
+              <code class="block">cd /path/to/extension</code>
+              <code class="block">npm run dev</code>
+            </div>
+            <UButton
+              :label="t('devServer.notReachable.retry')"
+              @click="retryLoadIFrame(tab.extension.id)"
+            />
+          </div>
+        </div>
+
         <iframe
           :ref="
             (el) => registerIFrame(tab.extension.id, el as HTMLIFrameElement)
           "
           class="w-full h-full border-0"
-          :src="getExtensionUrl(tab.extension)"
-          sandbox="allow-scripts allow-storage-access-by-user-activation allow-forms"
+          :src="
+            getExtensionUrl(
+              tab.extension.publicKey,
+              tab.extension.name,
+              tab.extension.version,
+              'index.html',
+              tab.extension.devServerUrl ?? undefined,
+            )
+          "
+          :sandbox="iframe.sandboxAttributes(tab.extension.devServerUrl)"
           allow="autoplay; speaker-selection; encrypted-media;"
+          @error="onIFrameError(tab.extension.id)"
         />
       </div>
 
@@ -130,7 +174,8 @@
                   log.level === 'info' ? 'text-info' : '',
                   log.level === 'debug' ? 'text-base-content/70' : '',
                 ]"
-              >{{ log.message }}</pre>
+                >{{ log.message }}</pre
+              >
             </div>
           </div>
 
@@ -156,16 +201,8 @@
 
 <script setup lang="ts">
 import {
-  useExtensionMessageHandler,
-  registerExtensionIFrame,
-  unregisterExtensionIFrame,
-} from '~/composables/extensionMessageHandler'
-import { useExtensionTabsStore } from '~/stores/extensions/tabs'
-import type { IHaexHubExtension } from '~/types/haexhub'
-import { platform } from '@tauri-apps/plugin-os'
-import {
-  EXTENSION_PROTOCOL_NAME,
   EXTENSION_PROTOCOL_PREFIX,
+  EXTENSION_PROTOCOL_NAME,
 } from '~/config/constants'
 
 definePageMeta({
@@ -175,6 +212,65 @@ definePageMeta({
 const { t } = useI18n()
 
 const tabsStore = useExtensionTabsStore()
+
+// Track iframe errors (for dev mode)
+//const iframeErrors = ref<Record<string, boolean>>({})
+
+const sandboxDefault = [
+  'allow-scripts',
+  'allow-storage-access-by-user-activation',
+  'allow-forms',
+] as const
+
+const iframe = reactive<{
+  errors: Record<string, boolean>
+  sandboxAttributes: (devUrl?: string | null) => string
+}>({
+  errors: {},
+  sandboxAttributes: (devUrl) => {
+    return devUrl
+      ? [...sandboxDefault, 'allow-same-origin'].join(' ')
+      : sandboxDefault.join(' ')
+  },
+})
+
+const { platform } = useDeviceStore()
+
+// Generate extension URL (uses cached platform)
+const getExtensionUrl = (
+  publicKey: string,
+  name: string,
+  version: string,
+  assetPath: string = 'index.html',
+  devServerUrl?: string,
+) => {
+  if (!publicKey || !name || !version) {
+    console.error('Missing required extension fields')
+    return ''
+  }
+
+  // If dev server URL is provided, load directly from dev server
+  if (devServerUrl) {
+    const cleanUrl = devServerUrl.replace(/\/$/, '')
+    const cleanPath = assetPath.replace(/^\//, '')
+    return cleanPath ? `${cleanUrl}/${cleanPath}` : cleanUrl
+  }
+
+  const extensionInfo = {
+    name,
+    publicKey,
+    version,
+  }
+  const encodedInfo = btoa(JSON.stringify(extensionInfo))
+
+  if (platform === 'android' || platform === 'windows') {
+    // Android: Tauri uses http://{scheme}.localhost format
+    return `http://${EXTENSION_PROTOCOL_NAME}.localhost/${encodedInfo}/${assetPath}`
+  } else {
+    // Desktop: Use custom protocol with base64 as host
+    return `${EXTENSION_PROTOCOL_PREFIX}${encodedInfo}/${assetPath}`
+  }
+}
 
 // Console logging - use global logs from plugin
 const { $consoleLogs, $clearConsoleLogs } = useNuxtApp()
@@ -233,7 +329,10 @@ const registerIFrame = (extensionId: string, el: HTMLIFrameElement | null) => {
   // Registriere IFrame im globalen Message Handler Registry
   const tab = tabsStore.openTabs.get(extensionId)
   if (tab?.extension) {
-    console.log('[Vue Debug] Registering iframe in message handler for:', tab.extension.name)
+    console.log(
+      '[Vue Debug] Registering iframe in message handler for:',
+      tab.extension.name,
+    )
     registerExtensionIFrame(el, tab.extension)
     console.log('[Vue Debug] Registration complete!')
   } else {
@@ -289,44 +388,6 @@ watch(
   },
   { deep: true },
 )
-const os = await platform()
-
-// Extension URL generieren
-const getExtensionUrl = (extension: IHaexHubExtension) => {
-  // Extract key_hash from full_extension_id (everything before first underscore)
-  const firstUnderscoreIndex = extension.id.indexOf('_')
-  if (firstUnderscoreIndex === -1) {
-    console.error('Invalid full_extension_id format:', extension.id)
-    return ''
-  }
-
-  const keyHash = extension.id.substring(0, firstUnderscoreIndex)
-
-  const info = {
-    key_hash: keyHash,
-    name: extension.name,
-    version: extension.version,
-  }
-
-  const jsonString = JSON.stringify(info)
-  const bytes = new TextEncoder().encode(jsonString)
-  const encodedInfo = Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
-
-  // 'android', 'ios', 'windows' etc.
-  let schemeUrl: string
-
-  if (os === 'android' || os === 'windows') {
-    // Android/Windows: http://<scheme>.localhost/path
-    schemeUrl = `http://${EXTENSION_PROTOCOL_NAME}.localhost/${encodedInfo}/index.html`
-  } else {
-    // macOS/Linux/iOS: Klassisch scheme://localhost/path
-    schemeUrl = `${EXTENSION_PROTOCOL_PREFIX}localhost/${encodedInfo}/index.html`
-  }
-
-  return schemeUrl
-}
 
 // Context Changes an alle Tabs broadcasten
 const { currentTheme } = storeToRefs(useUiStore())
@@ -361,11 +422,38 @@ const copyToClipboard = async (text: string) => {
     console.error('Failed to copy:', err)
   }
 }
+
+// Handle iframe errors (e.g., dev server not running)
+const onIFrameError = (extensionId: string) => {
+  iframe.errors[extensionId] = true
+}
+
+// Retry loading iframe (clears error and reloads)
+const retryLoadIFrame = (extensionId: string) => {
+  iframe.errors[extensionId] = false
+  // Reload the iframe by updating the tab
+  const tab = tabsStore.openTabs.get(extensionId)
+  if (tab?.iframe) {
+    tab.iframe.src = tab.iframe.src // Force reload
+  }
+}
 </script>
 
 <i18n lang="yaml">
 de:
   loading: Erweiterung wird geladen
+  devServer:
+    notReachable:
+      title: Dev-Server nicht erreichbar
+      description: Der Dev-Server unter {url} ist nicht erreichbar.
+      howToStart: 'So starten Sie den Dev-Server:'
+      retry: Erneut versuchen
 en:
   loading: Extension is loading
+  devServer:
+    notReachable:
+      title: Dev Server Not Reachable
+      description: The dev server at {url} is not reachable.
+      howToStart: 'To start the dev server:'
+      retry: Retry
 </i18n>

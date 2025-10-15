@@ -1,5 +1,5 @@
 import { platform } from '@tauri-apps/plugin-os'
-import type { LocationQueryValue, RouteLocationRawI18n } from 'vue-router'
+import type { RouteLocationRawI18n } from 'vue-router'
 
 /* export const bytesToBase64DataUrlAsync = async (
   bytes: Uint8Array,
@@ -25,26 +25,6 @@ export const blobToImageAsync = (blob: Blob): Promise<HTMLImageElement> => {
     }
     img.src = url
   })
-}
-
-export const deepToRaw = <T extends Record<string, any>>(sourceObj: T): T => {
-  const objectIterator = (input: any): any => {
-    if (Array.isArray(input)) {
-      return input.map((item) => objectIterator(item))
-    }
-    if (isRef(input) || isReactive(input) || isProxy(input)) {
-      return objectIterator(toRaw(input))
-    }
-    if (input && typeof input === 'object') {
-      return Object.keys(input).reduce((acc, key) => {
-        acc[key as keyof typeof acc] = objectIterator(input[key])
-        return acc
-      }, {} as T)
-    }
-    return input
-  }
-
-  return objectIterator(sourceObj)
 }
 
 export const readableFileSize = (sizeInByte: number | string = 0) => {
