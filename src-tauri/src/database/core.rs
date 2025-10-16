@@ -12,7 +12,6 @@ use serde_json::Value as JsonValue;
 use sqlparser::ast::{Expr, Query, Select, SetExpr, Statement, TableFactor, TableObject};
 use sqlparser::dialect::SQLiteDialect;
 use sqlparser::parser::Parser;
-use std::collections::HashMap;
 
 /// Öffnet und initialisiert eine Datenbank mit Verschlüsselung
 ///
@@ -121,7 +120,7 @@ pub fn execute(
     sql: String,
     params: Vec<JsonValue>,
     connection: &DbConnection,
-) -> Result<usize, DatabaseError> {
+) -> Result<Vec<Vec<JsonValue>>, DatabaseError> {
     // Konvertiere Parameter
     let params_converted: Vec<RusqliteValue> = params
         .iter()
@@ -130,19 +129,56 @@ pub fn execute(
     let params_sql: Vec<&dyn ToSql> = params_converted.iter().map(|v| v as &dyn ToSql).collect();
 
     with_connection(connection, |conn| {
-        let affected_rows = conn.execute(&sql, &params_sql[..]).map_err(|e| {
-            // "Lazy Parsing": Extrahiere den Tabellennamen nur, wenn ein Fehler auftritt,
-            // um den Overhead bei erfolgreichen Operationen zu vermeiden.
-            let table_name = extract_primary_table_name_from_sql(&sql).unwrap_or(None);
+        // Check if the SQL contains RETURNING clause
+        let has_returning = sql.to_uppercase().contains("RETURNING");
 
-            DatabaseError::ExecutionError {
-                sql: sql.clone(),
+        if has_returning {
+            // Use prepare + query for RETURNING statements
+            let mut stmt = conn.prepare(&sql).map_err(|e| DatabaseError::PrepareError {
                 reason: e.to_string(),
-                table: table_name,
-            }
-        })?;
+            })?;
 
-        Ok(affected_rows)
+            let num_columns = stmt.column_count();
+            let mut rows = stmt
+                .query(&params_sql[..])
+                .map_err(|e| DatabaseError::QueryError {
+                    reason: e.to_string(),
+                })?;
+
+            let mut result_vec: Vec<Vec<JsonValue>> = Vec::new();
+
+            while let Some(row) = rows.next().map_err(|e| DatabaseError::RowProcessingError {
+                reason: format!("Row iteration error: {}", e),
+            })? {
+                let mut row_values: Vec<JsonValue> = Vec::with_capacity(num_columns);
+
+                for i in 0..num_columns {
+                    let value_ref = row.get_ref(i).map_err(|e| {
+                        DatabaseError::RowProcessingError {
+                            reason: format!("Failed to get column {}: {}", i, e),
+                        }
+                    })?;
+
+                    let json_val = convert_value_ref_to_json(value_ref)?;
+                    row_values.push(json_val);
+                }
+                result_vec.push(row_values);
+            }
+
+            Ok(result_vec)
+        } else {
+            // For non-RETURNING statements, just execute and return empty array
+            conn.execute(&sql, &params_sql[..]).map_err(|e| {
+                let table_name = extract_primary_table_name_from_sql(&sql).unwrap_or(None);
+                DatabaseError::ExecutionError {
+                    sql: sql.clone(),
+                    reason: e.to_string(),
+                    table: table_name,
+                }
+            })?;
+
+            Ok(vec![])
+        }
     })
 }
 
@@ -150,7 +186,7 @@ pub fn select(
     sql: String,
     params: Vec<JsonValue>,
     connection: &DbConnection,
-) -> Result<Vec<HashMap<String, JsonValue>>, DatabaseError> {
+) -> Result<Vec<Vec<JsonValue>>, DatabaseError> {
     // Validiere SQL-Statement
     let statement = parse_single_statement(&sql)?;
 
@@ -176,12 +212,7 @@ pub fn select(
                 reason: e.to_string(),
             })?;
 
-        let column_names: Vec<String> = stmt
-            .column_names()
-            .into_iter()
-            .map(|s| s.to_string())
-            .collect();
-        let num_columns = column_names.len();
+        let num_columns = stmt.column_count();
 
         let mut rows = stmt
             .query(&params_sql[..])
@@ -189,34 +220,24 @@ pub fn select(
                 reason: e.to_string(),
             })?;
 
-        let mut result_vec: Vec<HashMap<String, JsonValue>> = Vec::new();
+        let mut result_vec: Vec<Vec<JsonValue>> = Vec::new();
 
         while let Some(row) = rows.next().map_err(|e| DatabaseError::RowProcessingError {
             reason: format!("Row iteration error: {}", e),
         })? {
-            let mut row_map: HashMap<String, JsonValue> = HashMap::with_capacity(num_columns);
+            let mut row_values: Vec<JsonValue> = Vec::with_capacity(num_columns);
 
             for i in 0..num_columns {
-                let col_name = &column_names[i];
-
-                /* println!(
-                    "--- Processing Column --- Index: {}, Name: '{}'",
-                    i, col_name
-                ); */
-
                 let value_ref = row
                     .get_ref(i)
                     .map_err(|e| DatabaseError::RowProcessingError {
-                        reason: format!("Failed to get column {} ('{}'): {}", i, col_name, e),
+                        reason: format!("Failed to get column {}: {}", i, e),
                     })?;
 
                 let json_val = convert_value_ref_to_json(value_ref)?;
-
-                //println!("Column: {} = {}", column_names[i], json_val);
-
-                row_map.insert(col_name.clone(), json_val);
+                row_values.push(json_val);
             }
-            result_vec.push(row_map);
+            result_vec.push(row_values);
         }
 
         Ok(result_vec)

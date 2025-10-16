@@ -11,7 +11,6 @@ use crate::AppState;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
-use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Mutex;
 use std::time::UNIX_EPOCH;
@@ -30,7 +29,7 @@ pub fn sql_select(
     sql: String,
     params: Vec<JsonValue>,
     state: State<'_, AppState>,
-) -> Result<Vec<HashMap<String, JsonValue>>, DatabaseError> {
+) -> Result<Vec<Vec<JsonValue>>, DatabaseError> {
     core::select(sql, params, &state.db)
 }
 
@@ -39,7 +38,7 @@ pub fn sql_execute(
     sql: String,
     params: Vec<JsonValue>,
     state: State<'_, AppState>,
-) -> Result<usize, DatabaseError> {
+) -> Result<Vec<Vec<JsonValue>>, DatabaseError> {
     core::execute(sql, params, &state.db)
 }
 

@@ -51,11 +51,12 @@ export const useDeviceStore = defineStore('vaultInstanceStore', () => {
 
   const readDeviceNameAsync = async (id?: string) => {
     const { readDeviceNameAsync } = useVaultSettingsStore()
-    const _id = id ?? deviceId.value
+    const _id = id || deviceId.value
     console.log('readDeviceNameAsync id', _id)
     if (!_id) return
 
     deviceName.value = (await readDeviceNameAsync(_id))?.value ?? ''
+
     return deviceName.value
   }
 

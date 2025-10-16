@@ -5,8 +5,19 @@ import {
   text,
   unique,
   type AnySQLiteColumn,
+  type SQLiteColumnBuilderBase,
 } from 'drizzle-orm/sqlite-core'
 import tableNames from '../tableNames.json'
+
+// Helper function to add common CRDT columns (haexTombstone and haexTimestamp)
+export const withCrdtColumns = <T extends Record<string, SQLiteColumnBuilderBase>>(
+  columns: T,
+  columnNames: { haexTombstone: string; haexTimestamp: string },
+) => ({
+  ...columns,
+  haexTombstone: integer(columnNames.haexTombstone, { mode: 'boolean' }),
+  haexTimestamp: text(columnNames.haexTimestamp),
+})
 
 export const haexSettings = sqliteTable(tableNames.haex.settings.name, {
   id: text()
@@ -120,3 +131,27 @@ export const haexNotifications = sqliteTable(
 )
 export type InsertHaexNotifications = typeof haexNotifications.$inferInsert
 export type SelectHaexNotifications = typeof haexNotifications.$inferSelect
+
+export const haexDesktopItems = sqliteTable(
+  tableNames.haex.desktop_items.name,
+  withCrdtColumns(
+    {
+      id: text(tableNames.haex.desktop_items.columns.id)
+        .primaryKey()
+        .$defaultFn(() => crypto.randomUUID()),
+      itemType: text(tableNames.haex.desktop_items.columns.itemType, {
+        enum: ['extension', 'file', 'folder'],
+      }).notNull(),
+      referenceId: text(tableNames.haex.desktop_items.columns.referenceId).notNull(), // extensionId für extensions, filePath für files/folders
+      positionX: integer(tableNames.haex.desktop_items.columns.positionX)
+        .notNull()
+        .default(0),
+      positionY: integer(tableNames.haex.desktop_items.columns.positionY)
+        .notNull()
+        .default(0),
+    },
+    tableNames.haex.desktop_items.columns,
+  ),
+)
+export type InsertHaexDesktopItems = typeof haexDesktopItems.$inferInsert
+export type SelectHaexDesktopItems = typeof haexDesktopItems.$inferSelect

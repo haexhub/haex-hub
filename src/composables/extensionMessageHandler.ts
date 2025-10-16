@@ -422,19 +422,12 @@ async function handleContextMethodAsync(request: ExtensionRequest) {
       return {
         theme: contextGetters.getTheme(),
         locale: contextGetters.getLocale(),
-        platform: detectPlatform(),
+        platform: contextGetters.getPlatform(),
       }
 
     default:
       throw new Error(`Unknown context method: ${request.method}`)
   }
-}
-
-function detectPlatform(): 'desktop' | 'mobile' | 'tablet' {
-  const width = window.innerWidth
-  if (width < 768) return 'mobile'
-  if (width < 1024) return 'tablet'
-  return 'desktop'
 }
 
 // ==========================================

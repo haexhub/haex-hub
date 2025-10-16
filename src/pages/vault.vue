@@ -1,10 +1,5 @@
 <template>
-  <div
-    :ui="{
-      root: ['h-full w-full bg-elevated lg:flex'],
-      center: ['h-full w-full'],
-    }"
-  >
+  <div class="w-full h-full overflow-y-auto">
     <NuxtLayout name="app">
       <NuxtPage />
     </NuxtLayout>
@@ -57,14 +52,18 @@ const { setDeviceIdIfNotExistsAsync, addDeviceNameAsync } = useDeviceStore()
 const { deviceId } = storeToRefs(useDeviceStore())
 
 onMounted(async () => {
-  await setDeviceIdIfNotExistsAsync()
-  await loadExtensionsAsync()
-  await readNotificationsAsync()
+  try {
+    await setDeviceIdIfNotExistsAsync()
+    await loadExtensionsAsync()
+    await readNotificationsAsync()
 
-  if (!(await isKnownDeviceAsync())) {
-    console.log('not known device')
-    newDeviceName.value = hostname.value ?? 'unknown'
-    showNewDeviceDialog.value = true
+    if (!(await isKnownDeviceAsync())) {
+      console.log('not known device')
+      newDeviceName.value = hostname.value ?? 'unknown'
+      showNewDeviceDialog.value = true
+    }
+  } catch (error) {
+    console.error('vault mount error:', error)
   }
 })
 

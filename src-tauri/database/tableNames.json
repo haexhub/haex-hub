@@ -63,6 +63,18 @@
         "haexTimestamp": "haex_timestamp"
       }
     },
+    "desktop_items": {
+      "name": "haex_desktop_items",
+      "columns": {
+        "id": "id",
+        "itemType": "item_type",
+        "referenceId": "reference_id",
+        "positionX": "position_x",
+        "positionY": "position_y",
+        "haexTombstone": "haex_tombstone",
+        "haexTimestamp": "haex_timestamp"
+      }
+    },
     "passwords": {
       "groups": "haex_passwords_groups",
       "group_items": "haex_passwords_group_items",

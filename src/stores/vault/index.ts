@@ -3,7 +3,10 @@
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { invoke } from '@tauri-apps/api/core'
 import { schema } from '@/../src-tauri/database/index'
-import type { SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy'
+import type {
+  AsyncRemoteCallback,
+  SqliteRemoteDatabase,
+} from 'drizzle-orm/sqlite-proxy'
 
 interface IVault {
   name: string
@@ -55,40 +58,10 @@ export const useVaultStore = defineStore('vaultStore', () => {
         ...openVaults.value,
         [vaultId]: {
           name: fileName,
-          drizzle: drizzle<typeof schema>(
-            async (sql, params: unknown[], method) => {
-              let rows: any[] = []
-              let results: any[] = []
-
-              // If the query is a SELECT, use the select method
-              if (isSelectQuery(sql)) {
-                console.log('sql_select', sql, params, method)
-                rows = await invoke<unknown[]>('sql_select', {
-                  sql,
-                  params,
-                }).catch((e) => {
-                  console.error('SQL select Error:', e, sql, params)
-                  return []
-                })
-              } else {
-                console.log('sql_execute', sql, params, method)
-                // Otherwise, use the execute method
-                rows = await invoke<unknown[]>('sql_execute', {
-                  sql,
-                  params,
-                }).catch((e) => {
-                  console.error('SQL execute Error:', e, sql, params)
-                  return []
-                })
-                return { rows: [] }
-              }
-
-              results = method === 'all' ? rows : rows[0]
-
-              return { rows: results }
-            },
-            { schema: schema, logger: true },
-          ),
+          drizzle: drizzle<typeof schema>(drizzleCallback, {
+            schema: schema,
+            logger: false,
+          }),
         },
       }
 
@@ -141,7 +114,34 @@ const getVaultIdAsync = async (path: string) => {
 }
 
 const isSelectQuery = (sql: string) => {
-  console.log('check isSelectQuery', sql)
   const selectRegex = /^\s*SELECT\b/i
   return selectRegex.test(sql)
 }
+
+const drizzleCallback = (async (
+  sql: string,
+  params: unknown[],
+  method: 'get' | 'run' | 'all' | 'values',
+) => {
+  let rows: unknown[] = []
+
+  if (isSelectQuery(sql)) {
+    rows = await invoke<unknown[]>('sql_select', { sql, params }).catch((e) => {
+      console.error('SQL select Error:', e, sql, params)
+      return []
+    })
+  } else {
+    rows = await invoke<unknown[]>('sql_execute', { sql, params }).catch(
+      (e) => {
+        console.error('SQL execute Error:', e, sql, params)
+        return []
+      },
+    )
+  }
+
+  if (method === 'get') {
+    return { rows: rows.length > 0 ? [rows[0]] : [] }
+  } else {
+    return { rows }
+  }
+}) satisfies AsyncRemoteCallback

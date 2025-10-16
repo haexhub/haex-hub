@@ -1,6 +1,5 @@
 <template>
-  <div class="">
-    <!-- class="" -->
+  <div class="flex flex-col w-full h-full overflow-hidden">
     <UPageHeader
       as="header"
       :ui="{
@@ -33,7 +32,7 @@
       </template>
     </UPageHeader>
 
-    <main class="overflow-scroll flex bg-elevated">
+    <main class="flex-1 overflow-hidden bg-elevated">
       <NuxtPage />
     </main>
   </div>

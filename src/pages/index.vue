@@ -100,7 +100,11 @@ const { syncLastVaultsAsync, removeVaultAsync } = useLastVaultStore()
 const { lastVaults } = storeToRefs(useLastVaultStore())
 
 onMounted(async () => {
-  await syncLastVaultsAsync()
+  try {
+    await syncLastVaultsAsync()
+  } catch (error) {
+    console.error('ERROR: ', error)
+  }
 })
 
 const onSelectLocale = async (locale: Locale) => {

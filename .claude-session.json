@@ -1,0 +1,9 @@
+{
+  "lastUpdated": "2025-10-16T00:00:00.000Z",
+  "todos": [],
+  "context": {
+    "description": "Session context file for Claude Code. This file is automatically updated to persist state across sessions.",
+    "currentFocus": null,
+    "notes": []
+  }
+}

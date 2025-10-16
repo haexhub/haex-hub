@@ -128,7 +128,7 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
           eq(schema.haexSettings.key, id),
         ),
       })
-    console.log('readDeviceNameAsync', deviceName)
+    console.log('store: readDeviceNameAsync', deviceName)
     return deviceName
   }
 

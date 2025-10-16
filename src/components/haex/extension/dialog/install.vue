@@ -67,6 +67,12 @@
           </div>
         </UCard>
 
+        <!-- Add to Desktop Option -->
+        <UCheckbox
+          v-model="addToDesktop"
+          :label="t('addToDesktop')"
+        />
+
         <!-- Permissions Section -->
         <div class="flex flex-col gap-4">
           <h4 class="text-lg font-semibold">
@@ -140,6 +146,7 @@ const open = defineModel<boolean>('open', { default: false })
 const preview = defineModel<ExtensionPreview | null>('preview', {
   default: null,
 })
+const addToDesktop = ref(true)
 
 const databasePermissions = computed({
   get: () => preview.value?.editable_permissions?.database || [],
@@ -217,7 +224,10 @@ const permissionAccordionItems = computed(() => {
   return items
 })
 
-const emit = defineEmits(['deny', 'confirm'])
+const emit = defineEmits<{
+  deny: []
+  confirm: [addToDesktop: boolean]
+}>()
 
 const onDeny = () => {
   open.value = false
@@ -226,7 +236,7 @@ const onDeny = () => {
 
 const onConfirm = () => {
   open.value = false
-  emit('confirm')
+  emit('confirm', addToDesktop.value)
 }
 </script>
 
@@ -235,6 +245,7 @@ de:
   title: Erweiterung installieren
   version: Version
   author: Autor
+  addToDesktop: Zum Desktop hinzufügen
   signature:
     valid: Signatur verifiziert
     invalid: Signatur ungültig
@@ -249,6 +260,7 @@ en:
   title: Install Extension
   version: Version
   author: Author
+  addToDesktop: Add to Desktop
   signature:
     valid: Signature verified
     invalid: Invalid signature

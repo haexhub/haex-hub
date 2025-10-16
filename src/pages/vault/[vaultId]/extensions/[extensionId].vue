@@ -206,7 +206,7 @@ import {
 } from '~/config/constants'
 
 definePageMeta({
-  name: 'haexExtension',
+  name: 'extension',
 })
 
 const { t } = useI18n()

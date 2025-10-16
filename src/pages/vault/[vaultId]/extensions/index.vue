@@ -104,7 +104,7 @@
     <HaexExtensionDialogInstall
       v-model:open="showConfirmation"
       :preview="preview"
-      @confirm="addExtensionAsync"
+      @confirm="(addToDesktop) => addExtensionAsync(addToDesktop)"
     />
 
     <HaexExtensionDialogRemove
@@ -130,6 +130,7 @@ definePageMeta({
 
 const { t } = useI18n()
 const extensionStore = useExtensionsStore()
+const desktopStore = useDesktopStore()
 
 const showConfirmation = ref(false)
 const openOverwriteDialog = ref(false)
@@ -388,17 +389,22 @@ const onSelectExtensionAsync = async () => {
   }
 }
 
-const addExtensionAsync = async () => {
+const addExtensionAsync = async (addToDesktop: boolean = false) => {
   try {
     console.log(
       'preview.value?.editable_permissions',
       preview.value?.editable_permissions,
     )
-    await extensionStore.installAsync(
+    const extensionId = await extensionStore.installAsync(
       extension.path,
       preview.value?.editable_permissions,
     )
     await extensionStore.loadExtensionsAsync()
+
+    // Add to desktop if requested
+    if (addToDesktop && extensionId) {
+      await desktopStore.addDesktopItemAsync('extension', extensionId, 50, 50)
+    }
 
     add({
       color: 'success',
