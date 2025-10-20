@@ -2,6 +2,7 @@
 
 use crate::database::error::DatabaseError;
 use crate::database::DbConnection;
+use crate::extension::database::executor::SqlExecutor;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use rusqlite::types::Value as SqlValue;
 use rusqlite::{
@@ -79,6 +80,16 @@ pub fn parse_sql_statements(sql: &str) -> Result<Vec<Statement>, DatabaseError> 
     })
 }
 
+/// Prüft ob ein Statement ein RETURNING Clause hat (AST-basiert, sicher)
+pub fn statement_has_returning(statement: &Statement) -> bool {
+    match statement {
+        Statement::Insert(insert) => insert.returning.is_some(),
+        Statement::Update { returning, .. } => returning.is_some(),
+        Statement::Delete(delete) => delete.returning.is_some(),
+        _ => false,
+    }
+}
+
 pub struct ValueConverter;
 
 impl ValueConverter {
@@ -116,6 +127,25 @@ impl ValueConverter {
     }
 }
 
+/// Execute SQL mit CRDT-Transformation (für Drizzle-Integration)
+/// Diese Funktion sollte von Drizzle verwendet werden, um CRDT-Support zu erhalten
+pub fn execute_with_crdt(
+    sql: String,
+    params: Vec<JsonValue>,
+    connection: &DbConnection,
+    hlc_service: &std::sync::MutexGuard<crate::crdt::hlc::HlcService>,
+) -> Result<Vec<Vec<JsonValue>>, DatabaseError> {
+    with_connection(connection, |conn| {
+        let tx = conn.transaction().map_err(DatabaseError::from)?;
+        let _modified_tables = SqlExecutor::execute_internal(&tx, hlc_service, &sql, &params)?;
+        tx.commit().map_err(DatabaseError::from)?;
+
+        // Für Drizzle: gebe leeres Array zurück (wie bei execute ohne RETURNING)
+        Ok(vec![])
+    })
+}
+
+/// Execute SQL OHNE CRDT-Transformation (für spezielle Fälle)
 pub fn execute(
     sql: String,
     params: Vec<JsonValue>,
@@ -245,7 +275,7 @@ pub fn select(
 }
 
 /// Konvertiert rusqlite ValueRef zu JSON
-fn convert_value_ref_to_json(value_ref: ValueRef) -> Result<JsonValue, DatabaseError> {
+pub fn convert_value_ref_to_json(value_ref: ValueRef) -> Result<JsonValue, DatabaseError> {
     let json_val = match value_ref {
         ValueRef::Null => JsonValue::Null,
         ValueRef::Integer(i) => JsonValue::Number(i.into()),

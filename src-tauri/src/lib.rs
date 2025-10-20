@@ -71,6 +71,8 @@ pub fn run() {
             database::list_vaults,
             database::open_encrypted_database,
             database::sql_execute,
+            database::sql_execute_with_crdt,
+            database::sql_query_with_crdt,
             database::sql_select,
             database::vault_exists,
             extension::database::extension_sql_execute,

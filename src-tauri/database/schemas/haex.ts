@@ -10,7 +10,9 @@ import {
 import tableNames from '../tableNames.json'
 
 // Helper function to add common CRDT columns (haexTombstone and haexTimestamp)
-export const withCrdtColumns = <T extends Record<string, SQLiteColumnBuilderBase>>(
+export const withCrdtColumns = <
+  T extends Record<string, SQLiteColumnBuilderBase>,
+>(
   columns: T,
   columnNames: { haexTombstone: string; haexTimestamp: string },
 ) => ({
@@ -132,6 +134,30 @@ export const haexNotifications = sqliteTable(
 export type InsertHaexNotifications = typeof haexNotifications.$inferInsert
 export type SelectHaexNotifications = typeof haexNotifications.$inferSelect
 
+export const haexWorkspaces = sqliteTable(
+  tableNames.haex.workspaces.name,
+  withCrdtColumns(
+    {
+      id: text(tableNames.haex.workspaces.columns.id)
+        .primaryKey()
+        .$defaultFn(() => crypto.randomUUID()),
+      name: text(tableNames.haex.workspaces.columns.name).notNull(),
+      position: integer(tableNames.haex.workspaces.columns.position)
+        .notNull()
+        .default(0),
+      createdAt: integer(tableNames.haex.workspaces.columns.createdAt, {
+        mode: 'timestamp',
+      })
+        .notNull()
+        .$defaultFn(() => new Date()),
+    },
+    tableNames.haex.workspaces.columns,
+  ),
+  (table) => [unique().on(table.name)],
+)
+export type InsertHaexWorkspaces = typeof haexWorkspaces.$inferInsert
+export type SelectHaexWorkspaces = typeof haexWorkspaces.$inferSelect
+
 export const haexDesktopItems = sqliteTable(
   tableNames.haex.desktop_items.name,
   withCrdtColumns(
@@ -139,10 +165,15 @@ export const haexDesktopItems = sqliteTable(
       id: text(tableNames.haex.desktop_items.columns.id)
         .primaryKey()
         .$defaultFn(() => crypto.randomUUID()),
+      workspaceId: text(tableNames.haex.desktop_items.columns.workspaceId)
+        .notNull()
+        .references(() => haexWorkspaces.id),
       itemType: text(tableNames.haex.desktop_items.columns.itemType, {
         enum: ['extension', 'file', 'folder'],
       }).notNull(),
-      referenceId: text(tableNames.haex.desktop_items.columns.referenceId).notNull(), // extensionId für extensions, filePath für files/folders
+      referenceId: text(
+        tableNames.haex.desktop_items.columns.referenceId,
+      ).notNull(), // extensionId für extensions, filePath für files/folders
       positionX: integer(tableNames.haex.desktop_items.columns.positionX)
         .notNull()
         .default(0),

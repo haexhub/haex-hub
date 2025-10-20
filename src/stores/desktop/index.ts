@@ -4,6 +4,8 @@ import type {
   InsertHaexDesktopItems,
   SelectHaexDesktopItems,
 } from '~~/src-tauri/database/schemas'
+import de from './de.json'
+import en from './en.json'
 
 export type DesktopItemType = 'extension' | 'file' | 'folder'
 
@@ -14,8 +16,17 @@ export interface IDesktopItem extends SelectHaexDesktopItems {
 
 export const useDesktopStore = defineStore('desktopStore', () => {
   const { currentVault } = storeToRefs(useVaultStore())
+  const workspaceStore = useWorkspaceStore()
+  const { currentWorkspace } = storeToRefs(workspaceStore)
+  const { $i18n } = useNuxtApp()
+
+  $i18n.setLocaleMessage('de', {
+    desktop: de,
+  })
+  $i18n.setLocaleMessage('en', { desktop: en })
 
   const desktopItems = ref<IDesktopItem[]>([])
+  const selectedItemIds = ref<Set<string>>(new Set())
 
   const loadDesktopItemsAsync = async () => {
     if (!currentVault.value?.drizzle) {
@@ -23,10 +34,16 @@ export const useDesktopStore = defineStore('desktopStore', () => {
       return
     }
 
+    if (!currentWorkspace.value) {
+      console.error('Kein Workspace aktiv')
+      return
+    }
+
     try {
       const items = await currentVault.value.drizzle
         .select()
         .from(haexDesktopItems)
+        .where(eq(haexDesktopItems.workspaceId, currentWorkspace.value.id))
 
       desktopItems.value = items
     } catch (error) {
@@ -45,8 +62,13 @@ export const useDesktopStore = defineStore('desktopStore', () => {
       throw new Error('Kein Vault geöffnet')
     }
 
+    if (!currentWorkspace.value) {
+      throw new Error('Kein Workspace aktiv')
+    }
+
     try {
       const newItem: InsertHaexDesktopItems = {
+        workspaceId: currentWorkspace.value.id,
         itemType: itemType,
         referenceId: referenceId,
         positionX: positionX,
@@ -100,6 +122,7 @@ export const useDesktopStore = defineStore('desktopStore', () => {
   }
 
   const removeDesktopItemAsync = async (id: string) => {
+    console.log('removeDesktopItemAsync', id)
     if (!currentVault.value?.drizzle) {
       throw new Error('Kein Vault geöffnet')
     }
@@ -126,33 +149,128 @@ export const useDesktopStore = defineStore('desktopStore', () => {
     )
   }
 
+  const openDesktopItem = (
+    itemType: DesktopItemType,
+    referenceId: string,
+    sourcePosition?: { x: number; y: number; width: number; height: number },
+  ) => {
+    if (itemType === 'extension') {
+      const windowManager = useWindowManagerStore()
+      const extensionsStore = useExtensionsStore()
+
+      const extension = extensionsStore.availableExtensions.find(
+        (ext) => ext.id === referenceId,
+      )
+
+      if (extension) {
+        windowManager.openWindow(
+          'extension',
+          extension.id,
+          extension.name,
+          extension.icon || undefined,
+          undefined, // Use default viewport-aware width
+          undefined, // Use default viewport-aware height
+          sourcePosition,
+        )
+      }
+    }
+    // Für später: file und folder handling
+  }
+
+  const uninstallDesktopItem = async (
+    id: string,
+    itemType: DesktopItemType,
+    referenceId: string,
+  ) => {
+    if (itemType === 'extension') {
+      try {
+        const extensionsStore = useExtensionsStore()
+        const extension = extensionsStore.availableExtensions.find(
+          (ext) => ext.id === referenceId,
+        )
+        if (!extension) {
+          console.error('Extension nicht gefunden')
+          return
+        }
+
+        // Uninstall the extension
+        await extensionsStore.removeExtensionAsync(
+          extension.publicKey,
+          extension.name,
+          extension.version,
+        )
+
+        // Reload extensions after uninstall
+        await extensionsStore.loadExtensionsAsync()
+
+        // Remove desktop item
+        await removeDesktopItemAsync(id)
+      } catch (error) {
+        console.error('Fehler beim Deinstallieren:', error)
+      }
+    }
+    // Für später: file und folder handling
+  }
+
+  const toggleSelection = (id: string, ctrlKey: boolean = false) => {
+    if (ctrlKey) {
+      // Mit Ctrl: Toggle einzelnes Element
+      if (selectedItemIds.value.has(id)) {
+        selectedItemIds.value.delete(id)
+      } else {
+        selectedItemIds.value.add(id)
+      }
+    } else {
+      // Ohne Ctrl: Nur dieses Element auswählen
+      selectedItemIds.value.clear()
+      selectedItemIds.value.add(id)
+    }
+  }
+
+  const clearSelection = () => {
+    selectedItemIds.value.clear()
+  }
+
+  const isItemSelected = (id: string) => {
+    return selectedItemIds.value.has(id)
+  }
+
+  const selectedItems = computed(() => {
+    return desktopItems.value.filter((item) =>
+      selectedItemIds.value.has(item.id),
+    )
+  })
+
   const getContextMenuItems = (
     id: string,
     itemType: DesktopItemType,
     referenceId: string,
-    onOpen: () => void,
     onUninstall: () => void,
   ) => {
+    const handleOpen = () => {
+      openDesktopItem(itemType, referenceId)
+    }
+
     return [
       [
         {
-          label: 'Öffnen',
+          label: $i18n.t('desktop.contextMenu.open'),
           icon: 'i-heroicons-arrow-top-right-on-square',
-          click: onOpen,
+          onSelect: handleOpen,
         },
       ],
       [
         {
-          label: 'Von Desktop entfernen',
+          label: $i18n.t('desktop.contextMenu.removeFromDesktop'),
           icon: 'i-heroicons-x-mark',
-          click: async () => {
+          onSelect: async () => {
             await removeDesktopItemAsync(id)
           },
         },
         {
-          label: 'Deinstallieren',
+          label: $i18n.t('desktop.contextMenu.uninstall'),
           icon: 'i-heroicons-trash',
-          click: onUninstall,
+          onSelect: onUninstall,
         },
       ],
     ]
@@ -160,11 +278,18 @@ export const useDesktopStore = defineStore('desktopStore', () => {
 
   return {
     desktopItems,
+    selectedItemIds,
+    selectedItems,
     loadDesktopItemsAsync,
     addDesktopItemAsync,
     updateDesktopItemPositionAsync,
     removeDesktopItemAsync,
     getDesktopItemByReference,
     getContextMenuItems,
+    openDesktopItem,
+    uninstallDesktopItem,
+    toggleSelection,
+    clearSelection,
+    isItemSelected,
   }
 })

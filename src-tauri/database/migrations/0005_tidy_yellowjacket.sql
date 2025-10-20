@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `haex_workspaces_name_unique` ON `haex_workspaces` (`name`);

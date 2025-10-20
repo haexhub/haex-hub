@@ -16,11 +16,15 @@ interface ExtensionRequest {
 
 // Globaler Handler - nur einmal registriert
 let globalHandlerRegistered = false
-const iframeRegistry = new Map<HTMLIFrameElement, IHaexHubExtension>()
-// Map event.source (WindowProxy) to extension for sandbox-compatible matching
-const sourceRegistry = new Map<Window, IHaexHubExtension>()
-// Reverse map: extension ID to Window for broadcasting
-const extensionToWindowMap = new Map<string, Window>()
+interface ExtensionInstance {
+  extension: IHaexHubExtension
+  windowId: string
+}
+const iframeRegistry = new Map<HTMLIFrameElement, ExtensionInstance>()
+// Map event.source (WindowProxy) to extension instance for sandbox-compatible matching
+const sourceRegistry = new Map<Window, ExtensionInstance>()
+// Reverse map: window ID to Window for broadcasting (supports multiple windows per extension)
+const windowIdToWindowMap = new Map<string, Window>()
 
 // Store context values that need to be accessed outside setup
 let contextGetters: {
@@ -40,15 +44,25 @@ const registerGlobalMessageHandler = () => {
 
     const request = event.data as ExtensionRequest
 
-    // Find extension by decoding event.origin (works with sandboxed iframes)
+    // Find extension instance by decoding event.origin (works with sandboxed iframes)
     // Origin formats:
     // - Desktop: haex-extension://<base64>
     // - Android: http://haex-extension.localhost (need to check request URL for base64)
-    let extension: IHaexHubExtension | undefined
+    let instance: ExtensionInstance | undefined
 
+    // Debug: Find which extension sent this message
+    let sourceInfo = 'unknown source'
+    for (const [iframe, inst] of iframeRegistry.entries()) {
+      if (iframe.contentWindow === event.source) {
+        sourceInfo = `${inst.extension.name} (${inst.windowId})`
+        break
+      }
+    }
     console.log(
-      '[ExtensionHandler] Received message from origin:',
-      event.origin,
+      '[ExtensionHandler] Received message from:',
+      sourceInfo,
+      'Method:',
+      request.method,
     )
 
     // Try to decode extension info from origin
@@ -74,10 +88,10 @@ const registerGlobalMessageHandler = () => {
         if (iframeRegistry.size === 1) {
           const entry = Array.from(iframeRegistry.entries())[0]
           if (entry) {
-            const [_, ext] = entry
-            extension = ext
-            sourceRegistry.set(event.source as Window, ext)
-            extensionToWindowMap.set(ext.id, event.source as Window)
+            const [_, inst] = entry
+            instance = inst
+            sourceRegistry.set(event.source as Window, inst)
+            windowIdToWindowMap.set(inst.windowId, event.source as Window)
           }
         }
       }
@@ -91,16 +105,16 @@ const registerGlobalMessageHandler = () => {
           }
 
           // Find matching extension in registry
-          for (const [_, ext] of iframeRegistry.entries()) {
+          for (const [_, inst] of iframeRegistry.entries()) {
             if (
-              ext.name === decodedInfo.name &&
-              ext.publicKey === decodedInfo.publicKey &&
-              ext.version === decodedInfo.version
+              inst.extension.name === decodedInfo.name &&
+              inst.extension.publicKey === decodedInfo.publicKey &&
+              inst.extension.version === decodedInfo.version
             ) {
-              extension = ext
+              instance = inst
               // Register for future lookups
-              sourceRegistry.set(event.source as Window, ext)
-              extensionToWindowMap.set(ext.id, event.source as Window)
+              sourceRegistry.set(event.source as Window, inst)
+              windowIdToWindowMap.set(inst.windowId, event.source as Window)
               break
             }
           }
@@ -110,31 +124,36 @@ const registerGlobalMessageHandler = () => {
       }
     }
 
-    // Fallback: Try to find extension by event.source (for localhost origin or legacy)
-    if (!extension) {
-      extension = sourceRegistry.get(event.source as Window)
+    // Fallback: Try to find extension instance by event.source (for localhost origin or legacy)
+    if (!instance) {
+      instance = sourceRegistry.get(event.source as Window)
 
-      // If not registered yet, register on first message from this source
-      if (!extension && iframeRegistry.size === 1) {
-        // If we only have one iframe, assume this message is from it
-        const entry = Array.from(iframeRegistry.entries())[0]
-        if (entry) {
-          const [_, ext] = entry
-          const windowSource = event.source as Window
-          sourceRegistry.set(windowSource, ext)
-          extensionToWindowMap.set(ext.id, windowSource)
-          extension = ext
+      // If not registered yet, find by matching iframe.contentWindow to event.source
+      if (!instance) {
+        for (const [iframe, inst] of iframeRegistry.entries()) {
+          if (iframe.contentWindow === event.source) {
+            instance = inst
+            // Register for future lookups
+            sourceRegistry.set(event.source as Window, inst)
+            windowIdToWindowMap.set(inst.windowId, event.source as Window)
+            console.log(
+              '[ExtensionHandler] Registered instance via contentWindow match:',
+              inst.windowId,
+            )
+            break
+          }
         }
-      } else if (extension && !extensionToWindowMap.has(extension.id)) {
+      } else if (instance && !windowIdToWindowMap.has(instance.windowId)) {
         // Also register in reverse map for broadcasting
-        extensionToWindowMap.set(extension.id, event.source as Window)
+        windowIdToWindowMap.set(instance.windowId, event.source as Window)
       }
     }
 
-    if (!extension) {
+    if (!instance) {
       console.warn(
-        '[ExtensionHandler] Could not identify extension for message:',
-        event.origin,
+        '[ExtensionHandler] Could not identify extension instance from event.source.',
+        'Registered iframes:',
+        iframeRegistry.size,
       )
       return // Message ist nicht von einem registrierten IFrame
     }
@@ -148,19 +167,19 @@ const registerGlobalMessageHandler = () => {
       let result: unknown
 
       if (request.method.startsWith('extension.')) {
-        result = await handleExtensionMethodAsync(request, extension)
+        result = await handleExtensionMethodAsync(request, instance.extension)
       } else if (request.method.startsWith('db.')) {
-        result = await handleDatabaseMethodAsync(request, extension)
+        result = await handleDatabaseMethodAsync(request, instance.extension)
       } else if (request.method.startsWith('fs.')) {
-        result = await handleFilesystemMethodAsync(request, extension)
+        result = await handleFilesystemMethodAsync(request, instance.extension)
       } else if (request.method.startsWith('http.')) {
-        result = await handleHttpMethodAsync(request, extension)
+        result = await handleHttpMethodAsync(request, instance.extension)
       } else if (request.method.startsWith('permissions.')) {
-        result = await handlePermissionsMethodAsync(request, extension)
+        result = await handlePermissionsMethodAsync(request, instance.extension)
       } else if (request.method.startsWith('context.')) {
         result = await handleContextMethodAsync(request)
       } else if (request.method.startsWith('storage.')) {
-        result = await handleStorageMethodAsync(request, extension)
+        result = await handleStorageMethodAsync(request, instance)
       } else {
         throw new Error(`Unknown method: ${request.method}`)
       }
@@ -203,6 +222,7 @@ const registerGlobalMessageHandler = () => {
 export const useExtensionMessageHandler = (
   iframeRef: Ref<HTMLIFrameElement | undefined | null>,
   extension: ComputedRef<IHaexHubExtension | undefined | null>,
+  windowId: Ref<string>,
 ) => {
   // Initialize context getters (can use composables here because we're in setup)
   const { currentTheme } = storeToRefs(useUiStore())
@@ -223,13 +243,26 @@ export const useExtensionMessageHandler = (
   // Registriere dieses IFrame
   watchEffect(() => {
     if (iframeRef.value && extension.value) {
-      iframeRegistry.set(iframeRef.value, extension.value)
+      iframeRegistry.set(iframeRef.value, {
+        extension: extension.value,
+        windowId: windowId.value,
+      })
     }
   })
 
   // Cleanup beim Unmount
   onUnmounted(() => {
     if (iframeRef.value) {
+      const instance = iframeRegistry.get(iframeRef.value)
+      if (instance) {
+        // Remove from all maps
+        windowIdToWindowMap.delete(instance.windowId)
+        for (const [source, inst] of sourceRegistry.entries()) {
+          if (inst.windowId === instance.windowId) {
+            sourceRegistry.delete(source)
+          }
+        }
+      }
       iframeRegistry.delete(iframeRef.value)
     }
   })
@@ -239,6 +272,7 @@ export const useExtensionMessageHandler = (
 export const registerExtensionIFrame = (
   iframe: HTMLIFrameElement,
   extension: IHaexHubExtension,
+  windowId: string,
 ) => {
   // Stelle sicher, dass der globale Handler registriert ist
   registerGlobalMessageHandler()
@@ -250,28 +284,48 @@ export const registerExtensionIFrame = (
     )
   }
 
-  iframeRegistry.set(iframe, extension)
+  iframeRegistry.set(iframe, { extension, windowId })
 }
 
 export const unregisterExtensionIFrame = (iframe: HTMLIFrameElement) => {
-  // Also remove from source registry
-  const ext = iframeRegistry.get(iframe)
-  if (ext) {
-    // Find and remove all sources pointing to this extension
-    for (const [source, extension] of sourceRegistry.entries()) {
-      if (extension === ext) {
+  // Also remove from source registry and instance map
+  const instance = iframeRegistry.get(iframe)
+  if (instance) {
+    // Find and remove all sources pointing to this instance
+    for (const [source, inst] of sourceRegistry.entries()) {
+      if (inst.windowId === instance.windowId) {
         sourceRegistry.delete(source)
       }
     }
-    // Remove from extension-to-window map
-    extensionToWindowMap.delete(ext.id)
+    // Remove from instance-to-window map
+    windowIdToWindowMap.delete(instance.windowId)
   }
   iframeRegistry.delete(iframe)
 }
 
-// Export function to get Window for an extension (for broadcasting)
+// Export function to get Window for a specific instance (for broadcasting)
+export const getInstanceWindow = (windowId: string): Window | undefined => {
+  return windowIdToWindowMap.get(windowId)
+}
+
+// Get all windows for an extension (all instances)
+export const getAllInstanceWindows = (extensionId: string): Window[] => {
+  const windows: Window[] = []
+  for (const [_, instance] of iframeRegistry.entries()) {
+    if (instance.extension.id === extensionId) {
+      const win = windowIdToWindowMap.get(instance.windowId)
+      if (win) {
+        windows.push(win)
+      }
+    }
+  }
+  return windows
+}
+
+// Deprecated - kept for backwards compatibility
 export const getExtensionWindow = (extensionId: string): Window | undefined => {
-  return extensionToWindowMap.get(extensionId)
+  // Return first window for this extension
+  return getAllInstanceWindows(extensionId)[0]
 }
 
 // ==========================================
@@ -436,11 +490,12 @@ async function handleContextMethodAsync(request: ExtensionRequest) {
 
 async function handleStorageMethodAsync(
   request: ExtensionRequest,
-  extension: IHaexHubExtension,
+  instance: ExtensionInstance,
 ) {
-  const storageKey = `ext_${extension.id}_`
+  // Storage is now per-window, not per-extension
+  const storageKey = `ext_${instance.extension.id}_${instance.windowId}_`
   console.log(
-    `[HaexHub Storage] ${request.method} for extension ${extension.id}`,
+    `[HaexHub Storage] ${request.method} for window ${instance.windowId}`,
   )
 
   switch (request.method) {
@@ -463,7 +518,7 @@ async function handleStorageMethodAsync(
     }
 
     case 'storage.clear': {
-      // Remove only extension-specific keys
+      // Remove only instance-specific keys
       const keys = Object.keys(localStorage).filter((k) =>
         k.startsWith(storageKey),
       )
@@ -472,7 +527,7 @@ async function handleStorageMethodAsync(
     }
 
     case 'storage.keys': {
-      // Return only extension-specific keys (without prefix)
+      // Return only instance-specific keys (without prefix)
       const keys = Object.keys(localStorage)
         .filter((k) => k.startsWith(storageKey))
         .map((k) => k.substring(storageKey.length))

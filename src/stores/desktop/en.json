@@ -1,0 +1,13 @@
+{
+  "contextMenu": {
+    "open": "Open",
+    "removeFromDesktop": "Remove from Desktop",
+    "uninstall": "Uninstall"
+  },
+  "confirmUninstall": {
+    "title": "Uninstall Extension",
+    "message": "Do you really want to uninstall the extension '{name}'? This action cannot be undone.",
+    "confirm": "Uninstall",
+    "cancel": "Cancel"
+  }
+}

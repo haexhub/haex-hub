@@ -92,12 +92,20 @@ export const useVaultStore = defineStore('vaultStore', () => {
     delete openVaults.value?.[currentVaultId.value]
   }
 
+  const existsVault = () => {
+    if (!currentVault.value?.drizzle) {
+      console.error('Kein Vault geöffnet')
+      return
+    }
+  }
+
   return {
     closeAsync,
     createAsync,
     currentVault,
     currentVaultId,
     currentVaultName,
+    existsVault,
     openAsync,
     openVaults,
   }
@@ -118,6 +126,11 @@ const isSelectQuery = (sql: string) => {
   return selectRegex.test(sql)
 }
 
+const hasReturning = (sql: string) => {
+  const returningRegex = /\bRETURNING\b/i
+  return returningRegex.test(sql)
+}
+
 const drizzleCallback = (async (
   sql: string,
   params: unknown[],
@@ -125,18 +138,33 @@ const drizzleCallback = (async (
 ) => {
   let rows: unknown[] = []
 
+  console.log('drizzleCallback', method, sql, params)
+
   if (isSelectQuery(sql)) {
+    // SELECT statements
     rows = await invoke<unknown[]>('sql_select', { sql, params }).catch((e) => {
       console.error('SQL select Error:', e, sql, params)
       return []
     })
+  } else if (hasReturning(sql)) {
+    // INSERT/UPDATE/DELETE with RETURNING → use query
+    rows = await invoke<unknown[]>('sql_query_with_crdt', {
+      sql,
+      params,
+    }).catch((e) => {
+      console.error('SQL query with CRDT Error:', e, sql, params)
+      return []
+    })
   } else {
-    rows = await invoke<unknown[]>('sql_execute', { sql, params }).catch(
-      (e) => {
-        console.error('SQL execute Error:', e, sql, params)
-        return []
-      },
-    )
+    // INSERT/UPDATE/DELETE without RETURNING → use execute
+    await invoke<unknown[]>('sql_execute_with_crdt', {
+      sql,
+      params,
+    }).catch((e) => {
+      console.error('SQL execute with CRDT Error:', e, sql, params, rows)
+      return []
+    })
+    return { rows: undefined }
   }
 
   if (method === 'get') {

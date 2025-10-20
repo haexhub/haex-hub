@@ -41,6 +41,20 @@ export default defineNuxtConfig({
       'pages/**',
       'types/**',
     ],
+    presets: [
+      {
+        from: '@vueuse/gesture',
+        imports: [
+          'useDrag',
+          'useGesture',
+          'useHover',
+          'useMove',
+          'usePinch',
+          'useScroll',
+          'useWheel',
+        ],
+      },
+    ],
   },
 
   css: ['./assets/css/main.css'],

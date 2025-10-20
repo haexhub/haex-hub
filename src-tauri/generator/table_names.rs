@@ -18,6 +18,7 @@ struct Haex {
     extensions: TableDefinition,
     extension_permissions: TableDefinition,
     notifications: TableDefinition,
+    desktop_items: TableDefinition,
     crdt: Crdt,
 }
 
@@ -107,6 +108,16 @@ pub const COL_NOTIFICATIONS_TITLE: &str = "{c_notif_title}";
 pub const COL_NOTIFICATIONS_TYPE: &str = "{c_notif_type}";
 pub const COL_NOTIFICATIONS_HAEX_TOMBSTONE: &str = "{c_notif_tombstone}";
 
+// --- Table: haex_desktop_items ---
+pub const TABLE_DESKTOP_ITEMS: &str = "{t_desktop_items}";
+pub const COL_DESKTOP_ITEMS_ID: &str = "{c_desktop_id}";
+pub const COL_DESKTOP_ITEMS_ITEM_TYPE: &str = "{c_desktop_itemType}";
+pub const COL_DESKTOP_ITEMS_REFERENCE_ID: &str = "{c_desktop_referenceId}";
+pub const COL_DESKTOP_ITEMS_POSITION_X: &str = "{c_desktop_positionX}";
+pub const COL_DESKTOP_ITEMS_POSITION_Y: &str = "{c_desktop_positionY}";
+pub const COL_DESKTOP_ITEMS_HAEX_TOMBSTONE: &str = "{c_desktop_tombstone}";
+pub const COL_DESKTOP_ITEMS_HAEX_TIMESTAMP: &str = "{c_desktop_timestamp}";
+
 // --- Table: haex_crdt_logs ---
 pub const TABLE_CRDT_LOGS: &str = "{t_crdt_logs}";
 pub const COL_CRDT_LOGS_ID: &str = "{c_crdt_logs_id}";
@@ -181,6 +192,15 @@ pub const COL_CRDT_CONFIGS_VALUE: &str = "{c_crdt_configs_value}";
         c_notif_title = haex.notifications.columns["title"],
         c_notif_type = haex.notifications.columns["type"],
         c_notif_tombstone = haex.notifications.columns["haexTombstone"],
+        // Desktop Items
+        t_desktop_items = haex.desktop_items.name,
+        c_desktop_id = haex.desktop_items.columns["id"],
+        c_desktop_itemType = haex.desktop_items.columns["itemType"],
+        c_desktop_referenceId = haex.desktop_items.columns["referenceId"],
+        c_desktop_positionX = haex.desktop_items.columns["positionX"],
+        c_desktop_positionY = haex.desktop_items.columns["positionY"],
+        c_desktop_tombstone = haex.desktop_items.columns["haexTombstone"],
+        c_desktop_timestamp = haex.desktop_items.columns["haexTimestamp"],
         // CRDT Logs
         t_crdt_logs = haex.crdt.logs.name,
         c_crdt_logs_id = haex.crdt.logs.columns["id"],

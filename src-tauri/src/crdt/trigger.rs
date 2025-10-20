@@ -78,14 +78,14 @@ pub enum TriggerSetupResult {
     TableNotFound,
 }
 
-#[derive(Debug)]
-struct ColumnInfo {
-    name: String,
-    is_pk: bool,
+#[derive(Debug, Clone)]
+pub struct ColumnInfo {
+    pub name: String,
+    pub is_pk: bool,
 }
 
 impl ColumnInfo {
-    fn from_row(row: &Row) -> RusqliteResult<Self> {
+    pub fn from_row(row: &Row) -> RusqliteResult<Self> {
         Ok(ColumnInfo {
             name: row.get("name")?,
             is_pk: row.get::<_, i64>("pk")? > 0,
@@ -155,7 +155,7 @@ pub fn setup_triggers_for_table(
 }
 
 /// Holt das Schema für eine gegebene Tabelle.
-fn get_table_schema(conn: &Connection, table_name: &str) -> RusqliteResult<Vec<ColumnInfo>> {
+pub fn get_table_schema(conn: &Connection, table_name: &str) -> RusqliteResult<Vec<ColumnInfo>> {
     if !is_safe_identifier(table_name) {
         return Err(rusqlite::Error::InvalidParameterName(format!(
             "Invalid or unsafe table name provided: {}",
@@ -167,6 +167,29 @@ fn get_table_schema(conn: &Connection, table_name: &str) -> RusqliteResult<Vec<C
     let sql = format!("PRAGMA table_info(\"{}\");", table_name);
     let mut stmt = conn.prepare(&sql)?;
     let rows = stmt.query_map([], ColumnInfo::from_row)?;
+    rows.collect()
+}
+
+/// Holt alle Foreign Key Spalten einer Tabelle.
+/// Gibt eine Liste der Spaltennamen zurück, die Foreign Keys sind.
+pub fn get_foreign_key_columns(conn: &Connection, table_name: &str) -> RusqliteResult<Vec<String>> {
+    if !is_safe_identifier(table_name) {
+        return Err(rusqlite::Error::InvalidParameterName(format!(
+            "Invalid or unsafe table name provided: {}",
+            table_name
+        ))
+        .into());
+    }
+
+    let sql = format!("PRAGMA foreign_key_list(\"{}\");", table_name);
+    let mut stmt = conn.prepare(&sql)?;
+
+    // foreign_key_list gibt Spalten zurück: id, seq, table, from, to, on_update, on_delete, match
+    // Wir brauchen die "from" Spalte, die den Namen der FK-Spalte in der aktuellen Tabelle enthält
+    let rows = stmt.query_map([], |row| {
+        row.get::<_, String>("from")
+    })?;
+
     rows.collect()
 }
 

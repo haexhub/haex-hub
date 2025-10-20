@@ -4,23 +4,15 @@
     :title
     :description
   >
-    <slot>
-      <!-- <UiButton
-        color="primary"
-        variant="outline"
-        icon="mdi:menu"
-        :ui="{
-          base: '',
-        }"
-      /> -->
-    </slot>
-
-    <template #title>
-      <slot name="title" />
-    </template>
-
-    <template #body>
-      <slot name="body" />
+    <template
+      v-for="(_, name) in $slots"
+      :key="name"
+      #[name]="slotData"
+    >
+      <slot
+        :name="name"
+        v-bind="slotData"
+      />
     </template>
 
     <template #footer>
@@ -38,7 +30,7 @@
           :label="confirmLabel || t('confirm')"
           block
           color="primary"
-          varaint="solid"
+          variant="solid"
           @click="$emit('confirm')"
         />
       </div>

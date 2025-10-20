@@ -150,7 +150,7 @@ const onOpenDatabase = async () => {
 
     await navigateTo(
       localePath({
-        name: 'vaultOverview',
+        name: 'desktop',
         params: {
           vaultId,
         },

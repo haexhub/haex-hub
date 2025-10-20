@@ -63,10 +63,22 @@
         "haexTimestamp": "haex_timestamp"
       }
     },
+    "workspaces": {
+      "name": "haex_workspaces",
+      "columns": {
+        "id": "id",
+        "name": "name",
+        "position": "position",
+        "createdAt": "created_at",
+        "haexTombstone": "haex_tombstone",
+        "haexTimestamp": "haex_timestamp"
+      }
+    },
     "desktop_items": {
       "name": "haex_desktop_items",
       "columns": {
         "id": "id",
+        "workspaceId": "workspace_id",
         "itemType": "item_type",
         "referenceId": "reference_id",
         "positionX": "position_x",

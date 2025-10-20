@@ -6,6 +6,7 @@ pub mod generated;
 
 use crate::crdt::hlc::HlcService;
 use crate::database::error::DatabaseError;
+use crate::extension::database::executor::SqlExecutor;
 use crate::table_names::TABLE_CRDT_CONFIGS;
 use crate::AppState;
 use rusqlite::Connection;
@@ -40,6 +41,36 @@ pub fn sql_execute(
     state: State<'_, AppState>,
 ) -> Result<Vec<Vec<JsonValue>>, DatabaseError> {
     core::execute(sql, params, &state.db)
+}
+
+#[tauri::command]
+pub fn sql_execute_with_crdt(
+    sql: String,
+    params: Vec<JsonValue>,
+    state: State<'_, AppState>,
+) -> Result<Vec<Vec<JsonValue>>, DatabaseError> {
+    let hlc_service = state.hlc.lock().map_err(|_| DatabaseError::MutexPoisoned {
+        reason: "Failed to lock HLC service".to_string(),
+    })?;
+    core::execute_with_crdt(sql, params, &state.db, &hlc_service)
+}
+
+#[tauri::command]
+pub fn sql_query_with_crdt(
+    sql: String,
+    params: Vec<JsonValue>,
+    state: State<'_, AppState>,
+) -> Result<Vec<Vec<JsonValue>>, DatabaseError> {
+    let hlc_service = state.hlc.lock().map_err(|_| DatabaseError::MutexPoisoned {
+        reason: "Failed to lock HLC service".to_string(),
+    })?;
+
+    core::with_connection(&state.db, |conn| {
+        let tx = conn.transaction().map_err(DatabaseError::from)?;
+        let result = SqlExecutor::query_internal(&tx, &hlc_service, &sql, &params)?;
+        tx.commit().map_err(DatabaseError::from)?;
+        Ok(result)
+    })
 }
 
 /// Resolves a database name to the full vault path

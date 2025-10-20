@@ -29,6 +29,20 @@
       "when": 1760611690801,
       "tag": "0003_daily_polaris",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1760817142340,
+      "tag": "0004_mature_viper",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1760964548034,
+      "tag": "0005_tidy_yellowjacket",
+      "breakpoints": true
     }
   ]
 }

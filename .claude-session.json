@@ -1,9 +1,227 @@
 {
-  "lastUpdated": "2025-10-16T00:00:00.000Z",
-  "todos": [],
+  "session_date": "2025-10-20",
+  "project": "haex-hub System Windows Architecture + Drizzle CRDT RETURNING Fix + PK-Remapping Refactor",
+  "status": "system_windows_ui_integration_completed",
+
   "context": {
-    "description": "Session context file for Claude Code. This file is automatically updated to persist state across sessions.",
-    "currentFocus": null,
-    "notes": []
-  }
+    "main_work_today": [
+      "Fixed Drizzle CRDT integration with RETURNING support",
+      "Implemented System Windows architecture (Settings, Marketplace as Desktop Windows)",
+      "Refactored executor functions: Split execute/query paths for cleaner code",
+      "Integrated System Windows UI: Launcher, Window Component, Placeholder Components"
+    ],
+    "completed_today": [
+      "Added AST-based statement_has_returning() for safe RETURNING detection",
+      "Created SqlExecutor::query_internal() for INSERT/UPDATE/DELETE with RETURNING",
+      "Simplified execute_internal to use execute_internal_typed (now with PK-Remapping!)",
+      "Added sql_query_with_crdt Tauri command",
+      "Updated drizzleCallback in index.ts to route correctly",
+      "Extended IWindow interface: type ('system' | 'extension'), sourceId",
+      "Added SystemWindowDefinition interface",
+      "Created system windows registry in windowManager store",
+      "Extended openWindow() to support both system and extension windows",
+      "Added singleton support for system windows",
+      "Split execute_internal_typed_with_context into two functions (execute vs query)",
+      "Created query_internal_typed_with_context with full PK-Remapping support",
+      "Updated query_internal to use new typed function with PK-Remapping",
+      "Fixed manager.rs to use query_internal_typed_with_context for INSERT RETURNING",
+      "Extended Launcher to show System Windows + Extensions alphabetically",
+      "Adapted Window Component to render System Windows as Vue Components, Extensions as iFrames",
+      "Created placeholder components: Settings.vue and Marketplace.vue"
+    ],
+    "tech_stack": "Vue 3, TypeScript, Pinia, Nuxt UI, Tauri, Rust, Drizzle ORM, SQLite"
+  },
+
+  "drizzle_crdt_implementation": {
+    "problem": "Drizzle .insert().returning() executed SQL twice and lost RETURNING data",
+    "solution": "Separate execute and query paths based on RETURNING clause",
+
+    "typescript_side": {
+      "file": "src/stores/vault/index.ts",
+      "drizzleCallback_logic": {
+        "select": "sql_select (unchanged)",
+        "with_returning": "sql_query_with_crdt (NEW)",
+        "without_returning": "sql_execute_with_crdt (unchanged)"
+      },
+      "hasReturning_check": "String-based RETURNING regex (safe enough for generated SQL)"
+    },
+
+    "rust_side": {
+      "files": [
+        "src-tauri/src/database/core.rs",
+        "src-tauri/src/extension/database/executor.rs",
+        "src-tauri/src/database/mod.rs"
+      ],
+      "core_rs_changes": {
+        "statement_has_returning": {
+          "line": 84,
+          "purpose": "AST-based RETURNING check (INSERT, UPDATE, DELETE)",
+          "safety": "Checks actual AST, not string matching"
+        },
+        "convert_value_ref_to_json": {
+          "line": 333,
+          "visibility": "Made public for reuse"
+        },
+        "removed": "query_with_crdt function (replaced by SqlExecutor::query_internal)"
+      },
+      "executor_rs_changes": {
+        "execute_internal_typed_with_context": {
+          "line": 100,
+          "purpose": "Execute SQL WITHOUT RETURNING (with CRDT and FK-Remapping)",
+          "returns": "Result<HashSet<String>, DatabaseError>",
+          "behavior": "Handles INSERTs with FK-Remapping, uses execute()"
+        },
+        "query_internal_typed_with_context": {
+          "line": 186,
+          "purpose": "Execute SQL WITH RETURNING (with CRDT, PK-Remapping, FK-Remapping)",
+          "returns": "Result<(HashSet<String>, Vec<Vec<JsonValue>>), DatabaseError>",
+          "behavior": "Handles INSERTs with full PK-Remapping + FK-Remapping, returns all RETURNING columns"
+        },
+        "query_internal": {
+          "line": 454,
+          "purpose": "Execute with CRDT + return full RETURNING results (JsonValue params)",
+          "behavior": "Wrapper around query_internal_typed_with_context"
+        },
+        "execute_internal_refactor": {
+          "line": 345,
+          "change": "Now wrapper around execute_internal_typed",
+          "benefit": "Drizzle now gets PK-Remapping for ON CONFLICT!"
+        }
+      },
+      "mod_rs_changes": {
+        "sql_query_with_crdt": {
+          "line": 59,
+          "calls": "SqlExecutor::query_internal",
+          "returns": "Vec<Vec<JsonValue>>"
+        }
+      },
+      "lib_rs_changes": {
+        "registered_command": "sql_query_with_crdt added to invoke_handler"
+      }
+    },
+
+    "benefits": [
+      "SQL executed only once (not twice)",
+      "Full RETURNING results available to Drizzle",
+      "PK-Remapping now works for Drizzle (both execute and query paths)",
+      "AST-based RETURNING detection (safe)",
+      "Less code duplication",
+      "Cleaner code separation: execute vs query functions",
+      "FK-Remapping works across transactions with PkRemappingContext"
+    ]
+  },
+
+  "system_windows_architecture": {
+    "concept": "ALL UI (Settings, Marketplace, etc.) as DesktopWindows, same as Extensions",
+    "status": "Store completed, UI integration pending",
+
+    "window_manager_store": {
+      "file": "src/stores/desktop/windowManager.ts",
+      "changes": {
+        "IWindow_interface": {
+          "added_fields": [
+            "type: 'system' | 'extension'",
+            "sourceId: string (replaces extensionId)"
+          ],
+          "removed_fields": ["extensionId"]
+        },
+        "SystemWindowDefinition": {
+          "fields": "id, name, icon, component, defaultWidth, defaultHeight, resizable, singleton"
+        },
+        "system_windows_registry": {
+          "line": 46,
+          "entries": ["settings", "marketplace"],
+          "structure": "Record<string, SystemWindowDefinition>"
+        },
+        "openWindow_function": {
+          "line": 101,
+          "signature": "(type, sourceId, title?, icon?, width?, height?, sourcePosition?)",
+          "features": [
+            "Type-based handling (system vs extension)",
+            "Singleton check for system windows",
+            "Auto-loads defaults from registry",
+            "Activates existing singleton if already open"
+          ]
+        },
+        "new_exports": ["getAllSystemWindows", "getSystemWindow"]
+      }
+    },
+
+    "ui_integration": {
+      "launcher": {
+        "file": "src/components/haex/extension/launcher.vue",
+        "changes": [
+          "Combined system windows and extensions in unified launcherItems computed",
+          "Alphabetically sorted by name",
+          "openItem() function handles both types with correct openWindow() signature",
+          "Uses windowManagerStore.getAllSystemWindows()"
+        ]
+      },
+      "desktop_window_component": {
+        "file": "src/components/haex/desktop/index.vue",
+        "changes": [
+          "Dynamic component rendering: <component :is='getSystemWindowComponent()'> for system windows",
+          "HaexDesktopExtensionFrame for extensions (iFrame)",
+          "getSystemWindowComponent() function to retrieve Vue component from registry",
+          "Applied to both normal mode and overview mode"
+        ]
+      },
+      "placeholder_components": {
+        "created": [
+          "src/components/haex/system/settings.vue",
+          "src/components/haex/system/marketplace.vue"
+        ],
+        "description": "Simple placeholder UI with sections and styling"
+      }
+    },
+
+    "next_steps": {
+      "priority": [
+        "Desktop Icons: Support system window icons (alongside extension icons)",
+        "Drag & Drop: Launcher → Desktop for all types (system + extension)"
+      ]
+    }
+  },
+
+  "workspace_overview_context": {
+    "still_active": "GNOME-style workspace overview with UDrawer, implemented yesterday",
+    "file": "src/components/haex/desktop/index.vue",
+    "status": "Working, workspace switching functional"
+  },
+
+  "file_changes_today": {
+    "modified": [
+      "src/stores/vault/index.ts (drizzleCallback with hasReturning)",
+      "src-tauri/src/database/core.rs (statement_has_returning, removed query_with_crdt)",
+      "src-tauri/src/extension/database/executor.rs (split execute/query functions, PK-Remapping)",
+      "src-tauri/src/database/mod.rs (sql_query_with_crdt command)",
+      "src-tauri/src/lib.rs (registered sql_query_with_crdt)",
+      "src/stores/desktop/windowManager.ts (system windows support)",
+      "src-tauri/src/extension/core/manager.rs (updated to use query_internal_typed_with_context)",
+      "src/components/haex/extension/launcher.vue (unified launcher for system + extensions)",
+      "src/components/haex/desktop/index.vue (dynamic component rendering)"
+    ],
+    "created": [
+      "src/components/haex/system/settings.vue",
+      "src/components/haex/system/marketplace.vue"
+    ],
+    "deleted": []
+  },
+
+  "important_notes": [
+    "Drizzle RETURNING now fully functional with CRDT",
+    "System windows use Vue components, Extensions use iFrame",
+    "sourceId is generic: extensionId for extensions, systemWindowId for system windows",
+    "Singleton system windows auto-activate if already open",
+    "PK-Remapping now works for both execute and query paths",
+    "executor.rs: Two separate functions for execute (no RETURNING) vs query (with RETURNING)",
+    "query_internal_typed_with_context returns full RETURNING results as Vec<Vec<JsonValue>>",
+    "FK-Remapping works across transaction using PkRemappingContext",
+    "Next session: Implement Launcher UI integration for system windows"
+  ],
+
+  "todos_remaining": [
+    "Desktop Icons für System Windows unterstützen (neben Extension Icons)",
+    "Drag & Drop vom Launcher zum Desktop implementieren (für beide Typen)"
+  ]
 }

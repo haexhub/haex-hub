@@ -4,7 +4,7 @@ use crate::extension::core::manifest::{EditablePermissions, ExtensionManifest, E
 use crate::extension::core::types::{copy_directory, Extension, ExtensionSource};
 use crate::extension::core::ExtensionPermissions;
 use crate::extension::crypto::ExtensionCrypto;
-use crate::extension::database::executor::SqlExecutor;
+use crate::extension::database::executor::{PkRemappingContext, SqlExecutor};
 use crate::extension::error::ExtensionError;
 use crate::extension::permissions::manager::PermissionManager;
 use crate::extension::permissions::types::ExtensionPermission;
@@ -315,7 +315,8 @@ impl ExtensionManager {
                 name: extension_name.to_string(),
             })?;
 
-
+        eprintln!("DEBUG: Removing extension with ID: {}", extension.id);
+        eprintln!("DEBUG: Extension name: {}, version: {}", extension_name, extension_version);
 
         // Lösche Permissions und Extension-Eintrag in einer Transaktion
         with_connection(&state.db, |conn| {
@@ -326,6 +327,7 @@ impl ExtensionManager {
             })?;
 
             // Lösche alle Permissions mit extension_id
+            eprintln!("DEBUG: Deleting permissions for extension_id: {}", extension.id);
             PermissionManager::delete_permissions_in_transaction(
                 &tx,
                 &hlc_service,
@@ -334,6 +336,7 @@ impl ExtensionManager {
 
             // Lösche Extension-Eintrag mit extension_id
             let sql = format!("DELETE FROM {} WHERE id = ?", TABLE_EXTENSIONS);
+            eprintln!("DEBUG: Executing SQL: {} with id = {}", sql, extension.id);
             SqlExecutor::execute_internal_typed(
                 &tx,
                 &hlc_service,
@@ -341,8 +344,11 @@ impl ExtensionManager {
                 rusqlite::params![&extension.id],
             )?;
 
+            eprintln!("DEBUG: Committing transaction");
             tx.commit().map_err(DatabaseError::from)
         })?;
+
+        eprintln!("DEBUG: Transaction committed successfully");
 
         // Entferne aus dem In-Memory-Manager
         self.remove_extension(public_key, extension_name)?;
@@ -460,20 +466,25 @@ impl ExtensionManager {
         let permissions = custom_permissions.to_internal_permissions(&extension_id);
 
         // Extension-Eintrag und Permissions in einer Transaktion speichern
-        with_connection(&state.db, |conn| {
+        let actual_extension_id = with_connection(&state.db, |conn| {
             let tx = conn.transaction().map_err(DatabaseError::from)?;
 
             let hlc_service = state.hlc.lock().map_err(|_| DatabaseError::MutexPoisoned {
                 reason: "Failed to lock HLC service".to_string(),
             })?;
 
+            // Erstelle PK-Remapping Context für die gesamte Transaktion
+            // Dies ermöglicht automatisches FK-Remapping wenn ON CONFLICT bei Extension auftritt
+            let mut pk_context = PkRemappingContext::new();
+
             // 1. Extension-Eintrag erstellen mit generierter UUID
+            // WICHTIG: RETURNING wird vom CRDT-Transformer automatisch hinzugefügt
             let insert_ext_sql = format!(
-                "INSERT INTO {} (id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO {} (id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
                 TABLE_EXTENSIONS
             );
 
-            SqlExecutor::execute_internal_typed(
+            let (_tables, returning_results) = SqlExecutor::query_internal_typed_with_context(
                 &tx,
                 &hlc_service,
                 &insert_ext_sql,
@@ -490,11 +501,28 @@ impl ExtensionManager {
                     extracted.manifest.description,
                     true, // enabled
                 ],
+                &mut pk_context,
             )?;
 
+            // Nutze die tatsächliche ID aus der Datenbank (wichtig bei ON CONFLICT)
+            // Die haex_extensions Tabelle hat einen single-column PK namens "id"
+            let actual_extension_id = returning_results
+                .first()
+                .and_then(|row| row.first())
+                .and_then(|val| val.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| extension_id.clone());
+
+            eprintln!(
+                "DEBUG: Extension UUID - Generated: {}, Actual from DB: {}",
+                extension_id, actual_extension_id
+            );
+
             // 2. Permissions speichern (oder aktualisieren falls schon vorhanden)
+            // Nutze einfaches INSERT - die CRDT-Transformation fügt automatisch ON CONFLICT hinzu
+            // FK-Werte (extension_id) werden automatisch remapped wenn Extension ON CONFLICT hatte
             let insert_perm_sql = format!(
-                "INSERT OR REPLACE INTO {} (id, extension_id, resource_type, action, target, constraints, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO {} (id, extension_id, resource_type, action, target, constraints, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 TABLE_EXTENSION_PERMISSIONS
             );
 
@@ -502,7 +530,7 @@ impl ExtensionManager {
                 use crate::database::generated::HaexExtensionPermissions;
                 let db_perm: HaexExtensionPermissions = perm.into();
 
-                SqlExecutor::execute_internal_typed(
+                SqlExecutor::execute_internal_typed_with_context(
                     &tx,
                     &hlc_service,
                     &insert_perm_sql,
@@ -515,15 +543,16 @@ impl ExtensionManager {
                         db_perm.constraints,
                         db_perm.status,
                     ],
+                    &mut pk_context,
                 )?;
             }
 
             tx.commit().map_err(DatabaseError::from)?;
-            Ok(extension_id.clone())
+            Ok(actual_extension_id.clone())
         })?;
 
         let extension = Extension {
-            id: extension_id.clone(),
+            id: actual_extension_id.clone(), // Nutze die actual_extension_id aus der Transaktion
             source: ExtensionSource::Production {
                 path: extensions_dir.clone(),
                 version: extracted.manifest.version.clone(),
@@ -535,7 +564,7 @@ impl ExtensionManager {
 
         self.add_production_extension(extension)?;
 
-        Ok(extension_id)
+        Ok(actual_extension_id) // Gebe die actual_extension_id an den Caller zurück
     }
 
     /// Scannt das Dateisystem beim Start und lädt alle installierten Erweiterungen.

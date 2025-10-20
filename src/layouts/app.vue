@@ -17,7 +17,7 @@
 
           <NuxtLinkLocale
             class="link text-base-content link-neutral text-xl font-semibold no-underline flex items-center"
-            :to="{ name: 'vaultOverview' }"
+            :to="{ name: 'desktop' }"
           >
             <UiTextGradient class="text-nowrap">
               {{ currentVaultName }}
@@ -27,6 +27,17 @@
       </template>
 
       <template #links>
+        <UButton
+          color="neutral"
+          variant="outline"
+          :block="isSmallScreen"
+          @click="isOverviewMode = !isOverviewMode"
+        >
+          <template #leading>
+            <UIcon name="i-heroicons-squares-2x2" />
+          </template>
+          Workspaces
+        </UButton>
         <HaexExtensionLauncher :block="isSmallScreen" />
         <UiDropdownVault :block="isSmallScreen" />
       </template>
@@ -42,6 +53,8 @@
 const { currentVaultName } = storeToRefs(useVaultStore())
 
 const { isSmallScreen } = storeToRefs(useUiStore())
+
+const { isOverviewMode } = storeToRefs(useWorkspaceStore())
 </script>
 
 <i18n lang="yaml">

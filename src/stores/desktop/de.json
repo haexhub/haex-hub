@@ -1,0 +1,13 @@
+{
+  "contextMenu": {
+    "open": "Öffnen",
+    "removeFromDesktop": "Von Desktop entfernen",
+    "uninstall": "Deinstallieren"
+  },
+  "confirmUninstall": {
+    "title": "Erweiterung deinstallieren",
+    "message": "Möchten Sie die Erweiterung '{name}' wirklich deinstallieren? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "confirm": "Deinstallieren",
+    "cancel": "Abbrechen"
+  }
+}

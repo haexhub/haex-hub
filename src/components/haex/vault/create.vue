@@ -98,7 +98,7 @@ const onCreateAsync = async () => {
       if (vaultId) {
         initVault()
         await navigateTo(
-          useLocaleRoute()({ name: 'vaultOverview', params: { vaultId } }),
+          useLocaleRoute()({ name: 'desktop', params: { vaultId } }),
         )
       }
     }

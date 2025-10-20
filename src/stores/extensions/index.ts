@@ -31,26 +31,12 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
     )
   })
 
-  /* const { addNotificationAsync } = useNotificationStore() */
-
-  /*  const extensionLinks = computed<ISidebarItem[]>(() =>
-    availableExtensions.value
-      .filter((extension) => extension.enabled && extension.installed)
-      .map((extension) => ({
-        icon: extension.icon ?? '',
-        id: extension.id,
-        name: extension.name ?? '',
-        tooltip: extension.name ?? '',
-        to: { name: 'haexExtension', params: { extensionId: extension.id } },
-      })),
-  ) */
-
-  const isActive = (id: string) =>
+  /* const isActive = (id: string) =>
     computed(
       () =>
         currentRoute.value.name === 'extension' &&
         currentRoute.value.params.extensionId === id,
-    )
+    ) */
 
   const extensionEntry = computed(() => {
     if (
@@ -65,7 +51,7 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
       currentExtension.value.name,
       currentExtension.value.version,
       'index.html',
-      currentExtension.value.devServerUrl ?? undefined
+      currentExtension.value.devServerUrl ?? undefined,
     )
   })
 
@@ -286,7 +272,7 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
     currentExtensionId,
     extensionEntry,
     installAsync,
-    isActive,
+    //isActive,
     isExtensionInstalledAsync,
     loadExtensionsAsync,
     previewManifestAsync,

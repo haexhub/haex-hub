@@ -6,6 +6,6 @@
 
 <script setup lang="ts">
 definePageMeta({
-  name: 'vaultOverview',
+  name: 'desktop',
 })
 </script>

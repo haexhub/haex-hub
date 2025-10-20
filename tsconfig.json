@@ -3,7 +3,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@bindings/*": ["./src-tauri/bindings/*"]
+      "@bindings/*": ["./src-tauri/bindings/*"],
+      "@/*": ["./src/*"]
     }
   },
   "files": [],
