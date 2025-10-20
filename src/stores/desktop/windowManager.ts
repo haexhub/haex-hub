@@ -102,19 +102,42 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
     windowsFrom.value.forEach((window) => (window.workspaceId = toWorkspaceId))
   }
 
-  const openWindow = (
-    type: 'system' | 'extension',
-    sourceId: string,
-    workspaceId: string,
-    title?: string,
-    icon?: string,
-    width?: number,
-    height?: number,
-    sourcePosition?: { x: number; y: number; width: number; height: number },
-  ) => {
-    const workspace = workspaces.value.find((w) => w.id === workspaceId)
-    if (!workspace) {
+  const openWindow = ({
+    height,
+    icon,
+    sourceId,
+    sourcePosition,
+    title,
+    type,
+    width,
+    workspaceId,
+  }: {
+    height?: number
+    icon?: string
+    sourceId: string
+    sourcePosition?: { x: number; y: number; width: number; height: number }
+    title?: string
+    type: 'system' | 'extension'
+    width?: number
+    workspaceId?: string
+  }) => {
+    // Wenn kein workspaceId angegeben ist, nutze die current workspace
+    const targetWorkspaceId = workspaceId || currentWorkspace.value?.id
+
+    if (!targetWorkspaceId) {
       console.error('Cannot open window: No active workspace')
+      return
+    }
+
+    // Sicherheitscheck
+    if (!targetWorkspaceId) {
+      console.error('Cannot open window: No workspace available')
+      return
+    }
+
+    const workspace = workspaces.value?.find((w) => w.id === targetWorkspaceId)
+    if (!workspace) {
+      console.error('Cannot open window: Invalid workspace')
       return
     }
 

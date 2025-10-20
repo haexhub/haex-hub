@@ -113,8 +113,8 @@ const openItem = async (item: LauncherItem) => {
   // Check if we're on the desktop page
   const isOnDesktop = route.name === 'desktop'
 
-  console.log('currentWorkspace', currentWorkspace.value)
-  if (!isOnDesktop) {
+  console.log('currentWorkspace', currentWorkspace.value, route.name)
+  /* if (!isOnDesktop) {
     // Navigate to desktop first
     await router.push(
       localePath({
@@ -124,15 +124,16 @@ const openItem = async (item: LauncherItem) => {
 
     // Wait for navigation and DOM update
     await nextTick()
-  }
+  } */
 
   // Open the window with correct type and sourceId
-  windowManagerStore.openWindow(
-    item.type, // 'system' or 'extension'
-    item.id, // systemWindowId or extensionId
-    item.name,
-    item.icon,
-  )
+  windowManagerStore.openWindow({
+    sourceId: item.id,
+    type: item.type, // 'system' or 'extension'
+    icon: item.icon, // systemWindowId or extensionId
+    title: item.name,
+    workspaceId: currentWorkspace.value?.id,
+  })
 
   open.value = false
 }
