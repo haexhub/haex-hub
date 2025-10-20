@@ -123,7 +123,7 @@
 const props = defineProps<{
   id: string
   title: string
-  icon?: string
+  icon?: string | null
   initialX?: number
   initialY?: number
   initialWidth?: number

@@ -51,13 +51,9 @@
 </template>
 
 <script setup lang="ts">
-import type { SystemWindowDefinition } from '@/stores/desktop/windowManager'
-
 const extensionStore = useExtensionsStore()
 const windowManagerStore = useWindowManagerStore()
-const router = useRouter()
-const route = useRoute()
-const localePath = useLocalePath()
+
 const { t } = useI18n()
 
 const open = ref(false)
@@ -107,35 +103,21 @@ const disabledExtensions = computed(() => {
   return extensionStore.availableExtensions.filter((ext) => !ext.enabled)
 })
 
-const { currentWorkspace } = storeToRefs(useWorkspaceStore())
 // Open launcher item (system window or extension)
 const openItem = async (item: LauncherItem) => {
-  // Check if we're on the desktop page
-  const isOnDesktop = route.name === 'desktop'
+  try {
+    // Open the window with correct type and sourceId
+    await windowManagerStore.openWindowAsync({
+      sourceId: item.id,
+      type: item.type,
+      icon: item.icon,
+      title: item.name,
+    })
 
-  console.log('currentWorkspace', currentWorkspace.value, route.name)
-  /* if (!isOnDesktop) {
-    // Navigate to desktop first
-    await router.push(
-      localePath({
-        name: 'desktop',
-      }),
-    )
-
-    // Wait for navigation and DOM update
-    await nextTick()
-  } */
-
-  // Open the window with correct type and sourceId
-  windowManagerStore.openWindow({
-    sourceId: item.id,
-    type: item.type, // 'system' or 'extension'
-    icon: item.icon, // systemWindowId or extensionId
-    title: item.name,
-    workspaceId: currentWorkspace.value?.id,
-  })
-
-  open.value = false
+    open.value = false
+  } catch (error) {
+    console.log(error)
+  }
 }
 </script>
 

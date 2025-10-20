@@ -163,15 +163,13 @@ export const useDesktopStore = defineStore('desktopStore', () => {
       )
 
       if (extension) {
-        windowManager.openWindow(
-          'extension',
-          extension.id,
-          extension.name,
-          extension.icon || undefined,
-          undefined, // Use default viewport-aware width
-          undefined, // Use default viewport-aware height
+        windowManager.openWindowAsync({
+          sourceId: extension.id,
+          type: 'extension',
+          icon: extension.icon,
+          title: extension.name,
           sourcePosition,
-        )
+        })
       }
     }
     // Für später: file und folder handling

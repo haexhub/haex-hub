@@ -6,7 +6,7 @@ export interface IWindow {
   type: 'system' | 'extension'
   sourceId: string // extensionId or systemWindowId (depends on type)
   title: string
-  icon?: string
+  icon?: string | null
   x: number
   y: number
   width: number
@@ -35,9 +35,6 @@ export interface SystemWindowDefinition {
 }
 
 export const useWindowManagerStore = defineStore('windowManager', () => {
-  const workspaceStore = useWorkspaceStore()
-  const { currentWorkspace, workspaces } = storeToRefs(workspaceStore)
-
   const windows = ref<IWindow[]>([])
   const activeWindowId = ref<string | null>(null)
   const nextZIndex = ref(100)
@@ -83,9 +80,9 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
 
   // Get windows for current workspace only
   const currentWorkspaceWindows = computed(() => {
-    if (!currentWorkspace.value) return []
+    if (!useWorkspaceStore().currentWorkspace) return []
     return windows.value.filter(
-      (w) => w.workspaceId === currentWorkspace.value?.id,
+      (w) => w.workspaceId === useWorkspaceStore().currentWorkspace?.id,
     )
   })
 
@@ -102,18 +99,18 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
     windowsFrom.value.forEach((window) => (window.workspaceId = toWorkspaceId))
   }
 
-  const openWindow = ({
-    height,
-    icon,
+  const openWindowAsync = async ({
+    height = 800,
+    icon = '',
     sourceId,
     sourcePosition,
     title,
     type,
-    width,
+    width = 600,
     workspaceId,
   }: {
     height?: number
-    icon?: string
+    icon?: string | null
     sourceId: string
     sourcePosition?: { x: number; y: number; width: number; height: number }
     title?: string
@@ -121,107 +118,105 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
     width?: number
     workspaceId?: string
   }) => {
-    // Wenn kein workspaceId angegeben ist, nutze die current workspace
-    const targetWorkspaceId = workspaceId || currentWorkspace.value?.id
+    try {
+      // Wenn kein workspaceId angegeben ist, nutze die current workspace
+      const targetWorkspaceId =
+        workspaceId || useWorkspaceStore().currentWorkspace?.id
 
-    if (!targetWorkspaceId) {
-      console.error('Cannot open window: No active workspace')
-      return
-    }
-
-    // Sicherheitscheck
-    if (!targetWorkspaceId) {
-      console.error('Cannot open window: No workspace available')
-      return
-    }
-
-    const workspace = workspaces.value?.find((w) => w.id === targetWorkspaceId)
-    if (!workspace) {
-      console.error('Cannot open window: Invalid workspace')
-      return
-    }
-
-    // System Window specific handling
-    if (type === 'system') {
-      const systemWindowDef = getSystemWindow(sourceId)
-      if (!systemWindowDef) {
-        console.error(`System window '${sourceId}' not found in registry`)
+      if (!targetWorkspaceId) {
+        console.error('Cannot open window: No active workspace')
         return
       }
 
-      // Singleton check: If already open, activate existing window
-      if (systemWindowDef.singleton) {
-        const existingWindow = windows.value.find(
-          (w) => w.type === 'system' && w.sourceId === sourceId,
-        )
-        if (existingWindow) {
-          activateWindow(existingWindow.id)
-          return existingWindow.id
+      const workspace = useWorkspaceStore().workspaces?.find(
+        (w) => w.id === targetWorkspaceId,
+      )
+      if (!workspace) {
+        console.error('Cannot open window: Invalid workspace')
+        return
+      }
+
+      // System Window specific handling
+      if (type === 'system') {
+        const systemWindowDef = getSystemWindow(sourceId)
+        if (!systemWindowDef) {
+          console.error(`System window '${sourceId}' not found in registry`)
+          return
         }
+
+        // Singleton check: If already open, activate existing window
+        if (systemWindowDef.singleton) {
+          const existingWindow = windows.value.find(
+            (w) => w.type === 'system' && w.sourceId === sourceId,
+          )
+          if (existingWindow) {
+            activateWindow(existingWindow.id)
+            return existingWindow.id
+          }
+        }
+
+        // Use system window defaults
+        title = title ?? systemWindowDef.name
+        icon = icon ?? systemWindowDef.icon
+        width = width ?? systemWindowDef.defaultWidth
+        height = height ?? systemWindowDef.defaultHeight
       }
 
-      // Use system window defaults
-      title = title ?? systemWindowDef.name
-      icon = icon ?? systemWindowDef.icon
-      width = width ?? systemWindowDef.defaultWidth
-      height = height ?? systemWindowDef.defaultHeight
-    }
+      // Create new window
+      const windowId = crypto.randomUUID()
 
-    // Create new window
-    const windowId = crypto.randomUUID()
+      // Calculate viewport-aware size
+      const viewportWidth = window.innerWidth
+      const viewportHeight = window.innerHeight
 
-    // Calculate viewport-aware size
-    const viewportWidth = window.innerWidth
-    const viewportHeight = window.innerHeight
-    const isMobile = viewportWidth < 768 // Tailwind md breakpoint
+      const windowWidth = width > viewportWidth ? viewportWidth : width
+      const windowHeight = height > viewportHeight ? viewportHeight : height
 
-    // Default size based on viewport
-    const defaultWidth = isMobile ? Math.floor(viewportWidth * 0.95) : 800
-    const defaultHeight = isMobile ? Math.floor(viewportHeight * 0.85) : 600
+      // Calculate centered position with cascading offset (only count windows in current workspace)
+      const offset = currentWorkspaceWindows.value.length * 30
+      const centerX = Math.max(0, (viewportWidth - windowWidth) / 1 / 3)
+      const centerY = Math.max(0, (viewportHeight - windowHeight) / 1 / 3)
+      const x = Math.min(centerX + offset, viewportWidth - windowWidth)
+      const y = Math.min(centerY + offset, viewportHeight - windowHeight)
 
-    const windowWidth = width ?? defaultWidth
-    const windowHeight = height ?? defaultHeight
-
-    // Calculate centered position with cascading offset (only count windows in current workspace)
-    const offset = currentWorkspaceWindows.value.length * 30
-    const centerX = Math.max(0, (viewportWidth - windowWidth) / 2)
-    const centerY = Math.max(0, (viewportHeight - windowHeight) / 2)
-    const x = Math.min(centerX + offset, viewportWidth - windowWidth)
-    const y = Math.min(centerY + offset, viewportHeight - windowHeight)
-
-    const newWindow: IWindow = {
-      id: windowId,
-      workspaceId: workspace.id,
-      type,
-      sourceId,
-      title: title!,
-      icon,
-      x,
-      y,
-      width: windowWidth,
-      height: windowHeight,
-      isMinimized: false,
-      zIndex: nextZIndex.value++,
-      sourceX: sourcePosition?.x,
-      sourceY: sourcePosition?.y,
-      sourceWidth: sourcePosition?.width,
-      sourceHeight: sourcePosition?.height,
-      isOpening: true,
-      isClosing: false,
-    }
-
-    windows.value.push(newWindow)
-    activeWindowId.value = windowId
-
-    // Remove opening flag after animation
-    setTimeout(() => {
-      const window = windows.value.find((w) => w.id === windowId)
-      if (window) {
-        window.isOpening = false
+      const newWindow: IWindow = {
+        id: windowId,
+        workspaceId: workspace.id,
+        type,
+        sourceId,
+        title: title!,
+        icon,
+        x,
+        y,
+        width: windowWidth,
+        height: windowHeight,
+        isMinimized: false,
+        zIndex: nextZIndex.value++,
+        sourceX: sourcePosition?.x,
+        sourceY: sourcePosition?.y,
+        sourceWidth: sourcePosition?.width,
+        sourceHeight: sourcePosition?.height,
+        isOpening: true,
+        isClosing: false,
       }
-    }, windowAnimationDuration.value)
 
-    return windowId
+      windows.value.push(newWindow)
+      activeWindowId.value = windowId
+
+      // Remove opening flag after animation
+      setTimeout(() => {
+        const window = windows.value.find((w) => w.id === windowId)
+        if (window) {
+          window.isOpening = false
+        }
+      }, windowAnimationDuration.value)
+
+      return windowId
+    } catch (error) {
+      console.error('Error opening window:', error)
+      // Optional: Fehler weiterwerfen wenn nötig
+      throw error
+    }
   }
 
   /*****************************************************************************************************
@@ -324,7 +319,7 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
     isWindowActive,
     minimizeWindow,
     moveWindowsToWorkspace,
-    openWindow,
+    openWindowAsync,
     restoreWindow,
     updateWindowPosition,
     updateWindowSize,
