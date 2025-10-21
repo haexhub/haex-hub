@@ -1,8 +1,6 @@
 <template>
-  <div>
-    <div
-      class="grid grid-rows-2 sm:grid-cols-2 sm:gap-2 p-2 max-w-2xl w-full h-fit"
-    >
+  <div class="w-full h-full bg-default">
+    <div class="grid grid-cols-2 p-2">
       <div class="p-2">{{ t('language') }}</div>
       <div><UiDropdownLocale @select="onSelectLocaleAsync" /></div>
 
@@ -34,6 +32,8 @@
           @change="onUpdateDeviceNameAsync"
         />
       </div>
+
+      <div class="h-full"></div>
     </div>
   </div>
 </template>

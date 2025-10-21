@@ -52,7 +52,7 @@
 
         <p
           v-if="extension.description"
-          class="text-sm text-gray-600 dark:text-gray-300 mt-2 line-clamp-2"
+          class="hidden @lg:flex text-sm text-gray-600 dark:text-gray-300 mt-2 line-clamp-2"
         >
           {{ extension.description }}
         </p>
@@ -67,7 +67,9 @@
           >
             <UIcon name="i-heroicons-check-circle-solid" />
             <span v-if="!extension.installedVersion">{{ t('installed') }}</span>
-            <span v-else>{{ t('installedVersion', { version: extension.installedVersion }) }}</span>
+            <span v-else>{{
+              t('installedVersion', { version: extension.installedVersion })
+            }}</span>
           </div>
           <div
             v-if="extension.downloads"
@@ -114,10 +116,16 @@
       <div class="flex items-center justify-between gap-2">
         <UButton
           :label="getInstallButtonLabel()"
-          :color="extension.isInstalled && !extension.installedVersion ? 'neutral' : 'primary'"
+          :color="
+            extension.isInstalled && !extension.installedVersion
+              ? 'neutral'
+              : 'primary'
+          "
           :disabled="extension.isInstalled && !extension.installedVersion"
           :icon="
-            extension.isInstalled && !extension.installedVersion ? 'i-heroicons-check' : 'i-heroicons-arrow-down-tray'
+            extension.isInstalled && !extension.installedVersion
+              ? 'i-heroicons-check'
+              : 'i-heroicons-arrow-down-tray'
           "
           size="sm"
           @click.stop="$emit('install')"

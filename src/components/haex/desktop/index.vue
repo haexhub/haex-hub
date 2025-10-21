@@ -17,6 +17,7 @@
       class="w-full h-full"
       @swiper="onSwiperInit"
       @slide-change="onSlideChange"
+      direction="vertical"
     >
       <SwiperSlide
         v-for="workspace in workspaces"

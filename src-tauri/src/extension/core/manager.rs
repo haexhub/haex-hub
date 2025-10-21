@@ -167,7 +167,6 @@ impl ExtensionManager {
         Ok(specific_extension_dir)
     }
 
-
     pub fn add_production_extension(&self, extension: Extension) -> Result<(), ExtensionError> {
         if extension.id.is_empty() {
             return Err(ExtensionError::ValidationError {
@@ -223,11 +222,12 @@ impl ExtensionManager {
         name: &str,
     ) -> Result<Option<(String, Extension)>, ExtensionError> {
         // 1. Check dev extensions first (higher priority)
-        let dev_extensions = self.dev_extensions.lock().map_err(|e| {
-            ExtensionError::MutexPoisoned {
-                reason: e.to_string(),
-            }
-        })?;
+        let dev_extensions =
+            self.dev_extensions
+                .lock()
+                .map_err(|e| ExtensionError::MutexPoisoned {
+                    reason: e.to_string(),
+                })?;
 
         for (id, ext) in dev_extensions.iter() {
             if ext.manifest.public_key == public_key && ext.manifest.name == name {
@@ -236,11 +236,12 @@ impl ExtensionManager {
         }
 
         // 2. Check production extensions
-        let prod_extensions = self.production_extensions.lock().map_err(|e| {
-            ExtensionError::MutexPoisoned {
-                reason: e.to_string(),
-            }
-        })?;
+        let prod_extensions =
+            self.production_extensions
+                .lock()
+                .map_err(|e| ExtensionError::MutexPoisoned {
+                    reason: e.to_string(),
+                })?;
 
         for (id, ext) in prod_extensions.iter() {
             if ext.manifest.public_key == public_key && ext.manifest.name == name {
@@ -262,11 +263,7 @@ impl ExtensionManager {
             .map(|(_, ext)| ext))
     }
 
-    pub fn remove_extension(
-        &self,
-        public_key: &str,
-        name: &str,
-    ) -> Result<(), ExtensionError> {
+    pub fn remove_extension(&self, public_key: &str, name: &str) -> Result<(), ExtensionError> {
         let (id, _) = self
             .find_extension_id_by_public_key_and_name(public_key, name)?
             .ok_or_else(|| ExtensionError::NotFound {
@@ -276,11 +273,12 @@ impl ExtensionManager {
 
         // Remove from dev extensions first
         {
-            let mut dev_extensions = self.dev_extensions.lock().map_err(|e| {
-                ExtensionError::MutexPoisoned {
-                    reason: e.to_string(),
-                }
-            })?;
+            let mut dev_extensions =
+                self.dev_extensions
+                    .lock()
+                    .map_err(|e| ExtensionError::MutexPoisoned {
+                        reason: e.to_string(),
+                    })?;
             if dev_extensions.remove(&id).is_some() {
                 return Ok(());
             }
@@ -288,11 +286,12 @@ impl ExtensionManager {
 
         // Remove from production extensions
         {
-            let mut prod_extensions = self.production_extensions.lock().map_err(|e| {
-                ExtensionError::MutexPoisoned {
-                    reason: e.to_string(),
-                }
-            })?;
+            let mut prod_extensions =
+                self.production_extensions
+                    .lock()
+                    .map_err(|e| ExtensionError::MutexPoisoned {
+                        reason: e.to_string(),
+                    })?;
             prod_extensions.remove(&id);
         }
 
@@ -316,7 +315,10 @@ impl ExtensionManager {
             })?;
 
         eprintln!("DEBUG: Removing extension with ID: {}", extension.id);
-        eprintln!("DEBUG: Extension name: {}, version: {}", extension_name, extension_version);
+        eprintln!(
+            "DEBUG: Extension name: {}, version: {}",
+            extension_name, extension_version
+        );
 
         // Lösche Permissions und Extension-Eintrag in einer Transaktion
         with_connection(&state.db, |conn| {
@@ -327,12 +329,11 @@ impl ExtensionManager {
             })?;
 
             // Lösche alle Permissions mit extension_id
-            eprintln!("DEBUG: Deleting permissions for extension_id: {}", extension.id);
-            PermissionManager::delete_permissions_in_transaction(
-                &tx,
-                &hlc_service,
-                &extension.id,
-            )?;
+            eprintln!(
+                "DEBUG: Deleting permissions for extension_id: {}",
+                extension.id
+            );
+            PermissionManager::delete_permissions_in_transaction(&tx, &hlc_service, &extension.id)?;
 
             // Lösche Extension-Eintrag mit extension_id
             let sql = format!("DELETE FROM {} WHERE id = ?", TABLE_EXTENSIONS);
@@ -573,6 +574,7 @@ impl ExtensionManager {
         app_handle: &AppHandle,
         state: &State<'_, AppState>,
     ) -> Result<Vec<String>, ExtensionError> {
+        // Clear existing data
         self.production_extensions
             .lock()
             .map_err(|e| ExtensionError::MutexPoisoned {
@@ -592,19 +594,22 @@ impl ExtensionManager {
             })?
             .clear();
 
-        // Schritt 1: Alle Daten aus der Datenbank in einem Rutsch laden.
+        // Lade alle Daten aus der Datenbank
         let extensions = with_connection(&state.db, |conn| {
             let sql = format!(
-                "SELECT id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled FROM {}",
-                TABLE_EXTENSIONS
-            );
+            "SELECT id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled FROM {}",
+            TABLE_EXTENSIONS
+        );
             eprintln!("DEBUG: SQL Query before transformation: {}", sql);
+
+            // select_internal gibt jetzt Vec<Vec<JsonValue>> zurück
             let results = SqlExecutor::select_internal(conn, &sql, &[])?;
             eprintln!("DEBUG: Query returned {} results", results.len());
 
             let mut data = Vec::new();
-            for result in results {
-                let id = result["id"]
+            for row in results {
+                // Wir erwarten die Werte in der Reihenfolge der SELECT-Anweisung
+                let id = row[0]
                     .as_str()
                     .ok_or_else(|| DatabaseError::SerializationError {
                         reason: "Missing id field".to_string(),
@@ -612,31 +617,31 @@ impl ExtensionManager {
                     .to_string();
 
                 let manifest = ExtensionManifest {
-                    name: result["name"]
+                    name: row[1]
                         .as_str()
                         .ok_or_else(|| DatabaseError::SerializationError {
                             reason: "Missing name field".to_string(),
                         })?
                         .to_string(),
-                    version: result["version"]
+                    version: row[2]
                         .as_str()
                         .ok_or_else(|| DatabaseError::SerializationError {
                             reason: "Missing version field".to_string(),
                         })?
                         .to_string(),
-                    author: result["author"].as_str().map(String::from),
-                    entry: result["entry"].as_str().unwrap_or("index.html").to_string(),
-                    icon: result["icon"].as_str().map(String::from),
-                    public_key: result["public_key"].as_str().unwrap_or("").to_string(),
-                    signature: result["signature"].as_str().unwrap_or("").to_string(),
+                    author: row[3].as_str().map(String::from),
+                    entry: row[4].as_str().unwrap_or("index.html").to_string(),
+                    icon: row[5].as_str().map(String::from),
+                    public_key: row[6].as_str().unwrap_or("").to_string(),
+                    signature: row[7].as_str().unwrap_or("").to_string(),
                     permissions: ExtensionPermissions::default(),
-                    homepage: result["homepage"].as_str().map(String::from),
-                    description: result["description"].as_str().map(String::from),
+                    homepage: row[8].as_str().map(String::from),
+                    description: row[9].as_str().map(String::from),
                 };
 
-                let enabled = result["enabled"]
+                let enabled = row[10]
                     .as_bool()
-                    .or_else(|| result["enabled"].as_i64().map(|v| v != 0))
+                    .or_else(|| row[10].as_i64().map(|v| v != 0))
                     .unwrap_or(false);
 
                 data.push(ExtensionDataFromDb {
@@ -684,10 +689,7 @@ impl ExtensionManager {
                 continue;
             }
 
-            eprintln!(
-                "DEBUG: Extension loaded successfully: {}",
-                extension_id
-            );
+            eprintln!("DEBUG: Extension loaded successfully: {}", extension_id);
 
             let extension = Extension {
                 id: extension_id.clone(),

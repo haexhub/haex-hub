@@ -142,7 +142,10 @@ const drizzleCallback = (async (
 
   if (isSelectQuery(sql)) {
     // SELECT statements
-    rows = await invoke<unknown[]>('sql_select', { sql, params }).catch((e) => {
+    rows = await invoke<unknown[]>('sql_select_with_crdt', {
+      sql,
+      params,
+    }).catch((e) => {
       console.error('SQL select Error:', e, sql, params)
       return []
     })
@@ -164,9 +167,9 @@ const drizzleCallback = (async (
       console.error('SQL execute with CRDT Error:', e, sql, params, rows)
       return []
     })
-    return { rows: undefined }
   }
 
+  console.log('drizzle found', rows)
   if (method === 'get') {
     return { rows: rows.length > 0 ? [rows[0]] : [] }
   } else {

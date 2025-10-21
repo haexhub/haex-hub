@@ -5,6 +5,8 @@ use crate::crdt::transformer::CrdtTransformer;
 use crate::crdt::trigger;
 use crate::database::core::{convert_value_ref_to_json, parse_sql_statements, ValueConverter};
 use crate::database::error::DatabaseError;
+use crate::database::DbConnection;
+use rusqlite::Connection;
 use rusqlite::{params_from_iter, types::Value as SqliteValue, ToSql, Transaction};
 use serde_json::Value as JsonValue;
 use sqlparser::ast::{Insert, Statement, TableObject};
@@ -423,10 +425,10 @@ impl SqlExecutor {
 
     /// Führt SELECT aus (mit CRDT-Transformation) - OHNE Permission-Check
     pub fn select_internal(
-        conn: &rusqlite::Connection,
+        conn: &Connection,
         sql: &str,
         params: &[JsonValue],
-    ) -> Result<Vec<JsonValue>, DatabaseError> {
+    ) -> Result<Vec<Vec<JsonValue>>, DatabaseError> {
         // Parameter validation
         let total_placeholders = sql.matches('?').count();
         if total_placeholders != params.len() {
@@ -457,42 +459,40 @@ impl SqlExecutor {
         let sql_params = ValueConverter::convert_params(params)?;
         let transformer = CrdtTransformer::new();
 
-        let last_statement = ast_vec.pop().unwrap();
-        let mut stmt_to_execute = last_statement;
-
+        let mut stmt_to_execute = ast_vec.pop().unwrap();
         transformer.transform_select_statement(&mut stmt_to_execute)?;
         let transformed_sql = stmt_to_execute.to_string();
 
-        let mut prepared_stmt =
-            conn.prepare(&transformed_sql)
-                .map_err(|e| DatabaseError::ExecutionError {
-                    sql: transformed_sql.clone(),
-                    reason: e.to_string(),
-                    table: None,
-                })?;
+        let mut prepared_stmt = conn.prepare(&transformed_sql)?;
+        let num_columns = prepared_stmt.column_count();
 
-        let column_names: Vec<String> = prepared_stmt
-            .column_names()
-            .into_iter()
-            .map(|s| s.to_string())
-            .collect();
-
-        let rows = prepared_stmt
-            .query_map(params_from_iter(sql_params.iter()), |row| {
-                crate::extension::database::row_to_json_value(row, &column_names)
-            })
+        let mut rows = prepared_stmt
+            .query(params_from_iter(sql_params.iter()))
             .map_err(|e| DatabaseError::QueryError {
                 reason: e.to_string(),
             })?;
 
-        let mut results = Vec::new();
-        for row_result in rows {
-            results.push(row_result.map_err(|e| DatabaseError::RowProcessingError {
-                reason: e.to_string(),
-            })?);
+        let mut result_vec: Vec<Vec<JsonValue>> = Vec::new();
+
+        while let Some(row) = rows.next().map_err(|e| DatabaseError::RowProcessingError {
+            reason: format!("Row iteration error: {}", e),
+        })? {
+            let mut row_values: Vec<JsonValue> = Vec::with_capacity(num_columns);
+
+            for i in 0..num_columns {
+                let value_ref = row
+                    .get_ref(i)
+                    .map_err(|e| DatabaseError::RowProcessingError {
+                        reason: format!("Failed to get column {}: {}", i, e),
+                    })?;
+
+                let json_val = convert_value_ref_to_json(value_ref)?;
+                row_values.push(json_val);
+            }
+            result_vec.push(row_values);
         }
 
-        Ok(results)
+        Ok(result_vec)
     }
 
     /// Führt SQL mit CRDT-Transformation aus und gibt RETURNING-Ergebnisse zurück

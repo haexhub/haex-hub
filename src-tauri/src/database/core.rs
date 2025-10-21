@@ -164,9 +164,11 @@ pub fn execute(
 
         if has_returning {
             // Use prepare + query for RETURNING statements
-            let mut stmt = conn.prepare(&sql).map_err(|e| DatabaseError::PrepareError {
-                reason: e.to_string(),
-            })?;
+            let mut stmt = conn
+                .prepare(&sql)
+                .map_err(|e| DatabaseError::PrepareError {
+                    reason: e.to_string(),
+                })?;
 
             let num_columns = stmt.column_count();
             let mut rows = stmt
@@ -183,11 +185,11 @@ pub fn execute(
                 let mut row_values: Vec<JsonValue> = Vec::with_capacity(num_columns);
 
                 for i in 0..num_columns {
-                    let value_ref = row.get_ref(i).map_err(|e| {
-                        DatabaseError::RowProcessingError {
-                            reason: format!("Failed to get column {}: {}", i, e),
-                        }
-                    })?;
+                    let value_ref =
+                        row.get_ref(i)
+                            .map_err(|e| DatabaseError::RowProcessingError {
+                                reason: format!("Failed to get column {}: {}", i, e),
+                            })?;
 
                     let json_val = convert_value_ref_to_json(value_ref)?;
                     row_values.push(json_val);
@@ -271,6 +273,16 @@ pub fn select(
         }
 
         Ok(result_vec)
+    })
+}
+
+pub fn select_with_crdt(
+    sql: String,
+    params: Vec<JsonValue>,
+    connection: &DbConnection,
+) -> Result<Vec<Vec<JsonValue>>, DatabaseError> {
+    with_connection(&connection, |conn| {
+        SqlExecutor::select_internal(conn, &sql, &params)
     })
 }
 

@@ -1,8 +1,8 @@
 <template>
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col h-full bg-default">
     <!-- Header with Actions -->
     <div
-      class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 border-b border-gray-200 dark:border-gray-800"
+      class="flex flex-col @lg:flex-row @lg:items-center justify-between gap-4 p-6 border-b border-gray-200 dark:border-gray-800"
     >
       <div>
         <h1 class="text-2xl font-bold">
@@ -14,14 +14,14 @@
       </div>
 
       <div
-        class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
+        class="flex flex-col @lg:flex-row items-stretch @lg:items-center gap-3"
       >
         <!-- Marketplace Selector -->
         <USelectMenu
           v-model="selectedMarketplace"
           :items="marketplaces"
           value-key="id"
-          class="w-full sm:w-48"
+          class="w-full @lg:w-48"
         >
           <template #leading>
             <UIcon name="i-heroicons-building-storefront" />
@@ -34,13 +34,14 @@
           icon="i-heroicons-arrow-up-tray"
           color="neutral"
           @click="onSelectExtensionAsync"
+          block
         />
       </div>
     </div>
 
     <!-- Search and Filters -->
     <div
-      class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 p-6 border-b border-gray-200 dark:border-gray-800"
+      class="flex flex-col @lg:flex-row items-stretch @lg:items-center gap-4 p-6 border-b border-gray-200 dark:border-gray-800"
     >
       <UInput
         v-model="searchQuery"
@@ -53,7 +54,7 @@
         :items="categories"
         :placeholder="t('filter.category')"
         value-key="id"
-        class="w-full sm:w-48"
+        class="w-full @lg:w-48"
       >
         <template #leading>
           <UIcon name="i-heroicons-tag" />
@@ -65,7 +66,7 @@
     <div class="flex-1 overflow-auto p-6">
       <div
         v-if="filteredExtensions.length"
-        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+        class="grid grid-cols-1 @md:grid-cols-2 @2xl:grid-cols-3 gap-4"
       >
         <!-- Marketplace Extension Card -->
         <HaexExtensionMarketplaceCard

@@ -5,7 +5,7 @@
     :class="[
       'absolute bg-default/80 backdrop-blur-xl rounded-xl shadow-2xl overflow-hidden isolate',
       'border border-gray-200 dark:border-gray-700 transition-all ease-out duration-600 ',
-      'flex flex-col',
+      'flex flex-col @container',
       { 'select-none': isResizingOrDragging },
       isActive ? 'z-50' : 'z-10',
     ]"
@@ -208,6 +208,7 @@ useDrag(
         }
       }
 
+      globalThis.getSelection()?.removeAllRanges()
       emit('positionChanged', x.value, y.value)
       emit('sizeChanged', width.value, height.value)
       emit('dragEnd')

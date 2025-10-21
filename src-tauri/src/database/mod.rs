@@ -44,6 +44,15 @@ pub fn sql_execute(
 }
 
 #[tauri::command]
+pub fn sql_select_with_crdt(
+    sql: String,
+    params: Vec<JsonValue>,
+    state: State<'_, AppState>,
+) -> Result<Vec<Vec<JsonValue>>, DatabaseError> {
+    core::select_with_crdt(sql, params, &state.db)
+}
+
+#[tauri::command]
 pub fn sql_execute_with_crdt(
     sql: String,
     params: Vec<JsonValue>,

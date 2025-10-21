@@ -2,7 +2,7 @@
   <UCard
     class="cursor-pointer transition-all h-32 w-72 shrink-0 group duration-500"
     :class="[
-      workspace.position === currentWorkspaceIndex
+      workspace.id === currentWorkspace?.id
         ? 'ring-2 ring-secondary bg-secondary/10'
         : 'hover:ring-2 hover:ring-gray-300',
     ]"
@@ -31,5 +31,5 @@ defineProps<{ workspace: IWorkspace }>()
 
 const workspaceStore = useWorkspaceStore()
 
-const { currentWorkspaceIndex } = storeToRefs(workspaceStore)
+const { currentWorkspace } = storeToRefs(workspaceStore)
 </script>

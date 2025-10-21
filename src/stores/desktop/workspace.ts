@@ -38,6 +38,7 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
         .from(haexWorkspaces)
         .orderBy(asc(haexWorkspaces.position))
 
+      console.log('loadWorkspacesAsync', items)
       workspaces.value = items
 
       // Create default workspace if none exist
