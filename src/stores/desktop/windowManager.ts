@@ -41,6 +41,18 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
 
   // System Windows Registry
   const systemWindows: Record<string, SystemWindowDefinition> = {
+    developer: {
+      id: 'developer',
+      name: 'Developer',
+      icon: 'i-hugeicons-developer',
+      component: defineAsyncComponent(
+        () => import('@/components/haex/system/developer.vue'),
+      ) as Component,
+      defaultWidth: 800,
+      defaultHeight: 600,
+      resizable: true,
+      singleton: true,
+    },
     settings: {
       id: 'settings',
       name: 'Settings',
@@ -169,8 +181,15 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
       const viewportWidth = window.innerWidth
       const viewportHeight = window.innerHeight
 
-      const windowWidth = width > viewportWidth ? viewportWidth : width
-      const windowHeight = height > viewportHeight ? viewportHeight : height
+      const windowHeight = Math.min(height, viewportHeight)
+
+      // Adjust width proportionally if needed (optional)
+      const aspectRatio = width / height
+      const windowWidth = Math.min(
+        width,
+        viewportWidth,
+        windowHeight * aspectRatio,
+      )
 
       // Calculate centered position with cascading offset (only count windows in current workspace)
       const offset = currentWorkspaceWindows.value.length * 30

@@ -3,10 +3,10 @@
     ref="windowEl"
     :style="windowStyle"
     :class="[
-      'absolute  backdrop-blur-xl rounded-xl shadow-2xl overflow-hidden',
-      'border border-gray-200 dark:border-gray-700 transition-all ease-out duration-600',
+      'absolute bg-default/80 backdrop-blur-xl rounded-xl shadow-2xl overflow-hidden isolate',
+      'border border-gray-200 dark:border-gray-700 transition-all ease-out duration-600 ',
       'flex flex-col',
-
+      { 'select-none': isResizingOrDragging },
       isActive ? 'z-50' : 'z-10',
     ]"
     @mousedown="handleActivate"
@@ -76,47 +76,17 @@
     <div
       :class="[
         'flex-1 overflow-auto relative ',
-        isDragging || isResizing ? 'pointer-events-none select-none' : '',
+        isResizingOrDragging ? 'pointer-events-none' : '',
       ]"
     >
       <slot />
     </div>
 
     <!-- Resize Handles -->
-    <template v-if="!isMaximized">
-      <div
-        class="absolute top-0 left-0 w-2 h-2 cursor-nw-resize shrink-0"
-        @mousedown.left.stop="handleResizeStart('nw', $event)"
-      />
-      <div
-        class="absolute top-0 right-0 w-2 h-2 cursor-ne-resize shrink-0"
-        @mousedown.left.stop="handleResizeStart('ne', $event)"
-      />
-      <div
-        class="absolute bottom-0 left-0 w-2 h-2 cursor-sw-resize shrink-0"
-        @mousedown.left.stop="handleResizeStart('sw', $event)"
-      />
-      <div
-        class="absolute bottom-0 right-0 w-2 h-2 cursor-se-resize shrink-0"
-        @mousedown.left.stop="handleResizeStart('se', $event)"
-      />
-      <div
-        class="absolute top-0 left-2 right-2 h-2 cursor-n-resize shrink-0"
-        @mousedown.left.stop="handleResizeStart('n', $event)"
-      />
-      <div
-        class="absolute bottom-0 left-2 right-2 h-2 cursor-s-resize shrink-0"
-        @mousedown.left.stop="handleResizeStart('s', $event)"
-      />
-      <div
-        class="absolute left-0 top-2 bottom-2 w-2 cursor-w-resize bg-red-300 overflow-visible"
-        @mousedown.left.stop="handleResizeStart('w', $event)"
-      />
-      <div
-        class="absolute right-0 top-2 bottom-2 w-2 cursor-e-resize shrink-0"
-        @mousedown.left.stop="handleResizeStart('e', $event)"
-      />
-    </template>
+    <HaexWindowResizeHandles
+      :disabled="isMaximized"
+      @resize-start="handleResizeStart"
+    />
   </div>
 </template>
 
@@ -148,7 +118,7 @@ const emit = defineEmits<{
   dragEnd: []
 }>()
 
-const windowEl = ref<HTMLElement>()
+const windowEl = useTemplateRef('windowEl')
 const titlebarEl = useTemplateRef('titlebarEl')
 
 // Inject viewport size from parent desktop
@@ -186,6 +156,10 @@ const resizeStartWidth = ref(0)
 const resizeStartHeight = ref(0)
 const resizeStartPosX = ref(0)
 const resizeStartPosY = ref(0)
+
+const isResizingOrDragging = computed(
+  () => isResizing.value || isDragging.value,
+)
 
 // Snap settings
 const snapEdgeThreshold = 50 // pixels from edge to trigger snap
@@ -298,19 +272,20 @@ const windowStyle = computed(() => {
     baseStyle.height = '100%'
     baseStyle.borderRadius = '0'
     baseStyle.opacity = '1'
-    baseStyle.transform = 'scale(1)'
+    //baseStyle.transform = 'scale(1)'
   } else {
     baseStyle.left = `${x.value}px`
     baseStyle.top = `${y.value}px`
     baseStyle.width = `${width.value}px`
     baseStyle.height = `${height.value}px`
     baseStyle.opacity = '1'
-    baseStyle.transform = 'scale(1)'
+    //baseStyle.transform = 'scale(1)'
   }
 
   // Performance optimization: hint browser about transforms
   if (isDragging.value || isResizing.value) {
     baseStyle.willChange = 'transform, width, height'
+    baseStyle.transform = 'translateZ(0)'
   }
 
   return baseStyle
@@ -423,7 +398,7 @@ const handleMaximize = () => {
 }
 
 // Window resizing
-const handleResizeStart = (direction: string, e: MouseEvent) => {
+const handleResizeStart = (direction: string, e: MouseEvent | TouchEvent) => {
   isResizing.value = true
   resizeDirection.value = direction
   resizeStartX.value = e.clientX

@@ -1,101 +1,132 @@
 <template>
-  <div class="w-full h-full flex flex-col bg-white dark:bg-gray-900">
-    <!-- Settings Header -->
+  <div>
     <div
-      class="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 p-6"
+      class="grid grid-rows-2 sm:grid-cols-2 sm:gap-2 p-2 max-w-2xl w-full h-fit"
     >
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-        Manage your HaexHub preferences and configuration
-      </p>
-    </div>
+      <div class="p-2">{{ t('language') }}</div>
+      <div><UiDropdownLocale @select="onSelectLocaleAsync" /></div>
 
-    <!-- Settings Content -->
-    <div class="flex-1 overflow-y-auto p-6">
-      <div class="max-w-2xl space-y-6">
-        <!-- General Section -->
-        <section>
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            General
-          </h2>
-          <div class="space-y-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-medium text-gray-900 dark:text-white">Theme</p>
-                <p class="text-sm text-gray-600 dark:text-gray-400">
-                  Choose your preferred theme
-                </p>
-              </div>
-              <UButton
-                label="Auto"
-                variant="outline"
-              />
-            </div>
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-medium text-gray-900 dark:text-white">
-                  Language
-                </p>
-                <p class="text-sm text-gray-600 dark:text-gray-400">
-                  Select your language
-                </p>
-              </div>
-              <UButton
-                label="English"
-                variant="outline"
-              />
-            </div>
-          </div>
-        </section>
+      <div class="p-2">{{ t('design') }}</div>
+      <div><UiDropdownTheme @select="onSelectThemeAsync" /></div>
 
-        <!-- Privacy Section -->
-        <section>
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Privacy & Security
-          </h2>
-          <div class="space-y-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-medium text-gray-900 dark:text-white">
-                  Auto-lock
-                </p>
-                <p class="text-sm text-gray-600 dark:text-gray-400">
-                  Lock vault after inactivity
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+      <div class="p-2">{{ t('vaultName.label') }}</div>
+      <div>
+        <UiInput
+          v-model="currentVaultName"
+          :placeholder="t('vaultName.label')"
+          @change="onSetVaultNameAsync"
+        />
+      </div>
 
-        <!-- About Section -->
-        <section>
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            About
-          </h2>
-          <div class="space-y-2 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-            <div class="flex justify-between">
-              <span class="text-sm text-gray-600 dark:text-gray-400"
-                >Version</span
-              >
-              <span class="text-sm font-medium text-gray-900 dark:text-white"
-                >0.1.0</span
-              >
-            </div>
-            <div class="flex justify-between">
-              <span class="text-sm text-gray-600 dark:text-gray-400"
-                >Platform</span
-              >
-              <span class="text-sm font-medium text-gray-900 dark:text-white"
-                >Tauri + Vue</span
-              >
-            </div>
-          </div>
-        </section>
+      <div class="p-2">{{ t('notifications.label') }}</div>
+      <div>
+        <UiButton
+          :label="t('notifications.requestPermission')"
+          @click="requestNotificationPermissionAsync"
+        />
+      </div>
+
+      <div class="p-2">{{ t('deviceName.label') }}</div>
+      <div>
+        <UiInput
+          v-model="deviceName"
+          :placeholder="t('deviceName.label')"
+          @change="onUpdateDeviceNameAsync"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-// Settings component - placeholder implementation
+import type { Locale } from 'vue-i18n'
+
+const { t, setLocale } = useI18n()
+
+const { currentVaultName } = storeToRefs(useVaultStore())
+const { updateVaultNameAsync, updateLocaleAsync, updateThemeAsync } =
+  useVaultSettingsStore()
+
+const onSelectLocaleAsync = async (locale: Locale) => {
+  await updateLocaleAsync(locale)
+  await setLocale(locale)
+}
+
+const { currentThemeName } = storeToRefs(useUiStore())
+
+const onSelectThemeAsync = async (theme: string) => {
+  currentThemeName.value = theme
+  console.log('onSelectThemeAsync', currentThemeName.value)
+  await updateThemeAsync(theme)
+}
+
+const { add } = useToast()
+
+const onSetVaultNameAsync = async () => {
+  try {
+    await updateVaultNameAsync(currentVaultName.value)
+    add({ description: t('vaultName.update.success'), color: 'success' })
+  } catch (error) {
+    console.error(error)
+    add({ description: t('vaultName.update.error'), color: 'error' })
+  }
+}
+
+const { requestNotificationPermissionAsync } = useNotificationStore()
+
+const { deviceName } = storeToRefs(useDeviceStore())
+const { updateDeviceNameAsync, readDeviceNameAsync } = useDeviceStore()
+
+onMounted(async () => {
+  await readDeviceNameAsync()
+})
+
+const onUpdateDeviceNameAsync = async () => {
+  const check = vaultDeviceNameSchema.safeParse(deviceName.value)
+  if (!check.success) return
+  try {
+    await updateDeviceNameAsync({ name: deviceName.value })
+    add({ description: t('deviceName.update.success'), color: 'success' })
+  } catch (error) {
+    console.log(error)
+    add({ description: t('deviceName.update.error'), color: 'error' })
+  }
+}
 </script>
+
+<i18n lang="yaml">
+de:
+  language: Sprache
+  design: Design
+  save: Änderung speichern
+  notifications:
+    label: Benachrichtigungen
+    requestPermission: Benachrichtigung erlauben
+  vaultName:
+    label: Vaultname
+    update:
+      success: Vaultname erfolgreich aktualisiert
+      error: Vaultname konnte nicht aktualisiert werden
+  deviceName:
+    label: Gerätename
+    update:
+      success: Gerätename wurde erfolgreich aktualisiert
+      error: Gerätename konnte nich aktualisiert werden
+en:
+  language: Language
+  design: Design
+  save: save changes
+  notifications:
+    label: Notifications
+    requestPermission: Grant Permission
+  vaultName:
+    label: Vault Name
+    update:
+      success: Vault Name successfully updated
+      error: Vault name could not be updated
+  deviceName:
+    label: Device name
+    update:
+      success: Device name has been successfully updated
+      error: Device name could not be updated
+</i18n>

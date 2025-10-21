@@ -1,8 +1,7 @@
 <template>
   <div
     ref="desktopEl"
-    class="w-full h-full relative overflow-hidden"
-    @click.self.stop="handleDesktopClick"
+    class="w-full h-full relative overflow-hidden isolate"
   >
     <Swiper
       :modules="[SwiperNavigation]"
@@ -25,7 +24,7 @@
         class="w-full h-full"
       >
         <div
-          class="w-full h-full relative bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700"
+          class="w-full h-full relative isolate"
           @click.self.stop="handleDesktopClick"
           @mousedown.left.self="handleAreaSelectStart"
         >
@@ -102,7 +101,7 @@
                 class="absolute inset-0 z-[100] bg-transparent group-hover:ring-4 group-hover:ring-purple-500 rounded-xl transition-all"
               />
 
-              <HaexDesktopWindow
+              <HaexWindow
                 :id="window.id"
                 :title="window.title"
                 :icon="window.icon"
@@ -144,11 +143,11 @@
                   :extension-id="window.sourceId"
                   :window-id="window.id"
                 />
-              </HaexDesktopWindow>
+              </HaexWindow>
             </div>
 
             <!-- Normal Mode (non-overview) -->
-            <HaexDesktopWindow
+            <HaexWindow
               :id="window.id"
               :title="window.title"
               :icon="window.icon"
@@ -189,7 +188,7 @@
                 :extension-id="window.sourceId"
                 :window-id="window.id"
               />
-            </HaexDesktopWindow>
+            </HaexWindow>
           </template>
         </div>
       </SwiperSlide>
@@ -471,7 +470,6 @@ const handleDesktopClick = () => {
   }
 
   desktopStore.clearSelection()
-
   isOverviewMode.value = false
 }
 

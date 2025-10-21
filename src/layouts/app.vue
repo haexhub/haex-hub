@@ -32,14 +32,11 @@
           variant="outline"
           :block="isSmallScreen"
           @click="isOverviewMode = !isOverviewMode"
+          icon="i-bi-person-workspace"
+          size="lg"
         >
-          <template #leading>
-            <UIcon name="i-heroicons-squares-2x2" />
-          </template>
-          Workspaces
         </UButton>
         <HaexExtensionLauncher :block="isSmallScreen" />
-        <UiDropdownVault :block="isSmallScreen" />
       </template>
     </UPageHeader>
 

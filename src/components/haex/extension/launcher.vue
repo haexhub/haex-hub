@@ -5,7 +5,7 @@
       color="neutral"
       variant="outline"
       v-bind="$attrs"
-      size="xl"
+      size="lg"
     />
 
     <template #content>
