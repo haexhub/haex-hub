@@ -50,6 +50,13 @@
       "when": 1761137108127,
       "tag": "0006_gigantic_bloodaxe",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1761141111765,
+      "tag": "0007_stale_longshot",
+      "breakpoints": true
     }
   ]
 }

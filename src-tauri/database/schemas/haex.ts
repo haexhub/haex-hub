@@ -149,15 +149,9 @@ export const haexWorkspaces = sqliteTable(
       position: integer(tableNames.haex.workspaces.columns.position)
         .notNull()
         .default(0),
-      createdAt: integer(tableNames.haex.workspaces.columns.createdAt, {
-        mode: 'timestamp',
-      })
-        .notNull()
-        .$defaultFn(() => new Date()),
     },
     tableNames.haex.workspaces.columns,
   ),
-  (table) => [unique().on(table.position)],
 )
 export type InsertHaexWorkspaces = typeof haexWorkspaces.$inferInsert
 export type SelectHaexWorkspaces = typeof haexWorkspaces.$inferSelect
