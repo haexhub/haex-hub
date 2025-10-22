@@ -15,7 +15,6 @@ use sqlparser::dialect::SQLiteDialect;
 use sqlparser::parser::Parser;
 
 /// Öffnet und initialisiert eine Datenbank mit Verschlüsselung
-///
 pub fn open_and_init_db(path: &str, key: &str, create: bool) -> Result<Connection, DatabaseError> {
     let flags = if create {
         OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE
@@ -159,47 +158,23 @@ pub fn execute(
     let params_sql: Vec<&dyn ToSql> = params_converted.iter().map(|v| v as &dyn ToSql).collect();
 
     with_connection(connection, |conn| {
-        // Check if the SQL contains RETURNING clause
-        let has_returning = sql.to_uppercase().contains("RETURNING");
-
-        if has_returning {
-            // Use prepare + query for RETURNING statements
-            let mut stmt = conn
-                .prepare(&sql)
-                .map_err(|e| DatabaseError::PrepareError {
-                    reason: e.to_string(),
-                })?;
-
+        if sql.to_uppercase().contains("RETURNING") {
+            let mut stmt = conn.prepare(&sql)?;
             let num_columns = stmt.column_count();
-            let mut rows = stmt
-                .query(&params_sql[..])
-                .map_err(|e| DatabaseError::QueryError {
-                    reason: e.to_string(),
-                })?;
-
+            let mut rows = stmt.query(&params_sql[..])?;
             let mut result_vec: Vec<Vec<JsonValue>> = Vec::new();
 
-            while let Some(row) = rows.next().map_err(|e| DatabaseError::RowProcessingError {
-                reason: format!("Row iteration error: {}", e),
-            })? {
+            while let Some(row) = rows.next()? {
                 let mut row_values: Vec<JsonValue> = Vec::with_capacity(num_columns);
-
                 for i in 0..num_columns {
-                    let value_ref =
-                        row.get_ref(i)
-                            .map_err(|e| DatabaseError::RowProcessingError {
-                                reason: format!("Failed to get column {}: {}", i, e),
-                            })?;
-
+                    let value_ref = row.get_ref(i)?;
                     let json_val = convert_value_ref_to_json(value_ref)?;
                     row_values.push(json_val);
                 }
                 result_vec.push(row_values);
             }
-
             Ok(result_vec)
         } else {
-            // For non-RETURNING statements, just execute and return empty array
             conn.execute(&sql, &params_sql[..]).map_err(|e| {
                 let table_name = extract_primary_table_name_from_sql(&sql).unwrap_or(None);
                 DatabaseError::ExecutionError {
@@ -208,7 +183,6 @@ pub fn execute(
                     table: table_name,
                 }
             })?;
-
             Ok(vec![])
         }
     })
@@ -238,40 +212,20 @@ pub fn select(
     let params_sql: Vec<&dyn ToSql> = params_converted.iter().map(|v| v as &dyn ToSql).collect();
 
     with_connection(connection, |conn| {
-        let mut stmt = conn
-            .prepare(&sql)
-            .map_err(|e| DatabaseError::PrepareError {
-                reason: e.to_string(),
-            })?;
-
+        let mut stmt = conn.prepare(&sql)?;
         let num_columns = stmt.column_count();
-
-        let mut rows = stmt
-            .query(&params_sql[..])
-            .map_err(|e| DatabaseError::QueryError {
-                reason: e.to_string(),
-            })?;
-
+        let mut rows = stmt.query(&params_sql[..])?;
         let mut result_vec: Vec<Vec<JsonValue>> = Vec::new();
 
-        while let Some(row) = rows.next().map_err(|e| DatabaseError::RowProcessingError {
-            reason: format!("Row iteration error: {}", e),
-        })? {
+        while let Some(row) = rows.next()? {
             let mut row_values: Vec<JsonValue> = Vec::with_capacity(num_columns);
-
             for i in 0..num_columns {
-                let value_ref = row
-                    .get_ref(i)
-                    .map_err(|e| DatabaseError::RowProcessingError {
-                        reason: format!("Failed to get column {}: {}", i, e),
-                    })?;
-
+                let value_ref = row.get_ref(i)?;
                 let json_val = convert_value_ref_to_json(value_ref)?;
                 row_values.push(json_val);
             }
             result_vec.push(row_values);
         }
-
         Ok(result_vec)
     })
 }

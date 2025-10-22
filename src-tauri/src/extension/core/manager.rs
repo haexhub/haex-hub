@@ -10,7 +10,8 @@ use crate::extension::permissions::manager::PermissionManager;
 use crate::extension::permissions::types::ExtensionPermission;
 use crate::table_names::{TABLE_EXTENSIONS, TABLE_EXTENSION_PERMISSIONS};
 use crate::AppState;
-use std::collections::HashMap;
+use serde_json::Value as JsonValue;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Cursor;
 use std::path::PathBuf;
@@ -470,9 +471,12 @@ impl ExtensionManager {
         let actual_extension_id = with_connection(&state.db, |conn| {
             let tx = conn.transaction().map_err(DatabaseError::from)?;
 
-            let hlc_service = state.hlc.lock().map_err(|_| DatabaseError::MutexPoisoned {
+            let hlc_service_guard = state.hlc.lock().map_err(|_| DatabaseError::MutexPoisoned {
                 reason: "Failed to lock HLC service".to_string(),
             })?;
+            // Klonen, um den MutexGuard freizugeben, bevor potenziell lange DB-Operationen stattfinden
+            let hlc_service = hlc_service_guard.clone();
+            drop(hlc_service_guard);
 
             // Erstelle PK-Remapping Context für die gesamte Transaktion
             // Dies ermöglicht automatisches FK-Remapping wenn ON CONFLICT bei Extension auftritt
@@ -485,34 +489,35 @@ impl ExtensionManager {
                 TABLE_EXTENSIONS
             );
 
-            let (_tables, returning_results) = SqlExecutor::query_internal_typed_with_context(
-                &tx,
-                &hlc_service,
-                &insert_ext_sql,
-                rusqlite::params![
-                    extension_id,
-                    extracted.manifest.name,
-                    extracted.manifest.version,
-                    extracted.manifest.author,
-                    extracted.manifest.entry,
-                    extracted.manifest.icon,
-                    extracted.manifest.public_key,
-                    extracted.manifest.signature,
-                    extracted.manifest.homepage,
-                    extracted.manifest.description,
-                    true, // enabled
-                ],
-                &mut pk_context,
-            )?;
+            let (_tables, returning_results): (HashSet<String>, Vec<Vec<JsonValue>>) =
+                SqlExecutor::query_internal_typed_with_context(
+                    &tx,
+                    &hlc_service,
+                    &insert_ext_sql,
+                    rusqlite::params![
+                        extension_id,
+                        extracted.manifest.name,
+                        extracted.manifest.version,
+                        extracted.manifest.author,
+                        extracted.manifest.entry,
+                        extracted.manifest.icon,
+                        extracted.manifest.public_key,
+                        extracted.manifest.signature,
+                        extracted.manifest.homepage,
+                        extracted.manifest.description,
+                        true, // enabled
+                    ],
+                    &mut pk_context,
+                )?;
 
             // Nutze die tatsächliche ID aus der Datenbank (wichtig bei ON CONFLICT)
             // Die haex_extensions Tabelle hat einen single-column PK namens "id"
             let actual_extension_id = returning_results
-                .first()
-                .and_then(|row| row.first())
-                .and_then(|val| val.as_str())
-                .map(|s| s.to_string())
-                .unwrap_or_else(|| extension_id.clone());
+                .first() // Holt die erste Zeile (das innere Vec<JsonValue>, z.B. Some(&["uuid-string"]))
+                .and_then(|row_array| row_array.first()) // Holt das erste Element daraus (z.B. Some(&JsonValue::String("uuid-string")))
+                .and_then(|val| val.as_str()) // Konvertiert zu &str (z.B. Some("uuid-string"))
+                .map(|s| s.to_string()) // Konvertiert zu String
+                .unwrap_or_else(|| extension_id.clone()); // Fallback
 
             eprintln!(
                 "DEBUG: Extension UUID - Generated: {}, Actual from DB: {}",

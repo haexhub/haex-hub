@@ -317,15 +317,6 @@ fn count_sql_placeholders(sql: &str) -> usize {
     sql.matches('?').count()
 }
 
-/// Kürzt SQL für Fehlermeldungen
-/* fn truncate_sql(sql: &str, max_length: usize) -> String {
-    if sql.len() <= max_length {
-        sql.to_string()
-    } else {
-        format!("{}...", &sql[..max_length])
-    }
-} */
-
 #[cfg(test)]
 mod tests {
     use super::*;

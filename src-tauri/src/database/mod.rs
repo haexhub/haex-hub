@@ -204,15 +204,17 @@ pub fn list_vaults(app_handle: AppHandle) -> Result<Vec<VaultInfo>, DatabaseErro
 
 /// Checks if a vault with the given name exists
 #[tauri::command]
-pub fn vault_exists(app_handle: AppHandle, db_name: String) -> Result<bool, DatabaseError> {
-    let vault_path = get_vault_path(&app_handle, &db_name)?;
+pub fn vault_exists(app_handle: AppHandle, vault_name: String) -> Result<bool, DatabaseError> {
+    let vault_path = get_vault_path(&app_handle, &vault_name)?;
     Ok(Path::new(&vault_path).exists())
 }
 
 /// Deletes a vault database file
 #[tauri::command]
-pub fn delete_vault(app_handle: AppHandle, db_name: String) -> Result<String, DatabaseError> {
-    let vault_path = get_vault_path(&app_handle, &db_name)?;
+pub fn delete_vault(app_handle: AppHandle, vault_name: String) -> Result<String, DatabaseError> {
+    let vault_path = get_vault_path(&app_handle, &vault_name)?;
+    let vault_shm_path = format!("{}-shm", vault_path);
+    let vault_wal_path = format!("{}-wal", vault_path);
 
     if !Path::new(&vault_path).exists() {
         return Err(DatabaseError::IoError {
@@ -221,12 +223,26 @@ pub fn delete_vault(app_handle: AppHandle, db_name: String) -> Result<String, Da
         });
     }
 
+    if Path::new(&vault_shm_path).exists() {
+        fs::remove_file(&vault_shm_path).map_err(|e| DatabaseError::IoError {
+            path: vault_shm_path.clone(),
+            reason: format!("Failed to delete vault: {}", e),
+        })?;
+    }
+
+    if Path::new(&vault_wal_path).exists() {
+        fs::remove_file(&vault_wal_path).map_err(|e| DatabaseError::IoError {
+            path: vault_wal_path.clone(),
+            reason: format!("Failed to delete vault: {}", e),
+        })?;
+    }
+
     fs::remove_file(&vault_path).map_err(|e| DatabaseError::IoError {
         path: vault_path.clone(),
         reason: format!("Failed to delete vault: {}", e),
     })?;
 
-    Ok(format!("Vault '{}' successfully deleted", db_name))
+    Ok(format!("Vault '{}' successfully deleted", vault_name))
 }
 
 #[tauri::command]

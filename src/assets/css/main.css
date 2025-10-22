@@ -15,11 +15,6 @@
   }
 }
 
-:root {
-  --ui-header-height: 74px;
-}
-
-.swiper-slide {
-  isolation: isolate; /* Für jeden Slide */
-  contain: layout style; /* Enthält den Context, ohne Performance-Hit */
+@theme {
+  --spacing-header: 3.5rem; /* 72px - oder dein Wunschwert */
 }

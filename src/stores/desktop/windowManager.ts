@@ -179,8 +179,9 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
 
       // Calculate viewport-aware size
       const viewportWidth = window.innerWidth
-      const viewportHeight = window.innerHeight
+      const viewportHeight = window.innerHeight - 60
 
+      console.log('viewportHeight', window.innerHeight, viewportHeight)
       const windowHeight = Math.min(height, viewportHeight)
 
       // Adjust width proportionally if needed (optional)

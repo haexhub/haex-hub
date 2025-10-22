@@ -136,43 +136,50 @@ const drizzleCallback = (async (
   params: unknown[],
   method: 'get' | 'run' | 'all' | 'values',
 ) => {
-  let rows: unknown[] = []
+  let rows: any[] = []
+
+  try {
+    if (isSelectQuery(sql)) {
+      // SELECT statements
+      rows = await invoke<unknown[]>('sql_select_with_crdt', {
+        sql,
+        params,
+      }).catch((e) => {
+        console.error('SQL select Error:', e, sql, params)
+        return []
+      })
+    } else if (hasReturning(sql)) {
+      // INSERT/UPDATE/DELETE with RETURNING → use query
+      rows = await invoke<unknown[]>('sql_query_with_crdt', {
+        sql,
+        params,
+      }).catch((e) => {
+        console.error('SQL query with CRDT Error:', e, sql, params)
+        return []
+      })
+    } else {
+      // INSERT/UPDATE/DELETE without RETURNING → use execute
+      await invoke<unknown[]>('sql_execute_with_crdt', {
+        sql,
+        params,
+      }).catch((e) => {
+        console.error('SQL execute with CRDT Error:', e, sql, params, rows)
+        return []
+      })
+    }
+  } catch (error) {
+    console.error('Fehler im drizzleCallback invoke:', error, {
+      sql,
+      params,
+      method,
+    })
+  }
 
   console.log('drizzleCallback', method, sql, params)
+  console.log('drizzleCallback rows', rows)
 
-  if (isSelectQuery(sql)) {
-    // SELECT statements
-    rows = await invoke<unknown[]>('sql_select_with_crdt', {
-      sql,
-      params,
-    }).catch((e) => {
-      console.error('SQL select Error:', e, sql, params)
-      return []
-    })
-  } else if (hasReturning(sql)) {
-    // INSERT/UPDATE/DELETE with RETURNING → use query
-    rows = await invoke<unknown[]>('sql_query_with_crdt', {
-      sql,
-      params,
-    }).catch((e) => {
-      console.error('SQL query with CRDT Error:', e, sql, params)
-      return []
-    })
-  } else {
-    // INSERT/UPDATE/DELETE without RETURNING → use execute
-    await invoke<unknown[]>('sql_execute_with_crdt', {
-      sql,
-      params,
-    }).catch((e) => {
-      console.error('SQL execute with CRDT Error:', e, sql, params, rows)
-      return []
-    })
-  }
-
-  console.log('drizzle found', rows)
   if (method === 'get') {
-    return { rows: rows.length > 0 ? [rows[0]] : [] }
-  } else {
-    return { rows }
+    return rows.length > 0 ? { rows: rows[0] } : { rows }
   }
+  return { rows }
 }) satisfies AsyncRemoteCallback

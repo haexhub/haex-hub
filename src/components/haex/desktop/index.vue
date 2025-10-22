@@ -248,6 +248,7 @@
 <script setup lang="ts">
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import { Navigation } from 'swiper/modules'
+import type { Swiper as SwiperType } from 'swiper'
 import 'swiper/css'
 import 'swiper/css/navigation'
 
@@ -273,14 +274,8 @@ const {
   isOverviewMode,
 } = storeToRefs(workspaceStore)
 
-// Swiper instance
-
-// Control Swiper touch behavior (disable during icon/window drag)
-
-// Mouse position tracking
 const { x: mouseX } = useMouse()
 
-// Desktop element ref
 const desktopEl = useTemplateRef('desktopEl')
 
 // Track desktop viewport size reactively

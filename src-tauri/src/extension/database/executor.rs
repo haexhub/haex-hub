@@ -5,10 +5,9 @@ use crate::crdt::transformer::CrdtTransformer;
 use crate::crdt::trigger;
 use crate::database::core::{convert_value_ref_to_json, parse_sql_statements, ValueConverter};
 use crate::database::error::DatabaseError;
-use crate::database::DbConnection;
 use rusqlite::Connection;
 use rusqlite::{params_from_iter, types::Value as SqliteValue, ToSql, Transaction};
-use serde_json::Value as JsonValue;
+use serde_json::{Map, Value as JsonValue};
 use sqlparser::ast::{Insert, Statement, TableObject};
 use std::collections::{HashMap, HashSet};
 
@@ -142,7 +141,7 @@ impl SqlExecutor {
         }
 
         let sql_str = statement.to_string();
-        eprintln!("DEBUG: Transformed SQL: {}", sql_str);
+        eprintln!("DEBUG: Transformed SQL (execute path): {}", sql_str);
 
         // Spezielle Behandlung für INSERT Statements (mit FK-Remapping, OHNE RETURNING)
         if let Statement::Insert(ref insert_stmt) = statement {
@@ -162,7 +161,6 @@ impl SqlExecutor {
                 // Remap FK-Werte in params (falls Mappings existieren)
                 remap_fk_params(insert_stmt, &mut param_vec, &fk_info, pk_context)?;
 
-                // Führe INSERT mit execute() aus
                 let param_refs: Vec<&dyn ToSql> =
                     param_vec.iter().map(|v| v as &dyn ToSql).collect();
 
@@ -174,19 +172,15 @@ impl SqlExecutor {
                         reason: format!("Prepare failed: {}", e),
                     })?;
 
-                let _ = stmt
+                let mut rows = stmt
                     .query(params_from_iter(param_refs.iter()))
                     .map_err(|e| DatabaseError::ExecutionError {
                         sql: sql_str.clone(),
                         table: Some(table_name_str.clone()),
-                        reason: format!("Query execution failed: {}", e),
+                        reason: format!("INSERT query execution failed: {}", e),
                     })?;
-                /* tx.execute(&sql_str, params_from_iter(param_refs.iter()))
-                .map_err(|e| DatabaseError::ExecutionError {
-                    sql: sql_str.clone(),
-                    table: Some(table_name_str.clone()),
-                    reason: e.to_string(),
-                })?; */
+
+                let _ = rows.next()?;
             }
         } else {
             // Nicht-INSERT Statements normal ausführen
@@ -194,7 +188,7 @@ impl SqlExecutor {
                 .map_err(|e| DatabaseError::ExecutionError {
                     sql: sql_str.clone(),
                     table: None,
-                    reason: e.to_string(),
+                    reason: format!("Execute failed: {}", e),
                 })?;
         }
 
@@ -300,9 +294,16 @@ impl SqlExecutor {
                         reason: e.to_string(),
                     })?;
 
-                let num_columns = stmt.column_count();
+                let column_names: Vec<String> = stmt
+                    .column_names()
+                    .into_iter()
+                    .map(|s| s.to_string())
+                    .collect();
+                let num_columns = column_names.len();
+
                 let param_refs: Vec<&dyn ToSql> =
                     param_vec.iter().map(|v| v as &dyn ToSql).collect();
+
                 let mut rows = stmt
                     .query(params_from_iter(param_refs.iter()))
                     .map_err(|e| DatabaseError::ExecutionError {
@@ -329,6 +330,7 @@ impl SqlExecutor {
 
                     // Extrahiere ALLE Spalten für RETURNING-Ergebnis
                     let mut row_values: Vec<JsonValue> = Vec::with_capacity(num_columns);
+
                     for i in 0..num_columns {
                         let value_ref =
                             row.get_ref(i)
@@ -353,6 +355,7 @@ impl SqlExecutor {
             })?;
 
         let num_columns = stmt.column_count();
+
         let mut rows = stmt.query(params).map_err(|e| DatabaseError::QueryError {
             reason: e.to_string(),
         })?;
@@ -463,11 +466,14 @@ impl SqlExecutor {
         transformer.transform_select_statement(&mut stmt_to_execute)?;
         let transformed_sql = stmt_to_execute.to_string();
 
+        eprintln!("DEBUG: Transformed SELECT: {}", transformed_sql);
+
         let mut prepared_stmt = conn.prepare(&transformed_sql)?;
+
         let num_columns = prepared_stmt.column_count();
 
         let mut rows = prepared_stmt
-            .query(params_from_iter(sql_params.iter()))
+            .query(params_from_iter(&sql_params[..]))
             .map_err(|e| DatabaseError::QueryError {
                 reason: e.to_string(),
             })?;
@@ -719,13 +725,14 @@ fn extract_pk_values_from_row(
 ) -> Result<PkValues, DatabaseError> {
     let mut pk_values = PkValues::new();
 
-    for (idx, pk_col) in pk_columns.iter().enumerate() {
-        // RETURNING gibt PKs in der Reihenfolge zurück, wie sie im RETURNING Clause stehen
-        let value: String = row.get(idx).map_err(|e| DatabaseError::ExecutionError {
-            sql: "RETURNING clause".to_string(),
-            reason: format!("Failed to extract PK column '{}': {}", pk_col, e),
-            table: None,
-        })?;
+    for pk_col in pk_columns.iter() {
+        let value: String =
+            row.get(pk_col.as_str())
+                .map_err(|e| DatabaseError::ExecutionError {
+                    sql: "RETURNING clause".to_string(),
+                    reason: format!("Failed to extract PK column '{}': {}", pk_col, e),
+                    table: None,
+                })?;
         pk_values.insert(pk_col.clone(), value);
     }
 

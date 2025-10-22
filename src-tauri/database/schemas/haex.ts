@@ -21,18 +21,22 @@ export const withCrdtColumns = <
   haexTimestamp: text(columnNames.haexTimestamp),
 })
 
-export const haexSettings = sqliteTable(tableNames.haex.settings.name, {
-  id: text()
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  key: text(),
-  type: text(),
-  value: text(),
-  haexTombstone: integer(tableNames.haex.settings.columns.haexTombstone, {
-    mode: 'boolean',
-  }),
-  haexTimestamp: text(tableNames.haex.settings.columns.haexTimestamp),
-})
+export const haexSettings = sqliteTable(
+  tableNames.haex.settings.name,
+  {
+    id: text()
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    key: text(),
+    type: text(),
+    value: text(),
+    haexTombstone: integer(tableNames.haex.settings.columns.haexTombstone, {
+      mode: 'boolean',
+    }),
+    haexTimestamp: text(tableNames.haex.settings.columns.haexTimestamp),
+  },
+  (table) => [unique().on(table.key, table.type, table.value)],
+)
 export type InsertHaexSettings = typeof haexSettings.$inferInsert
 export type SelectHaexSettings = typeof haexSettings.$inferSelect
 
@@ -153,7 +157,7 @@ export const haexWorkspaces = sqliteTable(
     },
     tableNames.haex.workspaces.columns,
   ),
-  (table) => [unique().on(table.name)],
+  (table) => [unique().on(table.position)],
 )
 export type InsertHaexWorkspaces = typeof haexWorkspaces.$inferInsert
 export type SelectHaexWorkspaces = typeof haexWorkspaces.$inferSelect

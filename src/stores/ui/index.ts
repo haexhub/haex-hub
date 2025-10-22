@@ -57,9 +57,11 @@ export const useUiStore = defineStore('uiStore', () => {
     colorMode.preference = currentThemeName.value
   })
 
+  const viewportHeightWithoutHeader = ref(0)
+
   return {
     availableThemes,
-    //currentScreenSize,
+    viewportHeightWithoutHeader,
     currentTheme,
     currentThemeName,
     defaultTheme,

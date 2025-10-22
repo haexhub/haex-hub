@@ -62,7 +62,7 @@
             >
               <Icon
                 name="mdi:trash-can-outline"
-                @click="removeVaultAsync(vault.name)"
+                @click="prepareRemoveVault(vault.name)"
               />
             </UButton>
           </div>
@@ -81,24 +81,52 @@
         </div>
       </div>
     </div>
+    <UiDialogConfirm
+      v-model:open="showRemoveDialog"
+      :title="t('remove.title')"
+      :description="t('remove.description', { vaultName: vaultToBeRemoved })"
+      @confirm="onConfirmRemoveAsync"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { openUrl } from '@tauri-apps/plugin-opener'
 import type { Locale } from 'vue-i18n'
+import type { VaultInfo } from '@bindings/VaultInfo'
 
 definePageMeta({
   name: 'vaultOpen',
 })
+
 const { t, setLocale } = useI18n()
 
 const passwordPromptOpen = ref(false)
-const selectedVault = ref<IVaultInfo>()
+const selectedVault = ref<VaultInfo>()
 
+const showRemoveDialog = ref(false)
 const { syncLastVaultsAsync, removeVaultAsync } = useLastVaultStore()
 const { lastVaults } = storeToRefs(useLastVaultStore())
 
+const vaultToBeRemoved = ref('')
+const prepareRemoveVault = (vaultName: string) => {
+  vaultToBeRemoved.value = vaultName
+  showRemoveDialog.value = true
+}
+
+const toast = useToast()
+const onConfirmRemoveAsync = async () => {
+  try {
+    await removeVaultAsync(vaultToBeRemoved.value)
+    showRemoveDialog.value = false
+    await syncLastVaultsAsync()
+  } catch (error) {
+    toast.add({
+      color: 'error',
+      description: JSON.stringify(error),
+    })
+  }
+}
 onMounted(async () => {
   try {
     await syncLastVaultsAsync()
@@ -116,7 +144,10 @@ const onSelectLocale = async (locale: Locale) => {
 de:
   welcome: 'Viel Spass mit'
   lastUsed: 'Zuletzt verwendete Vaults'
-  sponsors: 'Supported by'
+  sponsors: Supported by
+  remove:
+    title: Vault löschen
+    description: Möchtest du die Vault {vaultName} wirklich löschen?
 
 en:
   welcome: 'Have fun with'
