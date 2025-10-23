@@ -4,7 +4,7 @@ use crate::extension::core::manifest::{EditablePermissions, ExtensionManifest, E
 use crate::extension::core::types::{copy_directory, Extension, ExtensionSource};
 use crate::extension::core::ExtensionPermissions;
 use crate::extension::crypto::ExtensionCrypto;
-use crate::extension::database::executor::{PkRemappingContext, SqlExecutor};
+use crate::extension::database::executor::SqlExecutor;
 use crate::extension::error::ExtensionError;
 use crate::extension::permissions::manager::PermissionManager;
 use crate::extension::permissions::types::ExtensionPermission;
@@ -478,19 +478,13 @@ impl ExtensionManager {
             let hlc_service = hlc_service_guard.clone();
             drop(hlc_service_guard);
 
-            // Erstelle PK-Remapping Context für die gesamte Transaktion
-            // Dies ermöglicht automatisches FK-Remapping wenn ON CONFLICT bei Extension auftritt
-            let mut pk_context = PkRemappingContext::new();
-
             // 1. Extension-Eintrag erstellen mit generierter UUID
-            // WICHTIG: RETURNING wird vom CRDT-Transformer automatisch hinzugefügt
             let insert_ext_sql = format!(
-                "INSERT INTO {} (id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
+                "INSERT INTO {} (id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 TABLE_EXTENSIONS
             );
 
-            let (_tables, returning_results): (HashSet<String>, Vec<Vec<JsonValue>>) =
-                SqlExecutor::query_internal_typed_with_context(
+            SqlExecutor::execute_internal_typed(
                     &tx,
                     &hlc_service,
                     &insert_ext_sql,
@@ -507,26 +501,9 @@ impl ExtensionManager {
                         extracted.manifest.description,
                         true, // enabled
                     ],
-                    &mut pk_context,
                 )?;
 
-            // Nutze die tatsächliche ID aus der Datenbank (wichtig bei ON CONFLICT)
-            // Die haex_extensions Tabelle hat einen single-column PK namens "id"
-            let actual_extension_id = returning_results
-                .first() // Holt die erste Zeile (das innere Vec<JsonValue>, z.B. Some(&["uuid-string"]))
-                .and_then(|row_array| row_array.first()) // Holt das erste Element daraus (z.B. Some(&JsonValue::String("uuid-string")))
-                .and_then(|val| val.as_str()) // Konvertiert zu &str (z.B. Some("uuid-string"))
-                .map(|s| s.to_string()) // Konvertiert zu String
-                .unwrap_or_else(|| extension_id.clone()); // Fallback
-
-            eprintln!(
-                "DEBUG: Extension UUID - Generated: {}, Actual from DB: {}",
-                extension_id, actual_extension_id
-            );
-
-            // 2. Permissions speichern (oder aktualisieren falls schon vorhanden)
-            // Nutze einfaches INSERT - die CRDT-Transformation fügt automatisch ON CONFLICT hinzu
-            // FK-Werte (extension_id) werden automatisch remapped wenn Extension ON CONFLICT hatte
+            // 2. Permissions speichern
             let insert_perm_sql = format!(
                 "INSERT INTO {} (id, extension_id, resource_type, action, target, constraints, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 TABLE_EXTENSION_PERMISSIONS
@@ -536,7 +513,7 @@ impl ExtensionManager {
                 use crate::database::generated::HaexExtensionPermissions;
                 let db_perm: HaexExtensionPermissions = perm.into();
 
-                SqlExecutor::execute_internal_typed_with_context(
+                SqlExecutor::execute_internal_typed(
                     &tx,
                     &hlc_service,
                     &insert_perm_sql,
@@ -549,16 +526,15 @@ impl ExtensionManager {
                         db_perm.constraints,
                         db_perm.status,
                     ],
-                    &mut pk_context,
                 )?;
             }
 
             tx.commit().map_err(DatabaseError::from)?;
-            Ok(actual_extension_id.clone())
+            Ok(extension_id.clone())
         })?;
 
         let extension = Extension {
-            id: actual_extension_id.clone(), // Nutze die actual_extension_id aus der Transaktion
+            id: extension_id.clone(),
             source: ExtensionSource::Production {
                 path: extensions_dir.clone(),
                 version: extracted.manifest.version.clone(),
@@ -607,8 +583,7 @@ impl ExtensionManager {
         );
             eprintln!("DEBUG: SQL Query before transformation: {}", sql);
 
-            // select_internal gibt jetzt Vec<Vec<JsonValue>> zurück
-            let results = SqlExecutor::select_internal(conn, &sql, &[])?;
+            let results = SqlExecutor::query_select(conn, &sql, &[])?;
             eprintln!("DEBUG: Query returned {} results", results.len());
 
             let mut data = Vec::new();

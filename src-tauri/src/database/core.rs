@@ -236,7 +236,7 @@ pub fn select_with_crdt(
     connection: &DbConnection,
 ) -> Result<Vec<Vec<JsonValue>>, DatabaseError> {
     with_connection(&connection, |conn| {
-        SqlExecutor::select_internal(conn, &sql, &params)
+        SqlExecutor::query_select(conn, &sql, &params)
     })
 }
 

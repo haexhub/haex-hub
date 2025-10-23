@@ -76,7 +76,7 @@ pub fn sql_query_with_crdt(
 
     core::with_connection(&state.db, |conn| {
         let tx = conn.transaction().map_err(DatabaseError::from)?;
-        let result = SqlExecutor::query_internal(&tx, &hlc_service, &sql, &params)?;
+        let (_modified_tables, result) = SqlExecutor::query_internal(&tx, &hlc_service, &sql, &params)?;
         tx.commit().map_err(DatabaseError::from)?;
         Ok(result)
     })
