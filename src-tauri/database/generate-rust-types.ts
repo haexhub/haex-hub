@@ -170,6 +170,14 @@ use serde::{Deserialize, Serialize};
       table: schema.haexCrdtSnapshots,
     },
     { name: tablesNames.haex.crdt.configs.name, table: schema.haexCrdtConfigs },
+    {
+      name: tablesNames.haex.desktop_items.name,
+      table: schema.haexDesktopItems,
+    },
+    {
+      name: tablesNames.haex.workspaces.name,
+      table: schema.haexWorkspaces,
+    },
   ]
 
   for (const { name, table } of schemas) {

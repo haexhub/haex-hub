@@ -71,7 +71,6 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
         where: eq(schema.haexSettings.key, VaultSettingsKeyEnum.theme),
       })
 
-    console.log('found currentThemeRow', currentThemeRow)
     if (currentThemeRow?.value) {
       const theme = availableThemes.value.find(
         (theme) => theme.value === currentThemeRow.value,
@@ -100,7 +99,6 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
         where: eq(schema.haexSettings.key, VaultSettingsKeyEnum.vaultName),
       })
 
-    console.log('found currentVaultNameRow', currentVaultNameRow)
     if (currentVaultNameRow?.value) {
       currentVaultName.value =
         currentVaultNameRow.value || haexVault.defaultVaultName || 'HaexHub'

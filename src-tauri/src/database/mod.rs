@@ -3,11 +3,13 @@
 pub mod core;
 pub mod error;
 pub mod generated;
+pub mod init;
 
 use crate::crdt::hlc::HlcService;
+use crate::database::core::execute_with_crdt;
 use crate::database::error::DatabaseError;
 use crate::extension::database::executor::SqlExecutor;
-use crate::table_names::TABLE_CRDT_CONFIGS;
+use crate::table_names::{TABLE_CRDT_CONFIGS, TABLE_SETTINGS};
 use crate::AppState;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
@@ -76,7 +78,8 @@ pub fn sql_query_with_crdt(
 
     core::with_connection(&state.db, |conn| {
         let tx = conn.transaction().map_err(DatabaseError::from)?;
-        let (_modified_tables, result) = SqlExecutor::query_internal(&tx, &hlc_service, &sql, &params)?;
+        let (_modified_tables, result) =
+            SqlExecutor::query_internal(&tx, &hlc_service, &sql, &params)?;
         tx.commit().map_err(DatabaseError::from)?;
         Ok(result)
     })
@@ -417,9 +420,12 @@ fn initialize_session(
     state: &State<'_, AppState>,
 ) -> Result<(), DatabaseError> {
     // 1. Establish the raw database connection
-    let conn = core::open_and_init_db(path, key, false)?;
+    let mut conn = core::open_and_init_db(path, key, false)?;
 
-    // 2. Initialize the HLC service
+    // 2. Ensure CRDT triggers are initialized (for template DB)
+    let triggers_were_already_initialized = init::ensure_triggers_initialized(&mut conn)?;
+
+    // 3. Initialize the HLC service
     let hlc_service = HlcService::try_initialize(&conn, app_handle).map_err(|e| {
         // We convert the HlcError into a DatabaseError
         DatabaseError::ExecutionError {
@@ -429,16 +435,53 @@ fn initialize_session(
         }
     })?;
 
-    // 3. Store everything in the global AppState
+    // 4. Store everything in the global AppState
     let mut db_guard = state.db.0.lock().map_err(|e| DatabaseError::LockError {
         reason: e.to_string(),
     })?;
+    // Wichtig: Wir brauchen den db_guard gleich nicht mehr,
+    // da 'execute_with_crdt' 'with_connection' aufruft, was
+    // 'state.db' selbst locken muss.
+    // Wir müssen den Guard freigeben, *bevor* wir 'execute_with_crdt' rufen,
+    // um einen Deadlock zu verhindern.
+    // Aber wir müssen die 'conn' erst hineinbewegen.
     *db_guard = Some(conn);
+    drop(db_guard);
 
     let mut hlc_guard = state.hlc.lock().map_err(|e| DatabaseError::LockError {
         reason: e.to_string(),
     })?;
     *hlc_guard = hlc_service;
+
+    // WICHTIG: hlc_guard *nicht* freigeben, da 'execute_with_crdt'
+    // eine Referenz auf die Guard erwartet.
+
+    // 5. NEUER SCHRITT: Setze das Flag via CRDT, falls nötig
+    if !triggers_were_already_initialized {
+        eprintln!("INFO: Setting 'triggers_initialized' flag via CRDT...");
+
+        let insert_sql = format!(
+            "INSERT INTO {} (id, key, type, value) VALUES (?, ?, ?, ?)",
+            TABLE_SETTINGS
+        );
+
+        // execute_with_crdt erwartet Vec<JsonValue>, kein params!-Makro
+        let params_vec: Vec<JsonValue> = vec![
+            JsonValue::String(uuid::Uuid::new_v4().to_string()),
+            JsonValue::String("triggers_initialized".to_string()),
+            JsonValue::String("system".to_string()),
+            JsonValue::String("1".to_string()),
+        ];
+
+        // Jetzt können wir 'execute_with_crdt' sicher aufrufen,
+        // da der AppState initialisiert ist.
+        execute_with_crdt(
+            insert_sql, params_vec, &state.db,  // Das &DbConnection (der Mutex)
+            &hlc_guard, // Die gehaltene MutexGuard
+        )?;
+
+        eprintln!("INFO: ✓ 'triggers_initialized' flag set.");
+    }
 
     Ok(())
 }

@@ -50,12 +50,20 @@ const { isKnownDeviceAsync } = useDeviceStore()
 const { loadExtensionsAsync } = useExtensionsStore()
 const { setDeviceIdIfNotExistsAsync, addDeviceNameAsync } = useDeviceStore()
 const { deviceId } = storeToRefs(useDeviceStore())
+const { syncLocaleAsync, syncThemeAsync, syncVaultNameAsync } =
+  useVaultSettingsStore()
 
 onMounted(async () => {
   try {
-    await setDeviceIdIfNotExistsAsync()
-    await loadExtensionsAsync()
-    await readNotificationsAsync()
+    // Sync settings first before other initialization
+    await Promise.allSettled([
+      syncLocaleAsync(),
+      syncThemeAsync(),
+      syncVaultNameAsync(),
+      setDeviceIdIfNotExistsAsync(),
+      loadExtensionsAsync(),
+      readNotificationsAsync(),
+    ])
 
     const knownDevice = await isKnownDeviceAsync()
 

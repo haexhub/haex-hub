@@ -52,7 +52,7 @@ impl SqlExecutor {
         }
 
         let sql_str = statement.to_string();
-        eprintln!("DEBUG: Transformed SQL: {}", sql_str);
+        eprintln!("DEBUG: Transformed execute SQL: {}", sql_str);
 
         // Führe Statement aus
         tx.execute(&sql_str, params)

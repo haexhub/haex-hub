@@ -7,7 +7,7 @@
         "key": "key",
         "type": "type",
         "value": "value",
-        "haexTombstone": "haex_tombstone",
+
         "haexTimestamp": "haex_timestamp"
       }
     },
@@ -26,7 +26,7 @@
         "signature": "signature",
         "url": "url",
         "version": "version",
-        "haexTombstone": "haex_tombstone",
+
         "haexTimestamp": "haex_timestamp"
       }
     },
@@ -42,7 +42,7 @@
         "status": "status",
         "createdAt": "created_at",
         "updateAt": "updated_at",
-        "haexTombstone": "haex_tombstone",
+
         "haexTimestamp": "haex_timestamp"
       }
     },
@@ -59,7 +59,7 @@
         "text": "text",
         "title": "title",
         "type": "type",
-        "haexTombstone": "haex_tombstone",
+
         "haexTimestamp": "haex_timestamp"
       }
     },
@@ -70,7 +70,7 @@
         "name": "name",
         "position": "position",
         "createdAt": "created_at",
-        "haexTombstone": "haex_tombstone",
+
         "haexTimestamp": "haex_timestamp"
       }
     },
@@ -83,17 +83,11 @@
         "referenceId": "reference_id",
         "positionX": "position_x",
         "positionY": "position_y",
-        "haexTombstone": "haex_tombstone",
+
         "haexTimestamp": "haex_timestamp"
       }
     },
-    "passwords": {
-      "groups": "haex_passwords_groups",
-      "group_items": "haex_passwords_group_items",
-      "item_details": "haex_passwords_item_details",
-      "item_key_values": "haex_passwords_item_key_values",
-      "item_histories": "haex_passwords_item_history"
-    },
+
     "crdt": {
       "logs": {
         "name": "haex_crdt_logs",

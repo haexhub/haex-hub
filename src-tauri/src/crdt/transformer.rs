@@ -1,12 +1,12 @@
 // src-tauri/src/crdt/transformer.rs
 
 use crate::crdt::insert_transformer::InsertTransformer;
-use crate::crdt::trigger::{HLC_TIMESTAMP_COLUMN, TOMBSTONE_COLUMN};
+use crate::crdt::trigger::HLC_TIMESTAMP_COLUMN;
 use crate::database::error::DatabaseError;
 use crate::table_names::{TABLE_CRDT_CONFIGS, TABLE_CRDT_LOGS};
 use sqlparser::ast::{
-    Assignment, AssignmentTarget, ColumnDef, DataType, Expr, Ident, ObjectName,
-    ObjectNamePart, Statement, TableFactor, TableObject, Value,
+    Assignment, AssignmentTarget, ColumnDef, DataType, Expr, Ident, ObjectName, ObjectNamePart,
+    Statement, TableFactor, TableObject, Value,
 };
 use std::borrow::Cow;
 use std::collections::HashSet;
@@ -15,13 +15,11 @@ use uhlc::Timestamp;
 /// Konfiguration für CRDT-Spalten
 #[derive(Clone)]
 struct CrdtColumns {
-    tombstone: &'static str,
     hlc_timestamp: &'static str,
 }
 
 impl CrdtColumns {
     const DEFAULT: Self = Self {
-        tombstone: TOMBSTONE_COLUMN,
         hlc_timestamp: HLC_TIMESTAMP_COLUMN,
     };
 
@@ -37,13 +35,6 @@ impl CrdtColumns {
 
     /// Fügt CRDT-Spalten zu einer Tabellendefinition hinzu
     fn add_to_table_definition(&self, columns: &mut Vec<ColumnDef>) {
-        if !columns.iter().any(|c| c.name.value == self.tombstone) {
-            columns.push(ColumnDef {
-                name: Ident::new(self.tombstone),
-                data_type: DataType::Integer(None),
-                options: vec![],
-            });
-        }
         if !columns.iter().any(|c| c.name.value == self.hlc_timestamp) {
             columns.push(ColumnDef {
                 name: Ident::new(self.hlc_timestamp),
@@ -86,7 +77,7 @@ impl CrdtTransformer {
     // =================================================================
     // ÖFFENTLICHE API-METHODEN
     // =================================================================
-    
+
     pub fn transform_execute_statement_with_table_info(
         &self,
         stmt: &mut Statement,
@@ -171,7 +162,7 @@ impl CrdtTransformer {
             Statement::Update {
                 table, assignments, ..
             } => {
-                if let TableFactor::Table { name, ..} = &table.relation {
+                if let TableFactor::Table { name, .. } = &table.relation {
                     if self.is_crdt_sync_table(name) {
                         assignments.push(self.columns.create_hlc_assignment(hlc_timestamp));
                     }

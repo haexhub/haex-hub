@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX `haex_workspaces_position_unique` ON `haex_workspaces` (`position`);

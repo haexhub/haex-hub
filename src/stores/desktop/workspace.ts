@@ -66,7 +66,6 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
         name: name || `Workspace ${newIndex}`,
         position: workspaces.value.length,
         haexTimestamp: '',
-        haexTombstone: false,
       }
       workspaces.value.push(newWorkspace)
       currentWorkspaceIndex.value = workspaces.value.length - 1

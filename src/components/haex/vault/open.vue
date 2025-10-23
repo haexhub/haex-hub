@@ -100,9 +100,6 @@ const vault = reactive<{
   }
 } */
 
-const { syncLocaleAsync, syncThemeAsync, syncVaultNameAsync } =
-  useVaultSettingsStore()
-
 const check = ref(false)
 
 const initVault = () => {
@@ -156,11 +153,6 @@ const onOpenDatabase = async () => {
         },
       }),
     )
-    await Promise.allSettled([
-      syncLocaleAsync(),
-      syncThemeAsync(),
-      syncVaultNameAsync(),
-    ])
   } catch (error) {
     open.value = false
     console.error('handleError', error, typeof error)

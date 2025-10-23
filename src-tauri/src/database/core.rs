@@ -1,9 +1,11 @@
 // src-tauri/src/database/core.rs
 
+use crate::crdt::trigger::UUID_FUNCTION_NAME;
 use crate::database::error::DatabaseError;
 use crate::database::DbConnection;
 use crate::extension::database::executor::SqlExecutor;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
+use rusqlite::functions::FunctionFlags;
 use rusqlite::types::Value as SqlValue;
 use rusqlite::{
     types::{Value as RusqliteValue, ValueRef},
@@ -13,6 +15,7 @@ use serde_json::Value as JsonValue;
 use sqlparser::ast::{Expr, Query, Select, SetExpr, Statement, TableFactor, TableObject};
 use sqlparser::dialect::SQLiteDialect;
 use sqlparser::parser::Parser;
+use uuid::Uuid;
 
 /// Öffnet und initialisiert eine Datenbank mit Verschlüsselung
 pub fn open_and_init_db(path: &str, key: &str, create: bool) -> Result<Connection, DatabaseError> {
@@ -33,6 +36,19 @@ pub fn open_and_init_db(path: &str, key: &str, create: bool) -> Result<Connectio
             pragma: "key".to_string(),
             reason: e.to_string(),
         })?;
+
+    // Register custom UUID function for SQLite triggers
+    conn.create_scalar_function(
+        UUID_FUNCTION_NAME,
+        0,
+        FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC,
+        |_ctx| {
+            Ok(Uuid::new_v4().to_string())
+        },
+    )
+    .map_err(|e| DatabaseError::DatabaseError {
+        reason: format!("Failed to register {} function: {}", UUID_FUNCTION_NAME, e),
+    })?;
 
     let journal_mode: String = conn
         .query_row("PRAGMA journal_mode=WAL;", [], |row| row.get(0))

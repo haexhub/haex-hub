@@ -1,21 +1,19 @@
 // src-tauri/src/crdt/insert_transformer.rs
 // INSERT-spezifische CRDT-Transformationen (ON CONFLICT, RETURNING)
 
-use crate::crdt::trigger::{HLC_TIMESTAMP_COLUMN, TOMBSTONE_COLUMN};
+use crate::crdt::trigger::HLC_TIMESTAMP_COLUMN;
 use crate::database::error::DatabaseError;
 use sqlparser::ast::{Expr, Ident, Insert, SelectItem, SetExpr, Value};
 use uhlc::Timestamp;
 
 /// Helper-Struct für INSERT-Transformationen
 pub struct InsertTransformer {
-    tombstone_column: &'static str,
     hlc_timestamp_column: &'static str,
 }
 
 impl InsertTransformer {
     pub fn new() -> Self {
         Self {
-            tombstone_column: TOMBSTONE_COLUMN,
             hlc_timestamp_column: HLC_TIMESTAMP_COLUMN,
         }
     }
@@ -58,11 +56,9 @@ impl InsertTransformer {
         insert_stmt: &mut Insert,
         timestamp: &Timestamp,
     ) -> Result<(), DatabaseError> {
-        // Add both haex_timestamp and haex_tombstone columns if not exists
+        // Add haex_timestamp  column if not exists
         let hlc_col_index =
             Self::find_or_add_column(&mut insert_stmt.columns, self.hlc_timestamp_column);
-        let tombstone_col_index =
-            Self::find_or_add_column(&mut insert_stmt.columns, self.tombstone_column);
 
         // ON CONFLICT Logik komplett entfernt!
         // Bei Hard Deletes gibt es keine Tombstone-Einträge mehr zu reaktivieren
@@ -74,24 +70,15 @@ impl InsertTransformer {
                     for row in &mut values.rows {
                         let hlc_value =
                             Expr::Value(Value::SingleQuotedString(timestamp.to_string()).into());
-                        let tombstone_value =
-                            Expr::Value(Value::Number("0".to_string(), false).into());
 
                         Self::set_or_push_value(row, hlc_col_index, hlc_value);
-                        Self::set_or_push_value(row, tombstone_col_index, tombstone_value);
                     }
                 }
                 SetExpr::Select(select) => {
                     let hlc_value =
                         Expr::Value(Value::SingleQuotedString(timestamp.to_string()).into());
-                    let tombstone_value = Expr::Value(Value::Number("0".to_string(), false).into());
 
                     Self::set_or_push_projection(&mut select.projection, hlc_col_index, hlc_value);
-                    Self::set_or_push_projection(
-                        &mut select.projection,
-                        tombstone_col_index,
-                        tombstone_value,
-                    );
                 }
                 _ => {
                     return Err(DatabaseError::UnsupportedStatement {

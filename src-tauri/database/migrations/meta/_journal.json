@@ -5,71 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1759402321133,
-      "tag": "0000_glamorous_hulk",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1759418087677,
-      "tag": "0001_green_stark_industries",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1760272083150,
-      "tag": "0002_amazing_iron_fist",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1760611690801,
-      "tag": "0003_daily_polaris",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1760817142340,
-      "tag": "0004_mature_viper",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1760964548034,
-      "tag": "0005_tidy_yellowjacket",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1761137108127,
-      "tag": "0006_gigantic_bloodaxe",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1761141111765,
-      "tag": "0007_stale_longshot",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1761145177028,
-      "tag": "0008_dizzy_blue_shield",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1761203548348,
-      "tag": "0009_boring_arclight",
+      "when": 1761216357702,
+      "tag": "0000_bumpy_valkyrie",
       "breakpoints": true
     }
   ]

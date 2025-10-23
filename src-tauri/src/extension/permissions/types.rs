@@ -165,8 +165,6 @@ pub struct ExtensionPermission {
     pub constraints: Option<PermissionConstraints>,
     pub status: PermissionStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub haex_tombstone: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub haex_timestamp: Option<String>,
 }
 
@@ -341,9 +339,9 @@ impl From<&ExtensionPermission> for crate::database::generated::HaexExtensionPer
     fn from(perm: &ExtensionPermission) -> Self {
         Self {
             id: perm.id.clone(),
-            extension_id: Some(perm.extension_id.clone()),
+            extension_id: perm.extension_id.clone(),
             resource_type: Some(perm.resource_type.as_str().to_string()),
-            action: Some(perm.action.as_str()),
+            action: Some(perm.action.as_str().to_string()),
             target: Some(perm.target.clone()),
             constraints: perm
                 .constraints
@@ -352,7 +350,6 @@ impl From<&ExtensionPermission> for crate::database::generated::HaexExtensionPer
             status: perm.status.as_str().to_string(),
             created_at: None,
             updated_at: None,
-            haex_tombstone: perm.haex_tombstone,
             haex_timestamp: perm.haex_timestamp.clone(),
         }
     }
@@ -382,13 +379,12 @@ impl From<crate::database::generated::HaexExtensionPermissions> for ExtensionPer
 
         Self {
             id: db_perm.id,
-            extension_id: db_perm.extension_id.unwrap_or_default(),
+            extension_id: db_perm.extension_id,
             resource_type,
             action,
             target: db_perm.target.unwrap_or_default(),
             constraints,
             status,
-            haex_tombstone: db_perm.haex_tombstone,
             haex_timestamp: db_perm.haex_timestamp,
         }
     }

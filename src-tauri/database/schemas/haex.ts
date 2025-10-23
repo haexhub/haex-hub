@@ -9,15 +9,14 @@ import {
 } from 'drizzle-orm/sqlite-core'
 import tableNames from '../tableNames.json'
 
-// Helper function to add common CRDT columns (haexTombstone and haexTimestamp)
+// Helper function to add common CRDT columns ( haexTimestamp)
 export const withCrdtColumns = <
   T extends Record<string, SQLiteColumnBuilderBase>,
 >(
   columns: T,
-  columnNames: { haexTombstone: string; haexTimestamp: string },
+  columnNames: { haexTimestamp: string },
 ) => ({
   ...columns,
-  haexTombstone: integer(columnNames.haexTombstone, { mode: 'boolean' }),
   haexTimestamp: text(columnNames.haexTimestamp),
 })
 
@@ -30,9 +29,7 @@ export const haexSettings = sqliteTable(
     key: text(),
     type: text(),
     value: text(),
-    haexTombstone: integer(tableNames.haex.settings.columns.haexTombstone, {
-      mode: 'boolean',
-    }),
+
     haexTimestamp: text(tableNames.haex.settings.columns.haexTimestamp),
   },
   (table) => [unique().on(table.key, table.type, table.value)],
@@ -56,9 +53,6 @@ export const haexExtensions = sqliteTable(
     enabled: integer({ mode: 'boolean' }).default(true),
     icon: text(),
     signature: text().notNull(),
-    haexTombstone: integer(tableNames.haex.extensions.columns.haexTombstone, {
-      mode: 'boolean',
-    }),
     haexTimestamp: text(tableNames.haex.extensions.columns.haexTimestamp),
   },
   (table) => [
@@ -75,9 +69,7 @@ export const haexExtensionPermissions = sqliteTable(
     id: text()
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    extensionId: text(
-      tableNames.haex.extension_permissions.columns.extensionId,
-    )
+    extensionId: text(tableNames.haex.extension_permissions.columns.extensionId)
       .notNull()
       .references((): AnySQLiteColumn => haexExtensions.id, {
         onDelete: 'cascade',
@@ -94,10 +86,6 @@ export const haexExtensionPermissions = sqliteTable(
     createdAt: text('created_at').default(sql`(CURRENT_TIMESTAMP)`),
     updateAt: integer('updated_at', { mode: 'timestamp' }).$onUpdate(
       () => new Date(),
-    ),
-    haexTombstone: integer(
-      tableNames.haex.extension_permissions.columns.haexTombstone,
-      { mode: 'boolean' },
     ),
     haexTimestamp: text(
       tableNames.haex.extension_permissions.columns.haexTimestamp,
@@ -132,10 +120,6 @@ export const haexNotifications = sqliteTable(
     type: text({
       enum: ['error', 'success', 'warning', 'info', 'log'],
     }).notNull(),
-    haexTombstone: integer(
-      tableNames.haex.notifications.columns.haexTombstone,
-      { mode: 'boolean' },
-    ),
     haexTimestamp: text(tableNames.haex.notifications.columns.haexTimestamp),
   },
 )
