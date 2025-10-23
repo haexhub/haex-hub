@@ -6,7 +6,7 @@
         ? 'ring-2 ring-secondary bg-secondary/10'
         : 'hover:ring-2 hover:ring-gray-300',
     ]"
-    @click="workspaceStore.slideToWorkspace(workspace.position)"
+    @click="workspaceStore.slideToWorkspace(workspace.id)"
   >
     <template #header>
       <div class="flex justify-between">

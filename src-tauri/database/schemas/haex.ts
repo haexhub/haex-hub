@@ -77,7 +77,11 @@ export const haexExtensionPermissions = sqliteTable(
       .$defaultFn(() => crypto.randomUUID()),
     extensionId: text(
       tableNames.haex.extension_permissions.columns.extensionId,
-    ).references((): AnySQLiteColumn => haexExtensions.id),
+    )
+      .notNull()
+      .references((): AnySQLiteColumn => haexExtensions.id, {
+        onDelete: 'cascade',
+      }),
     resourceType: text('resource_type', {
       enum: ['fs', 'http', 'db', 'shell'],
     }),
@@ -152,6 +156,7 @@ export const haexWorkspaces = sqliteTable(
     },
     tableNames.haex.workspaces.columns,
   ),
+  (table) => [unique().on(table.position)],
 )
 export type InsertHaexWorkspaces = typeof haexWorkspaces.$inferInsert
 export type SelectHaexWorkspaces = typeof haexWorkspaces.$inferSelect
@@ -165,7 +170,7 @@ export const haexDesktopItems = sqliteTable(
         .$defaultFn(() => crypto.randomUUID()),
       workspaceId: text(tableNames.haex.desktop_items.columns.workspaceId)
         .notNull()
-        .references(() => haexWorkspaces.id),
+        .references(() => haexWorkspaces.id, { onDelete: 'cascade' }),
       itemType: text(tableNames.haex.desktop_items.columns.itemType, {
         enum: ['extension', 'file', 'folder'],
       }).notNull(),

@@ -232,14 +232,8 @@ pub async fn extension_sql_select(
     // Database operation
     with_connection(&state.db, |conn| {
         let sql_params = ValueConverter::convert_params(&params)?;
-        let transformer = CrdtTransformer::new();
-
-        // Use the last statement for result set
-        let last_statement = ast_vec.pop().unwrap();
-        let mut stmt_to_execute = last_statement;
-
-        // Transform the statement
-        transformer.transform_select_statement(&mut stmt_to_execute)?;
+        // Hard Delete: Keine SELECT-Transformation mehr nötig
+        let stmt_to_execute = ast_vec.pop().unwrap();
         let transformed_sql = stmt_to_execute.to_string();
 
         // Prepare and execute query

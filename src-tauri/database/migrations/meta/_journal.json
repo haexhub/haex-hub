@@ -57,6 +57,20 @@
       "when": 1761141111765,
       "tag": "0007_stale_longshot",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1761145177028,
+      "tag": "0008_dizzy_blue_shield",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1761203548348,
+      "tag": "0009_boring_arclight",
+      "breakpoints": true
     }
   ]
 }

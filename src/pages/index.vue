@@ -153,4 +153,7 @@ en:
   welcome: 'Have fun with'
   lastUsed: 'Last used Vaults'
   sponsors: 'Supported by'
+  remove:
+    title: Delete Vault
+    description: Are you sure you really want to delete {vaultName}?
 </i18n>

@@ -35,9 +35,11 @@ export const haexPasswordsItemKeyValues = sqliteTable(
   tableNames.haex.passwords.item_key_values,
   {
     id: text().primaryKey(),
-    itemId: text('item_id').references(
-      (): AnySQLiteColumn => haexPasswordsItemDetails.id,
-    ),
+    itemId: text('item_id')
+      .notNull()
+      .references((): AnySQLiteColumn => haexPasswordsItemDetails.id, {
+        onDelete: 'cascade',
+      }),
     key: text(),
     value: text(),
     updateAt: integer('updated_at', { mode: 'timestamp' }).$onUpdate(
@@ -55,9 +57,11 @@ export const haexPasswordsItemHistory = sqliteTable(
   tableNames.haex.passwords.item_histories,
   {
     id: text().primaryKey(),
-    itemId: text('item_id').references(
-      (): AnySQLiteColumn => haexPasswordsItemDetails.id,
-    ),
+    itemId: text('item_id')
+      .notNull()
+      .references((): AnySQLiteColumn => haexPasswordsItemDetails.id, {
+        onDelete: 'cascade',
+      }),
     changedProperty:
       text('changed_property').$type<keyof typeof haexPasswordsItemDetails>(),
     oldValue: text('old_value'),
@@ -82,6 +86,7 @@ export const haexPasswordsGroups = sqliteTable(
     color: text(),
     parentId: text('parent_id').references(
       (): AnySQLiteColumn => haexPasswordsGroups.id,
+      { onDelete: 'cascade' },
     ),
     createdAt: text('created_at').default(sql`(CURRENT_TIMESTAMP)`),
     updateAt: integer('updated_at', { mode: 'timestamp' }).$onUpdate(
@@ -96,12 +101,16 @@ export type SelectHaexPasswordsGroups = typeof haexPasswordsGroups.$inferSelect
 export const haexPasswordsGroupItems = sqliteTable(
   tableNames.haex.passwords.group_items,
   {
-    groupId: text('group_id').references(
-      (): AnySQLiteColumn => haexPasswordsGroups.id,
-    ),
-    itemId: text('item_id').references(
-      (): AnySQLiteColumn => haexPasswordsItemDetails.id,
-    ),
+    groupId: text('group_id')
+      .notNull()
+      .references((): AnySQLiteColumn => haexPasswordsGroups.id, {
+        onDelete: 'cascade',
+      }),
+    itemId: text('item_id')
+      .notNull()
+      .references((): AnySQLiteColumn => haexPasswordsItemDetails.id, {
+        onDelete: 'cascade',
+      }),
     haex_tombstone: integer({ mode: 'boolean' }),
   },
   (table) => [primaryKey({ columns: [table.itemId, table.groupId] })],

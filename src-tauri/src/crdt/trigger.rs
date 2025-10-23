@@ -9,6 +9,7 @@ use ts_rs::TS;
 // Der "z_"-Präfix soll sicherstellen, dass diese Trigger als Letzte ausgeführt werden
 const INSERT_TRIGGER_TPL: &str = "z_crdt_{TABLE_NAME}_insert";
 const UPDATE_TRIGGER_TPL: &str = "z_crdt_{TABLE_NAME}_update";
+const DELETE_TRIGGER_TPL: &str = "z_crdt_{TABLE_NAME}_delete";
 
 //const SYNC_ACTIVE_KEY: &str = "sync_active";
 pub const TOMBSTONE_COLUMN: &str = "haex_tombstone";
@@ -143,6 +144,7 @@ pub fn setup_triggers_for_table(
 
     let insert_trigger_sql = generate_insert_trigger_sql(table_name, &pks, &cols_to_track);
     let update_trigger_sql = generate_update_trigger_sql(table_name, &pks, &cols_to_track);
+    let delete_trigger_sql = generate_delete_trigger_sql(table_name, &pks, &cols_to_track);
 
     if recreate {
         drop_triggers_for_table(&tx, table_name)?;
@@ -150,6 +152,7 @@ pub fn setup_triggers_for_table(
 
     tx.execute_batch(&insert_trigger_sql)?;
     tx.execute_batch(&update_trigger_sql)?;
+    tx.execute_batch(&delete_trigger_sql)?;
 
     Ok(TriggerSetupResult::Success)
 }
@@ -170,28 +173,7 @@ pub fn get_table_schema(conn: &Connection, table_name: &str) -> RusqliteResult<V
     rows.collect()
 }
 
-/// Holt alle Foreign Key Spalten einer Tabelle.
-/// Gibt eine Liste der Spaltennamen zurück, die Foreign Keys sind.
-pub fn get_foreign_key_columns(conn: &Connection, table_name: &str) -> RusqliteResult<Vec<String>> {
-    if !is_safe_identifier(table_name) {
-        return Err(rusqlite::Error::InvalidParameterName(format!(
-            "Invalid or unsafe table name provided: {}",
-            table_name
-        ))
-        .into());
-    }
-
-    let sql = format!("PRAGMA foreign_key_list(\"{}\");", table_name);
-    let mut stmt = conn.prepare(&sql)?;
-
-    // foreign_key_list gibt Spalten zurück: id, seq, table, from, to, on_update, on_delete, match
-    // Wir brauchen die "from" Spalte, die den Namen der FK-Spalte in der aktuellen Tabelle enthält
-    let rows = stmt.query_map([], |row| {
-        row.get::<_, String>("from")
-    })?;
-
-    rows.collect()
-}
+// get_foreign_key_columns() removed - not needed with hard deletes (no ON CONFLICT logic)
 
 pub fn drop_triggers_for_table(
     tx: &Transaction, // Arbeitet direkt auf einer Transaktion
@@ -209,8 +191,13 @@ pub fn drop_triggers_for_table(
         drop_trigger_sql(INSERT_TRIGGER_TPL.replace("{TABLE_NAME}", table_name));
     let drop_update_trigger_sql =
         drop_trigger_sql(UPDATE_TRIGGER_TPL.replace("{TABLE_NAME}", table_name));
+    let drop_delete_trigger_sql =
+        drop_trigger_sql(DELETE_TRIGGER_TPL.replace("{TABLE_NAME}", table_name));
 
-    let sql_batch = format!("{}\n{}", drop_insert_trigger_sql, drop_update_trigger_sql);
+    let sql_batch = format!(
+        "{}\n{}\n{}",
+        drop_insert_trigger_sql, drop_update_trigger_sql, drop_delete_trigger_sql
+    );
 
     tx.execute_batch(&sql_batch)?;
     Ok(())
@@ -350,25 +337,64 @@ fn generate_update_trigger_sql(table_name: &str, pks: &[String], cols: &[String]
         }
     }
 
-    // Soft-delete loggen
-    writeln!(
-        &mut body,
-        "INSERT INTO {log_table} (haex_timestamp, op_type, table_name, row_pks)
-            SELECT NEW.\"{hlc_col}\", 'DELETE', '{table}', json_object({pk_payload})
-            WHERE NEW.\"{tombstone_col}\" = 1 AND OLD.\"{tombstone_col}\" = 0;",
-        log_table = TABLE_CRDT_LOGS,
-        hlc_col = HLC_TIMESTAMP_COLUMN,
-        table = table_name,
-        pk_payload = pk_json_payload,
-        tombstone_col = TOMBSTONE_COLUMN
-    )
-    .unwrap();
+    // Soft-delete Logging entfernt - wir nutzen jetzt Hard Deletes mit eigenem BEFORE DELETE Trigger
 
     let trigger_name = UPDATE_TRIGGER_TPL.replace("{TABLE_NAME}", table_name);
 
     format!(
         "CREATE TRIGGER IF NOT EXISTS \"{trigger_name}\"
             AFTER UPDATE ON \"{table_name}\"
+            FOR EACH ROW
+            BEGIN
+            {body}
+            END;"
+    )
+}
+
+/// Generiert das SQL für den BEFORE DELETE-Trigger.
+/// WICHTIG: BEFORE DELETE damit die Daten noch verfügbar sind!
+fn generate_delete_trigger_sql(table_name: &str, pks: &[String], cols: &[String]) -> String {
+    let pk_json_payload = pks
+        .iter()
+        .map(|pk| format!("'{}', OLD.\"{}\"", pk, pk))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let mut body = String::new();
+
+    // Alle Spaltenwerte speichern für mögliche Wiederherstellung
+    if !cols.is_empty() {
+        for col in cols {
+            writeln!(
+                &mut body,
+                "INSERT INTO {log_table} (haex_timestamp, op_type, table_name, row_pks, column_name, old_value)
+                    VALUES (OLD.\"{hlc_col}\", 'DELETE', '{table}', json_object({pk_payload}), '{column}',
+                    json_object('value', OLD.\"{column}\"));",
+                log_table = TABLE_CRDT_LOGS,
+                hlc_col = HLC_TIMESTAMP_COLUMN,
+                table = table_name,
+                pk_payload = pk_json_payload,
+                column = col
+            ).unwrap();
+        }
+    } else {
+        // Nur PKs -> minimales Delete Log
+        writeln!(
+            &mut body,
+            "INSERT INTO {log_table} (haex_timestamp, op_type, table_name, row_pks)
+                VALUES (OLD.\"{hlc_col}\", 'DELETE', '{table}', json_object({pk_payload}));",
+            log_table = TABLE_CRDT_LOGS,
+            hlc_col = HLC_TIMESTAMP_COLUMN,
+            table = table_name,
+            pk_payload = pk_json_payload
+        ).unwrap();
+    }
+
+    let trigger_name = DELETE_TRIGGER_TPL.replace("{TABLE_NAME}", table_name);
+
+    format!(
+        "CREATE TRIGGER IF NOT EXISTS \"{trigger_name}\"
+            BEFORE DELETE ON \"{table_name}\"
             FOR EACH ROW
             BEGIN
             {body}

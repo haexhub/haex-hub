@@ -1,7 +1,6 @@
-import { asc, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import {
   haexWorkspaces,
-  type InsertHaexWorkspaces,
   type SelectHaexWorkspaces,
 } from '~~/src-tauri/database/schemas'
 import type { Swiper } from 'swiper/types'
@@ -33,18 +32,18 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
     }
 
     try {
-      const items = await currentVault.value.drizzle
+      /* const items = await currentVault.value.drizzle
         .select()
         .from(haexWorkspaces)
         .orderBy(asc(haexWorkspaces.position))
 
       console.log('loadWorkspacesAsync', items)
-      workspaces.value = items
+      workspaces.value = items */
 
       // Create default workspace if none exist
-      if (items.length === 0) {
-        await addWorkspaceAsync('Workspace 1')
-      }
+      /* if (items.length === 0) { */
+      await addWorkspaceAsync('Workspace 1')
+      /* } */
     } catch (error) {
       console.error('Fehler beim Laden der Workspaces:', error)
       throw error
@@ -62,12 +61,16 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
 
     try {
       const newIndex = workspaces.value.length + 1
-      const newWorkspace: InsertHaexWorkspaces = {
+      const newWorkspace: SelectHaexWorkspaces = {
+        id: crypto.randomUUID(),
         name: name || `Workspace ${newIndex}`,
         position: workspaces.value.length,
+        haexTimestamp: '',
+        haexTombstone: false,
       }
-
-      const result = await currentVault.value.drizzle
+      workspaces.value.push(newWorkspace)
+      currentWorkspaceIndex.value = workspaces.value.length - 1
+      /* const result = await currentVault.value.drizzle
         .insert(haexWorkspaces)
         .values(newWorkspace)
         .returning()
@@ -76,7 +79,7 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
         workspaces.value.push(result[0])
         currentWorkspaceIndex.value = workspaces.value.length - 1
         return result[0]
-      }
+      } */
     } catch (error) {
       console.error('Fehler beim Hinzufügen des Workspace:', error)
       throw error
@@ -104,12 +107,27 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
     const index = workspaces.value.findIndex((ws) => ws.id === workspaceId)
     if (index === -1) return
 
-    try {
-      await currentVault.value.drizzle
-        .delete(haexWorkspaces)
-        .where(eq(haexWorkspaces.id, workspaceId))
+    workspaces.value.splice(index, 1)
+    workspaces.value.forEach((workspace, index) => (workspace.position = index))
 
-      workspaces.value.splice(index, 1)
+    try {
+      /* await currentVault.value.drizzle.transaction(async (tx) => {
+        await tx
+          .delete(haexWorkspaces)
+          .where(eq(haexWorkspaces.id, workspaceId))
+
+        workspaces.value.splice(index, 1)
+        workspaces.value.forEach(
+          (workspace, index) => (workspace.position = index),
+        )
+
+        for (const workspace of workspaces.value) {
+          await tx
+            .update(haexWorkspaces)
+            .set({ position: index })
+            .where(eq(haexWorkspaces.position, workspace.position))
+        }
+      }) */
 
       // Adjust current index if needed
       if (currentWorkspaceIndex.value >= workspaces.value.length) {
@@ -121,10 +139,17 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
     }
   }
 
-  const switchToWorkspace = (index: number) => {
-    if (index >= 0 && index < workspaces.value.length) {
-      currentWorkspaceIndex.value = index
+  const switchToWorkspace = (workspaceId?: string) => {
+    const workspace = workspaces.value.find((w) => w.id === workspaceId)
+
+    console.log('switchToWorkspace', workspace)
+    if (workspace) {
+      currentWorkspaceIndex.value = workspace?.position
+    } else {
+      currentWorkspaceIndex.value = 0
     }
+
+    return currentWorkspaceIndex.value
   }
 
   const switchToNext = () => {
@@ -163,7 +188,8 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
     }
   }
 
-  const slideToWorkspace = (index: number) => {
+  const slideToWorkspace = (workspaceId?: string) => {
+    const index = switchToWorkspace(workspaceId)
     if (swiperInstance.value) {
       swiperInstance.value.slideTo(index)
     }

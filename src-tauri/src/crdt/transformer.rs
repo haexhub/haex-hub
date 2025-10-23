@@ -5,8 +5,8 @@ use crate::crdt::trigger::{HLC_TIMESTAMP_COLUMN, TOMBSTONE_COLUMN};
 use crate::database::error::DatabaseError;
 use crate::table_names::{TABLE_CRDT_CONFIGS, TABLE_CRDT_LOGS};
 use sqlparser::ast::{
-    Assignment, AssignmentTarget, BinaryOperator, ColumnDef, DataType, Expr, Ident, ObjectName,
-    ObjectNamePart, SelectItem, SetExpr, Statement, TableFactor, TableObject, Value,
+    Assignment, AssignmentTarget, ColumnDef, DataType, Expr, Ident, ObjectName,
+    ObjectNamePart, Statement, TableFactor, TableObject, Value,
 };
 use std::borrow::Cow;
 use std::collections::HashSet;
@@ -24,32 +24,6 @@ impl CrdtColumns {
         tombstone: TOMBSTONE_COLUMN,
         hlc_timestamp: HLC_TIMESTAMP_COLUMN,
     };
-
-    /// Erstellt einen Tombstone-Filter für eine Tabelle
-    fn create_tombstone_filter(&self, table_alias: Option<&str>) -> Expr {
-        let column_expr = match table_alias {
-            Some(alias) => {
-                // Qualifizierte Referenz: alias.tombstone
-                Expr::CompoundIdentifier(vec![Ident::new(alias), Ident::new(self.tombstone)])
-            }
-            None => {
-                // Einfache Referenz: tombstone
-                Expr::Identifier(Ident::new(self.tombstone))
-            }
-        };
-
-        Expr::IsNotTrue(Box::new(column_expr))
-    }
-
-    /// Erstellt eine Tombstone-Zuweisung für UPDATE/DELETE
-    fn create_tombstone_assignment(&self) -> Assignment {
-        Assignment {
-            target: AssignmentTarget::ColumnName(ObjectName(vec![ObjectNamePart::Identifier(
-                Ident::new(self.tombstone),
-            )])),
-            value: Expr::Value(Value::Number("1".to_string(), false).into()),
-        }
-    }
 
     /// Erstellt eine HLC-Zuweisung für UPDATE/DELETE
     fn create_hlc_assignment(&self, timestamp: &Timestamp) -> Assignment {
@@ -112,27 +86,11 @@ impl CrdtTransformer {
     // =================================================================
     // ÖFFENTLICHE API-METHODEN
     // =================================================================
-
-    pub fn transform_select_statement(&self, stmt: &mut Statement) -> Result<(), DatabaseError> {
-        match stmt {
-            Statement::Query(query) => {
-                // Ruft jetzt die private Methode in diesem Struct auf
-                self.transform_select_query_recursive(&mut query.body, &self.excluded_tables)
-            }
-            // Fange alle anderen Fälle ab und gib einen Fehler zurück
-            _ => Err(DatabaseError::UnsupportedStatement {
-                sql: stmt.to_string(),
-                reason: "This operation only accepts SELECT statements.".to_string(),
-            }),
-        }
-    }
-
-    /// Transformiert Statements MIT Zugriff auf Tabelleninformationen (empfohlen)
+    
     pub fn transform_execute_statement_with_table_info(
         &self,
         stmt: &mut Statement,
         hlc_timestamp: &Timestamp,
-        tx: &rusqlite::Transaction,
     ) -> Result<Option<String>, DatabaseError> {
         match stmt {
             Statement::CreateTable(create_table) => {
@@ -149,37 +107,9 @@ impl CrdtTransformer {
             Statement::Insert(insert_stmt) => {
                 if let TableObject::TableName(name) = &insert_stmt.table {
                     if self.is_crdt_sync_table(name) {
-                        // Hole die Tabelleninformationen um PKs und FKs zu identifizieren
-                        let table_name_str = self.normalize_table_name(name);
-
-                        let columns = crate::crdt::trigger::get_table_schema(tx, &table_name_str)
-                            .map_err(|e| DatabaseError::ExecutionError {
-                            sql: format!("PRAGMA table_info('{}')", table_name_str),
-                            reason: e.to_string(),
-                            table: Some(table_name_str.to_string()),
-                        })?;
-
-                        let primary_keys: Vec<String> = columns
-                            .iter()
-                            .filter(|c| c.is_pk)
-                            .map(|c| c.name.clone())
-                            .collect();
-
-                        let foreign_keys =
-                            crate::crdt::trigger::get_foreign_key_columns(tx, &table_name_str)
-                                .map_err(|e| DatabaseError::ExecutionError {
-                                    sql: format!("PRAGMA foreign_key_list('{}')", table_name_str),
-                                    reason: e.to_string(),
-                                    table: Some(table_name_str.to_string()),
-                                })?;
-
+                        // Hard Delete: Kein Schema-Lookup mehr nötig (kein ON CONFLICT)
                         let insert_transformer = InsertTransformer::new();
-                        insert_transformer.transform_insert(
-                            insert_stmt,
-                            hlc_timestamp,
-                            &primary_keys,
-                            &foreign_keys,
-                        )?;
+                        insert_transformer.transform_insert(insert_stmt, hlc_timestamp)?;
                     }
                 }
                 Ok(None)
@@ -194,26 +124,11 @@ impl CrdtTransformer {
                 }
                 Ok(None)
             }
-            Statement::Delete(del_stmt) => {
-                if let Some(table_name) = self.extract_table_name_from_delete(del_stmt) {
-                    let table_name_str = self.normalize_table_name(&table_name);
-                    let is_crdt = self.is_crdt_sync_table(&table_name);
-                    eprintln!("DEBUG DELETE (with_table_info): table='{}', is_crdt_sync={}, normalized='{}'",
-                              table_name, is_crdt, table_name_str);
-                    if is_crdt {
-                        eprintln!(
-                            "DEBUG: Transforming DELETE to UPDATE for table '{}'",
-                            table_name_str
-                        );
-                        self.transform_delete_to_update(stmt, hlc_timestamp)?;
-                    }
-                    Ok(None)
-                } else {
-                    Err(DatabaseError::UnsupportedStatement {
-                        sql: del_stmt.to_string(),
-                        reason: "DELETE from non-table source or multiple tables".to_string(),
-                    })
-                }
+            Statement::Delete(_del_stmt) => {
+                // Hard Delete - keine Transformation!
+                // DELETE bleibt DELETE
+                // BEFORE DELETE Trigger schreiben die Logs
+                Ok(None)
             }
             Statement::AlterTable { name, .. } => {
                 if self.is_crdt_sync_table(name) {
@@ -231,9 +146,6 @@ impl CrdtTransformer {
         stmt: &mut Statement,
         hlc_timestamp: &Timestamp,
     ) -> Result<Option<String>, DatabaseError> {
-        // Für INSERT-Statements ohne Connection nutzen wir eine leere PK-Liste
-        // Das bedeutet ALLE Spalten werden im ON CONFLICT UPDATE gesetzt
-        // Dies ist ein Fallback für den Fall, dass keine Connection verfügbar ist
         match stmt {
             Statement::CreateTable(create_table) => {
                 if self.is_crdt_sync_table(&create_table.name) {
@@ -249,14 +161,9 @@ impl CrdtTransformer {
             Statement::Insert(insert_stmt) => {
                 if let TableObject::TableName(name) = &insert_stmt.table {
                     if self.is_crdt_sync_table(name) {
-                        // Ohne Connection: leere PK- und FK-Listen (alle Spalten werden upgedatet)
+                        // Hard Delete: Keine ON CONFLICT Logik mehr nötig
                         let insert_transformer = InsertTransformer::new();
-                        insert_transformer.transform_insert(
-                            insert_stmt,
-                            hlc_timestamp,
-                            &[],
-                            &[],
-                        )?;
+                        insert_transformer.transform_insert(insert_stmt, hlc_timestamp)?;
                     }
                 }
                 Ok(None)
@@ -264,25 +171,17 @@ impl CrdtTransformer {
             Statement::Update {
                 table, assignments, ..
             } => {
-                if let TableFactor::Table { name, .. } = &table.relation {
+                if let TableFactor::Table { name, ..} = &table.relation {
                     if self.is_crdt_sync_table(name) {
                         assignments.push(self.columns.create_hlc_assignment(hlc_timestamp));
                     }
                 }
                 Ok(None)
             }
-            Statement::Delete(del_stmt) => {
-                if let Some(table_name) = self.extract_table_name_from_delete(del_stmt) {
-                    if self.is_crdt_sync_table(&table_name) {
-                        self.transform_delete_to_update(stmt, hlc_timestamp)?;
-                    }
-                    Ok(None)
-                } else {
-                    Err(DatabaseError::UnsupportedStatement {
-                        sql: del_stmt.to_string(),
-                        reason: "DELETE from non-table source or multiple tables".to_string(),
-                    })
-                }
+            Statement::Delete(_del_stmt) => {
+                // Hard Delete - keine Transformation!
+                // DELETE bleibt DELETE
+                Ok(None)
             }
             Statement::AlterTable { name, .. } => {
                 if self.is_crdt_sync_table(name) {
@@ -293,540 +192,5 @@ impl CrdtTransformer {
             }
             _ => Ok(None),
         }
-    }
-
-    // =================================================================
-    // PRIVATE HELFER (DELETE/UPDATE)
-    // =================================================================
-
-    /// Transformiert DELETE zu UPDATE (soft delete)
-    fn transform_delete_to_update(
-        &self,
-        stmt: &mut Statement,
-        timestamp: &Timestamp,
-    ) -> Result<(), DatabaseError> {
-        if let Statement::Delete(del_stmt) = stmt {
-            let table_to_update = match &del_stmt.from {
-                sqlparser::ast::FromTable::WithFromKeyword(from)
-                | sqlparser::ast::FromTable::WithoutKeyword(from) => {
-                    if from.len() == 1 {
-                        from[0].clone()
-                    } else {
-                        return Err(DatabaseError::UnsupportedStatement {
-                            reason: "DELETE with multiple tables not supported".to_string(),
-                            sql: stmt.to_string(),
-                        });
-                    }
-                }
-            };
-
-            let assignments = vec![
-                self.columns.create_tombstone_assignment(),
-                self.columns.create_hlc_assignment(timestamp),
-            ];
-
-            *stmt = Statement::Update {
-                table: table_to_update,
-                assignments,
-                from: None,
-                selection: del_stmt.selection.clone(),
-                returning: None,
-                or: None,
-                limit: None,
-            };
-        }
-        Ok(())
-    }
-
-    /// Extrahiert Tabellennamen aus DELETE-Statement
-    fn extract_table_name_from_delete(
-        &self,
-        del_stmt: &sqlparser::ast::Delete,
-    ) -> Option<ObjectName> {
-        let tables = match &del_stmt.from {
-            sqlparser::ast::FromTable::WithFromKeyword(from)
-            | sqlparser::ast::FromTable::WithoutKeyword(from) => from,
-        };
-
-        if tables.len() == 1 {
-            if let TableFactor::Table { name, .. } = &tables[0].relation {
-                Some(name.clone())
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    }
-
-    // =================================================================
-    // PRIVATE HELFER (SELECT-TRANSFORMATION)
-    // (Diese Methoden kommen aus dem alten `query_transformer.rs`)
-    // =================================================================
-
-    /// Rekursive Behandlung aller SetExpr-Typen mit vollständiger Subquery-Unterstützung
-    fn transform_select_query_recursive(
-        &self,
-        set_expr: &mut SetExpr,
-        excluded_tables: &std::collections::HashSet<&str>,
-    ) -> Result<(), DatabaseError> {
-        match set_expr {
-            SetExpr::Select(select) => {
-                self.add_tombstone_filters_to_select(select, excluded_tables)?;
-
-                // Transformiere auch Subqueries in Projektionen
-                for projection in &mut select.projection {
-                    match projection {
-                        SelectItem::UnnamedExpr(expr) | SelectItem::ExprWithAlias { expr, .. } => {
-                            self.transform_expression_subqueries(expr, excluded_tables)?;
-                        }
-                        _ => {} // Wildcard projections ignorieren
-                    }
-                }
-
-                // Transformiere Subqueries in WHERE
-                if let Some(where_clause) = &mut select.selection {
-                    self.transform_expression_subqueries(where_clause, excluded_tables)?;
-                }
-
-                // Transformiere Subqueries in GROUP BY
-                match &mut select.group_by {
-                    sqlparser::ast::GroupByExpr::All(_) => {
-                        // GROUP BY ALL - keine Expressions zu transformieren
-                    }
-                    sqlparser::ast::GroupByExpr::Expressions(exprs, _) => {
-                        for group_expr in exprs {
-                            self.transform_expression_subqueries(group_expr, excluded_tables)?;
-                        }
-                    }
-                }
-
-                // Transformiere Subqueries in HAVING
-                if let Some(having) = &mut select.having {
-                    self.transform_expression_subqueries(having, excluded_tables)?;
-                }
-            }
-            SetExpr::SetOperation { left, right, .. } => {
-                self.transform_select_query_recursive(left, excluded_tables)?;
-                self.transform_select_query_recursive(right, excluded_tables)?;
-            }
-            SetExpr::Query(query) => {
-                self.transform_select_query_recursive(&mut query.body, excluded_tables)?;
-            }
-            SetExpr::Values(values) => {
-                // Transformiere auch Subqueries in Values-Listen
-                for row in &mut values.rows {
-                    for expr in row {
-                        self.transform_expression_subqueries(expr, excluded_tables)?;
-                    }
-                }
-            }
-            _ => {} // Andere Fälle
-        }
-        Ok(())
-    }
-
-    /// Transformiert Subqueries innerhalb von Expressions
-    fn transform_expression_subqueries(
-        &self,
-        expr: &mut Expr,
-        excluded_tables: &std::collections::HashSet<&str>,
-    ) -> Result<(), DatabaseError> {
-        match expr {
-            // Einfache Subqueries
-            Expr::Subquery(query) => {
-                self.transform_select_query_recursive(&mut query.body, excluded_tables)?;
-            }
-            // EXISTS Subqueries
-            Expr::Exists { subquery, .. } => {
-                self.transform_select_query_recursive(&mut subquery.body, excluded_tables)?;
-            }
-            // IN Subqueries
-            Expr::InSubquery {
-                expr: left_expr,
-                subquery,
-                ..
-            } => {
-                self.transform_expression_subqueries(left_expr, excluded_tables)?;
-                self.transform_select_query_recursive(&mut subquery.body, excluded_tables)?;
-            }
-            // ANY/ALL Subqueries
-            Expr::AnyOp { left, right, .. } | Expr::AllOp { left, right, .. } => {
-                self.transform_expression_subqueries(left, excluded_tables)?;
-                self.transform_expression_subqueries(right, excluded_tables)?;
-            }
-            // Binäre Operationen
-            Expr::BinaryOp { left, right, .. } => {
-                self.transform_expression_subqueries(left, excluded_tables)?;
-                self.transform_expression_subqueries(right, excluded_tables)?;
-            }
-            // Unäre Operationen
-            Expr::UnaryOp {
-                expr: inner_expr, ..
-            } => {
-                self.transform_expression_subqueries(inner_expr, excluded_tables)?;
-            }
-            // Verschachtelte Ausdrücke
-            Expr::Nested(nested) => {
-                self.transform_expression_subqueries(nested, excluded_tables)?;
-            }
-            // CASE-Ausdrücke
-            Expr::Case {
-                operand,
-                conditions,
-                else_result,
-                ..
-            } => {
-                if let Some(op) = operand {
-                    self.transform_expression_subqueries(op, excluded_tables)?;
-                }
-                for case_when in conditions {
-                    self.transform_expression_subqueries(
-                        &mut case_when.condition,
-                        excluded_tables,
-                    )?;
-                    self.transform_expression_subqueries(&mut case_when.result, excluded_tables)?;
-                }
-                if let Some(else_res) = else_result {
-                    self.transform_expression_subqueries(else_res, excluded_tables)?;
-                }
-            }
-            // Funktionsaufrufe
-            Expr::Function(func) => match &mut func.args {
-                sqlparser::ast::FunctionArguments::List(sqlparser::ast::FunctionArgumentList {
-                    args,
-                    ..
-                }) => {
-                    for arg in args {
-                        if let sqlparser::ast::FunctionArg::Unnamed(
-                            sqlparser::ast::FunctionArgExpr::Expr(expr),
-                        ) = arg
-                        {
-                            self.transform_expression_subqueries(expr, excluded_tables)?;
-                        }
-                    }
-                }
-                _ => {}
-            },
-            // BETWEEN
-            Expr::Between {
-                expr: main_expr,
-                low,
-                high,
-                ..
-            } => {
-                self.transform_expression_subqueries(main_expr, excluded_tables)?;
-                self.transform_expression_subqueries(low, excluded_tables)?;
-                self.transform_expression_subqueries(high, excluded_tables)?;
-            }
-            // IN Liste
-            Expr::InList {
-                expr: main_expr,
-                list,
-                ..
-            } => {
-                self.transform_expression_subqueries(main_expr, excluded_tables)?;
-                for list_expr in list {
-                    self.transform_expression_subqueries(list_expr, excluded_tables)?;
-                }
-            }
-            // IS NULL/IS NOT NULL
-            Expr::IsNull(inner) | Expr::IsNotNull(inner) => {
-                self.transform_expression_subqueries(inner, excluded_tables)?;
-            }
-            // Andere Expression-Typen benötigen keine Transformation
-            _ => {}
-        }
-        Ok(())
-    }
-
-    /// Fügt Tombstone-Filter zu SELECT-Statements hinzu
-    fn add_tombstone_filters_to_select(
-        &self,
-        select: &mut sqlparser::ast::Select,
-        excluded_tables: &HashSet<&str>,
-    ) -> Result<(), DatabaseError> {
-        // Sammle alle CRDT-Tabellen mit ihren Aliasen
-        let mut crdt_tables = Vec::new();
-        for twj in &select.from {
-            if let TableFactor::Table { name, alias, .. } = &twj.relation {
-                // Nutzt die zentrale Logik von CrdtTransformer
-                if self.is_crdt_sync_table(name) {
-                    let table_alias = alias.as_ref().map(|a| a.name.value.as_str());
-                    crdt_tables.push((name.clone(), table_alias));
-                }
-            }
-        }
-
-        if crdt_tables.is_empty() {
-            return Ok(());
-        }
-
-        // Prüfe, welche Tombstone-Spalten bereits in der WHERE-Klausel referenziert werden
-        let explicitly_filtered_tables = if let Some(where_clause) = &select.selection {
-            self.find_explicitly_filtered_tombstone_tables(where_clause, &crdt_tables)
-        } else {
-            HashSet::new()
-        };
-
-        // Erstelle Filter nur für Tabellen, die noch nicht explizit gefiltert werden
-        let mut tombstone_filters = Vec::new();
-        for (table_name, table_alias) in crdt_tables {
-            let table_name_string = table_name.to_string();
-            let table_key = table_alias.unwrap_or(&table_name_string);
-            if !explicitly_filtered_tables.contains(table_key) {
-                // Nutzt die zentrale Logik von CrdtColumns
-                tombstone_filters.push(self.columns.create_tombstone_filter(table_alias));
-            }
-        }
-
-        // Füge die automatischen Filter hinzu
-        if !tombstone_filters.is_empty() {
-            let combined_filter = tombstone_filters
-                .into_iter()
-                .reduce(|acc, expr| Expr::BinaryOp {
-                    left: Box::new(acc),
-                    op: BinaryOperator::And,
-                    right: Box::new(expr),
-                })
-                .unwrap();
-
-            match &mut select.selection {
-                Some(existing) => {
-                    *existing = Expr::BinaryOp {
-                        left: Box::new(existing.clone()),
-                        op: BinaryOperator::And,
-                        right: Box::new(combined_filter),
-                    };
-                }
-                None => {
-                    select.selection = Some(combined_filter);
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Findet alle Tabellen, die bereits explizit Tombstone-Filter in der WHERE-Klausel haben
-    fn find_explicitly_filtered_tombstone_tables(
-        &self,
-        where_expr: &Expr,
-        crdt_tables: &[(ObjectName, Option<&str>)],
-    ) -> HashSet<String> {
-        let mut filtered_tables = HashSet::new();
-        self.scan_expression_for_tombstone_references(
-            where_expr,
-            crdt_tables,
-            &mut filtered_tables,
-        );
-        filtered_tables
-    }
-
-    /// Rekursiv durchsucht einen Expression-Baum nach Tombstone-Spalten-Referenzen
-    fn scan_expression_for_tombstone_references(
-        &self,
-        expr: &Expr,
-        crdt_tables: &[(ObjectName, Option<&str>)],
-        filtered_tables: &mut HashSet<String>,
-    ) {
-        match expr {
-            Expr::Identifier(ident) => {
-                // Nutzt die zentrale Konfiguration von CrdtColumns
-                if ident.value == self.columns.tombstone && crdt_tables.len() == 1 {
-                    let table_name_str = crdt_tables[0].0.to_string();
-                    let table_key = crdt_tables[0].1.unwrap_or(&table_name_str);
-                    filtered_tables.insert(table_key.to_string());
-                }
-            }
-            Expr::CompoundIdentifier(idents) => {
-                // Nutzt die zentrale Konfiguration von CrdtColumns
-                if idents.len() == 2 && idents[1].value == self.columns.tombstone {
-                    let table_ref = &idents[0].value;
-                    for (table_name, alias) in crdt_tables {
-                        let table_name_str = table_name.to_string();
-                        if table_ref == &table_name_str || alias.map_or(false, |a| a == table_ref) {
-                            filtered_tables.insert(table_ref.clone());
-                            break;
-                        }
-                    }
-                }
-            }
-            Expr::BinaryOp { left, right, .. } => {
-                self.scan_expression_for_tombstone_references(left, crdt_tables, filtered_tables);
-                self.scan_expression_for_tombstone_references(right, crdt_tables, filtered_tables);
-            }
-            Expr::UnaryOp { expr, .. } => {
-                self.scan_expression_for_tombstone_references(expr, crdt_tables, filtered_tables);
-            }
-            Expr::Nested(nested) => {
-                self.scan_expression_for_tombstone_references(nested, crdt_tables, filtered_tables);
-            }
-            Expr::InList { expr, .. } => {
-                self.scan_expression_for_tombstone_references(expr, crdt_tables, filtered_tables);
-            }
-            Expr::Between { expr, .. } => {
-                self.scan_expression_for_tombstone_references(expr, crdt_tables, filtered_tables);
-            }
-            Expr::IsNull(expr) | Expr::IsNotNull(expr) => {
-                self.scan_expression_for_tombstone_references(expr, crdt_tables, filtered_tables);
-            }
-            Expr::Function(func) => {
-                if let sqlparser::ast::FunctionArguments::List(
-                    sqlparser::ast::FunctionArgumentList { args, .. },
-                ) = &func.args
-                {
-                    for arg in args {
-                        if let sqlparser::ast::FunctionArg::Unnamed(
-                            sqlparser::ast::FunctionArgExpr::Expr(expr),
-                        ) = arg
-                        {
-                            self.scan_expression_for_tombstone_references(
-                                expr,
-                                crdt_tables,
-                                filtered_tables,
-                            );
-                        }
-                    }
-                }
-            }
-            Expr::Case {
-                operand,
-                conditions,
-                else_result,
-                ..
-            } => {
-                if let Some(op) = operand {
-                    self.scan_expression_for_tombstone_references(op, crdt_tables, filtered_tables);
-                }
-                for case_when in conditions {
-                    self.scan_expression_for_tombstone_references(
-                        &case_when.condition,
-                        crdt_tables,
-                        filtered_tables,
-                    );
-                    self.scan_expression_for_tombstone_references(
-                        &case_when.result,
-                        crdt_tables,
-                        filtered_tables,
-                    );
-                }
-                if let Some(else_res) = else_result {
-                    self.scan_expression_for_tombstone_references(
-                        else_res,
-                        crdt_tables,
-                        filtered_tables,
-                    );
-                }
-            }
-            Expr::Subquery(query) => {
-                self.analyze_query_for_tombstone_references(query, crdt_tables, filtered_tables)
-                    .ok();
-            }
-            Expr::Exists { subquery, .. } => {
-                self.analyze_query_for_tombstone_references(subquery, crdt_tables, filtered_tables)
-                    .ok();
-            }
-            Expr::InSubquery { expr, subquery, .. } => {
-                self.scan_expression_for_tombstone_references(expr, crdt_tables, filtered_tables);
-                self.analyze_query_for_tombstone_references(subquery, crdt_tables, filtered_tables)
-                    .ok();
-            }
-            Expr::AnyOp { left, right, .. } | Expr::AllOp { left, right, .. } => {
-                self.scan_expression_for_tombstone_references(left, crdt_tables, filtered_tables);
-                self.scan_expression_for_tombstone_references(right, crdt_tables, filtered_tables);
-            }
-            _ => {}
-        }
-    }
-
-    fn analyze_query_for_tombstone_references(
-        &self,
-        query: &sqlparser::ast::Query,
-        crdt_tables: &[(ObjectName, Option<&str>)],
-        filtered_tables: &mut HashSet<String>,
-    ) -> Result<(), DatabaseError> {
-        self.analyze_set_expr_for_tombstone_references(&query.body, crdt_tables, filtered_tables)
-    }
-
-    fn analyze_set_expr_for_tombstone_references(
-        &self,
-        set_expr: &SetExpr,
-        crdt_tables: &[(ObjectName, Option<&str>)],
-        filtered_tables: &mut HashSet<String>,
-    ) -> Result<(), DatabaseError> {
-        match set_expr {
-            SetExpr::Select(select) => {
-                if let Some(where_clause) = &select.selection {
-                    self.scan_expression_for_tombstone_references(
-                        where_clause,
-                        crdt_tables,
-                        filtered_tables,
-                    );
-                }
-
-                for projection in &select.projection {
-                    match projection {
-                        SelectItem::UnnamedExpr(expr) | SelectItem::ExprWithAlias { expr, .. } => {
-                            self.scan_expression_for_tombstone_references(
-                                expr,
-                                crdt_tables,
-                                filtered_tables,
-                            );
-                        }
-                        _ => {}
-                    }
-                }
-
-                match &select.group_by {
-                    sqlparser::ast::GroupByExpr::All(_) => {}
-                    sqlparser::ast::GroupByExpr::Expressions(exprs, _) => {
-                        for group_expr in exprs {
-                            self.scan_expression_for_tombstone_references(
-                                group_expr,
-                                crdt_tables,
-                                filtered_tables,
-                            );
-                        }
-                    }
-                }
-
-                if let Some(having) = &select.having {
-                    self.scan_expression_for_tombstone_references(
-                        having,
-                        crdt_tables,
-                        filtered_tables,
-                    );
-                }
-            }
-            SetExpr::SetOperation { left, right, .. } => {
-                self.analyze_set_expr_for_tombstone_references(left, crdt_tables, filtered_tables)?;
-                self.analyze_set_expr_for_tombstone_references(
-                    right,
-                    crdt_tables,
-                    filtered_tables,
-                )?;
-            }
-            SetExpr::Query(query) => {
-                self.analyze_set_expr_for_tombstone_references(
-                    &query.body,
-                    crdt_tables,
-                    filtered_tables,
-                )?;
-            }
-            SetExpr::Values(values) => {
-                for row in &values.rows {
-                    for expr in row {
-                        self.scan_expression_for_tombstone_references(
-                            expr,
-                            crdt_tables,
-                            filtered_tables,
-                        );
-                    }
-                }
-            }
-            _ => {}
-        }
-        Ok(())
     }
 }

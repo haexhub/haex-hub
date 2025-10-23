@@ -563,7 +563,9 @@ const onSwiperInit = (swiper: SwiperType) => {
 }
 
 const onSlideChange = (swiper: SwiperType) => {
-  workspaceStore.switchToWorkspace(swiper.activeIndex)
+  workspaceStore.switchToWorkspace(
+    workspaceStore.workspaces.at(swiper.activeIndex)?.id,
+  )
 }
 
 // Workspace control handlers

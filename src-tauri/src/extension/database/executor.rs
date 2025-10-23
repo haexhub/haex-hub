@@ -135,7 +135,6 @@ impl SqlExecutor {
         if let Some(table_name) = transformer.transform_execute_statement_with_table_info(
             &mut statement,
             &hlc_timestamp,
-            tx,
         )? {
             modified_schema_tables.insert(table_name);
         }
@@ -239,7 +238,6 @@ impl SqlExecutor {
         if let Some(table_name) = transformer.transform_execute_statement_with_table_info(
             &mut statement,
             &hlc_timestamp,
-            tx,
         )? {
             modified_schema_tables.insert(table_name);
         }
@@ -460,13 +458,12 @@ impl SqlExecutor {
         }
 
         let sql_params = ValueConverter::convert_params(params)?;
-        let transformer = CrdtTransformer::new();
 
-        let mut stmt_to_execute = ast_vec.pop().unwrap();
-        transformer.transform_select_statement(&mut stmt_to_execute)?;
+        // Hard Delete: Keine SELECT-Transformation mehr nötig
+        let stmt_to_execute = ast_vec.pop().unwrap();
         let transformed_sql = stmt_to_execute.to_string();
 
-        eprintln!("DEBUG: Transformed SELECT: {}", transformed_sql);
+        eprintln!("DEBUG: SELECT (no transformation): {}", transformed_sql);
 
         let mut prepared_stmt = conn.prepare(&transformed_sql)?;
 
