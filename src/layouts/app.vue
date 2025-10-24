@@ -32,20 +32,19 @@
             color="neutral"
             variant="outline"
             :block="isSmallScreen"
-            @click="isOverviewMode = !isOverviewMode"
             icon="i-bi-person-workspace"
             size="lg"
-          >
-          </UButton>
+            @click="isOverviewMode = !isOverviewMode"
+          />
           <UButton
             color="neutral"
             variant="outline"
             :block="isSmallScreen"
-            @click="showWindowOverview = !showWindowOverview"
             icon="i-heroicons-squares-2x2"
             size="lg"
+            @click="showWindowOverview = !showWindowOverview"
           >
-            <template #trailing v-if="openWindowsCount > 0">
+            <template v-if="openWindowsCount > 0" #trailing>
               <UBadge
                 :label="openWindowsCount.toString()"
                 color="primary"

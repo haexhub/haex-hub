@@ -17,7 +17,7 @@
       :title="t('pick')"
       class="top-0 left-0 absolute size-0"
       type="color"
-    />
+    >
 
     <UiTooltip :tooltip="t('reset')">
       <UiButton

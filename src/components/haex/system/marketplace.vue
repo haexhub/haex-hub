@@ -33,8 +33,8 @@
           :label="t('extension.installFromFile')"
           icon="i-heroicons-arrow-up-tray"
           color="neutral"
-          @click="onSelectExtensionAsync"
           block
+          @click="onSelectExtensionAsync"
         />
       </div>
     </div>

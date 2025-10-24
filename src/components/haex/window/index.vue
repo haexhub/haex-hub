@@ -23,7 +23,7 @@
           v-if="icon"
           :src="icon"
           :alt="title"
-          class="w-5 h-5 object-contain flex-shrink-0"
+          class="w-5 h-5 object-contain shrink-0"
         />
       </div>
 

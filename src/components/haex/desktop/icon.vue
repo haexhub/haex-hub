@@ -37,7 +37,7 @@
               :alt="label"
               class="w-14 h-14 object-contain transition-transform duration-200"
               :class="{ 'scale-110': isSelected }"
-            />
+            >
             <UIcon
               v-else
               name="i-heroicons-puzzle-piece-solid"

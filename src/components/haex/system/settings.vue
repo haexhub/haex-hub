@@ -33,7 +33,7 @@
         />
       </div>
 
-      <div class="h-full"></div>
+      <div class="h-full"/>
     </div>
   </div>
 </template>

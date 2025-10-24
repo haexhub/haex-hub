@@ -15,7 +15,7 @@
             type="checkbox"
             class="checkbox"
             :checked="Object.values(access).at(0)"
-          />
+          >
           <label
             class="label-text text-base"
             :for="Object.keys(access).at(0)"

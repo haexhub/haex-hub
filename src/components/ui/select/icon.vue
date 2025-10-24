@@ -2,8 +2,8 @@
   <UDropdownMenu
     :items="icons"
     class="btn"
-    @select="(newIcon) => (iconName = newIcon)"
     :read_only
+    @select="(newIcon) => (iconName = newIcon)"
   >
     <template #activator>
       <Icon :name="iconName ? iconName : defaultIcon || icons.at(0)" />
@@ -12,8 +12,8 @@
     <template #items="{ items }">
       <div class="grid grid-cols-6 -ml-2">
         <li
-          class="dropdown-item"
           v-for="item in items"
+          class="dropdown-item"
           @click="read_only ? '' : (iconName = item)"
         >
           <Icon

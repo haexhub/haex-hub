@@ -49,8 +49,7 @@
                   color="info"
                   size="xs"
                   :title="t('minimized')"
-                >
-                </UBadge>
+                />
               </div>
 
               <!-- Scaled Window Preview Container / Teleport Target -->

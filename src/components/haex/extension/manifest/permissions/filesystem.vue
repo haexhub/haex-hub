@@ -14,7 +14,7 @@
             type="checkbox"
             class="checkbox"
             :checked="Object.values(read).at(0)"
-          />
+          >
           <label
             class="label-text text-base"
             :for="Object.keys(read).at(0)"
@@ -41,7 +41,7 @@
             type="checkbox"
             class="checkbox"
             :checked="Object.values(write).at(0)"
-          />
+          >
           <label
             class="label-text text-base"
             :for="Object.keys(write).at(0)"

@@ -6,8 +6,8 @@
     <button
       :id
       class="advance-select-toogle flex justify-between grow p-3"
-      @click.prevent="toogleMenu"
       :disabled="read_only"
+      @click.prevent="toogleMenu"
     >
       <slot
         name="value"
@@ -18,9 +18,9 @@
       </slot>
     </button>
     <button
-      @click.prevent="toogleMenu"
       class="flex items-center p-2 hover:shadow rounded-md hover:bg-primary hover:text-base-content"
       :disabled="read_only"
+      @click.prevent="toogleMenu"
     >
       <i class="i-[material-symbols--keyboard-arrow-down] size-4" />
     </button>
