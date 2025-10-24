@@ -7,7 +7,7 @@
       'border border-gray-200 dark:border-gray-700 transition-all ease-out duration-600 ',
       'flex flex-col @container',
       { 'select-none': isResizingOrDragging },
-      isActive ? 'z-50' : 'z-10',
+      isActive ? 'z-100' : 'z-50',
     ]"
     @mousedown="handleActivate"
   >
@@ -95,10 +95,6 @@ const props = defineProps<{
   id: string
   title: string
   icon?: string | null
-  initialX?: number
-  initialY?: number
-  initialWidth?: number
-  initialHeight?: number
   isActive?: boolean
   sourceX?: number
   sourceY?: number
@@ -118,6 +114,12 @@ const emit = defineEmits<{
   dragEnd: []
 }>()
 
+// Use defineModel for x, y, width, height
+const x = defineModel<number>('x', { default: 100 })
+const y = defineModel<number>('y', { default: 100 })
+const width = defineModel<number>('width', { default: 800 })
+const height = defineModel<number>('height', { default: 600 })
+
 const windowEl = useTemplateRef('windowEl')
 const titlebarEl = useTemplateRef('titlebarEl')
 
@@ -126,20 +128,14 @@ const viewportSize = inject<{
   width: Ref<number>
   height: Ref<number>
 }>('viewportSize')
-
-// Window state
-const x = ref(props.initialX ?? 100)
-const y = ref(props.initialY ?? 100)
-const width = ref(props.initialWidth ?? 800)
-const height = ref(props.initialHeight ?? 600)
 const isMaximized = ref(false) // Don't start maximized
 
 // Store initial position/size for restore
 const preMaximizeState = ref({
-  x: props.initialX ?? 100,
-  y: props.initialY ?? 100,
-  width: props.initialWidth ?? 800,
-  height: props.initialHeight ?? 600,
+  x: x.value,
+  y: y.value,
+  width: width.value,
+  height: height.value,
 })
 
 // Dragging state
@@ -161,10 +157,6 @@ const isResizingOrDragging = computed(
   () => isResizing.value || isDragging.value,
 )
 
-// Snap settings
-const snapEdgeThreshold = 50 // pixels from edge to trigger snap
-const { x: mouseX } = useMouse()
-
 // Setup drag with useDrag composable (supports mouse + touch)
 useDrag(
   ({ movement: [mx, my], first, last }) => {
@@ -180,34 +172,8 @@ useDrag(
     }
 
     if (last) {
-      // Drag ended - apply snapping
+      // Drag ended
       isDragging.value = false
-
-      const viewportBounds = getViewportBounds()
-      if (viewportBounds) {
-        const viewportWidth = viewportBounds.width
-        const viewportHeight = viewportBounds.height
-
-        if (mouseX.value <= snapEdgeThreshold) {
-          // Snap to left half
-          x.value = 0
-          y.value = 0
-          width.value = viewportWidth / 2
-          height.value = viewportHeight
-          isMaximized.value = false
-        } else if (mouseX.value >= viewportWidth - snapEdgeThreshold) {
-          // Snap to right half
-          x.value = viewportWidth / 2
-          y.value = 0
-          width.value = viewportWidth / 2
-          height.value = viewportHeight
-          isMaximized.value = false
-        } else {
-          // Normal snap back to viewport
-          snapToViewport()
-        }
-      }
-
       globalThis.getSelection()?.removeAllRanges()
       emit('positionChanged', x.value, y.value)
       emit('sizeChanged', width.value, height.value)
@@ -229,7 +195,6 @@ useDrag(
     eventOptions: { passive: false },
     pointer: { touch: true },
     drag: {
-      threshold: 10, // 10px threshold prevents accidental drags and improves performance
       filterTaps: true, // Filter out taps (clicks) vs drags
       delay: 0, // No delay for immediate response
     },
@@ -265,22 +230,18 @@ const windowStyle = computed(() => {
     baseStyle.opacity = '0'
     baseStyle.transform = 'scale(0.3)'
   }
-  // Normal state
-  else if (isMaximized.value) {
-    baseStyle.left = '0px'
-    baseStyle.top = '0px'
-    baseStyle.width = '100%'
-    baseStyle.height = '100%'
-    baseStyle.borderRadius = '0'
-    baseStyle.opacity = '1'
-    //baseStyle.transform = 'scale(1)'
-  } else {
+  // Normal state (maximized windows now use actual pixel dimensions)
+  else {
     baseStyle.left = `${x.value}px`
     baseStyle.top = `${y.value}px`
     baseStyle.width = `${width.value}px`
     baseStyle.height = `${height.value}px`
     baseStyle.opacity = '1'
-    //baseStyle.transform = 'scale(1)'
+
+    // Remove border-radius when maximized
+    if (isMaximized.value) {
+      baseStyle.borderRadius = '0'
+    }
   }
 
   // Performance optimization: hint browser about transforms
@@ -318,52 +279,23 @@ const constrainToViewportDuringDrag = (newX: number, newY: number) => {
   const windowWidth = width.value
   const windowHeight = height.value
 
-  // Allow max 1/3 of window to go outside viewport during drag
+  // Allow sides and bottom to go out more
   const maxOffscreenX = windowWidth / 3
-  const maxOffscreenY = windowHeight / 3
+  const maxOffscreenBottom = windowHeight / 3
 
+  // For X axis: allow 1/3 to go outside on both sides
   const maxX = bounds.width - windowWidth + maxOffscreenX
   const minX = -maxOffscreenX
-  const maxY = bounds.height - windowHeight + maxOffscreenY
-  const minY = -maxOffscreenY
 
-  const constrainedX = Math.max(minX, Math.min(maxX, newX))
-  const constrainedY = Math.max(minY, Math.min(maxY, newY))
-
-  return { x: constrainedX, y: constrainedY }
-}
-
-const constrainToViewportFully = (
-  newX: number,
-  newY: number,
-  newWidth?: number,
-  newHeight?: number,
-) => {
-  const bounds = getViewportBounds()
-  if (!bounds) return { x: newX, y: newY }
-
-  const windowWidth = newWidth ?? width.value
-  const windowHeight = newHeight ?? height.value
-
-  // Keep entire window within viewport
-  const maxX = bounds.width - windowWidth
-  const minX = 0
-  const maxY = bounds.height - windowHeight
+  // For Y axis: HARD constraint at top (y=0), never allow window to go above header
   const minY = 0
+  // Bottom: allow 1/3 to go outside
+  const maxY = bounds.height - windowHeight + maxOffscreenBottom
 
   const constrainedX = Math.max(minX, Math.min(maxX, newX))
   const constrainedY = Math.max(minY, Math.min(maxY, newY))
 
   return { x: constrainedX, y: constrainedY }
-}
-
-const snapToViewport = () => {
-  const bounds = getViewportBounds()
-  if (!bounds) return
-
-  const constrained = constrainToViewportFully(x.value, y.value)
-  x.value = constrained.x
-  y.value = constrained.y
 }
 
 const handleActivate = () => {
@@ -387,14 +319,25 @@ const handleMaximize = () => {
     height.value = preMaximizeState.value.height
     isMaximized.value = false
   } else {
-    // Maximize
+    // Maximize - set position and size to viewport dimensions
     preMaximizeState.value = {
       x: x.value,
       y: y.value,
       width: width.value,
       height: height.value,
     }
-    isMaximized.value = true
+
+    // Get viewport bounds (desktop container, already excludes header)
+    const bounds = getViewportBounds()
+
+    if (bounds && bounds.width > 0 && bounds.height > 0) {
+      x.value = 0
+      y.value = 0
+      width.value = bounds.width
+      height.value = bounds.height
+      isMaximized.value = true
+    }
+    console.log('handleMaximize', preMaximizeState, bounds)
   }
 }
 
@@ -402,8 +345,30 @@ const handleMaximize = () => {
 const handleResizeStart = (direction: string, e: MouseEvent | TouchEvent) => {
   isResizing.value = true
   resizeDirection.value = direction
-  resizeStartX.value = e.clientX
-  resizeStartY.value = e.clientY
+  let clientX: number
+  let clientY: number
+
+  if ('touches' in e) {
+    // Es ist ein TouchEvent
+    const touch = e.touches[0] // Hole den ersten Touch
+
+    // Prüfe, ob 'touch' existiert (ist undefined, wenn e.touches leer ist)
+    if (touch) {
+      clientX = touch.clientX
+      clientY = touch.clientY
+    } else {
+      // Ungültiges Start-Event (kein Finger). Abbruch.
+      isResizing.value = false
+      return
+    }
+  } else {
+    // Es ist ein MouseEvent
+    clientX = e.clientX
+    clientY = e.clientY
+  }
+
+  resizeStartX.value = clientX
+  resizeStartY.value = clientY
   resizeStartWidth.value = width.value
   resizeStartHeight.value = height.value
   resizeStartPosX.value = x.value
@@ -445,9 +410,6 @@ useEventListener(window, 'mouseup', () => {
   if (isResizing.value) {
     globalThis.getSelection()?.removeAllRanges()
     isResizing.value = false
-
-    // Snap back to viewport after resize ends
-    snapToViewport()
 
     emit('positionChanged', x.value, y.value)
     emit('sizeChanged', width.value, height.value)

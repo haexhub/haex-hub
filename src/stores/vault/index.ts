@@ -136,6 +136,8 @@ const drizzleCallback = (async (
   params: unknown[],
   method: 'get' | 'run' | 'all' | 'values',
 ) => {
+  // Wir MÜSSEN 'any[]' verwenden, um Drizzle's Typ zu erfüllen.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let rows: any[] = []
 
   try {
@@ -179,7 +181,8 @@ const drizzleCallback = (async (
   console.log('drizzleCallback rows', rows)
 
   if (method === 'get') {
-    return rows.length > 0 ? { rows: rows[0] } : { rows }
+    return { rows: rows.slice(0, 1) }
+    //return rows.length > 0 ? { rows: rows[0] } : { rows }
   }
   return { rows }
 }) satisfies AsyncRemoteCallback

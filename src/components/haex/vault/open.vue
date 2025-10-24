@@ -155,8 +155,15 @@ const onOpenDatabase = async () => {
     )
   } catch (error) {
     open.value = false
-    console.error('handleError', error, typeof error)
-    add({ color: 'error', description: `${error}` })
+    if (error?.details?.reason === 'file is not a database') {
+      add({
+        color: 'error',
+        title: t('error.password.title'),
+        description: t('error.password.description'),
+      })
+    } else {
+      add({ color: 'error', description: JSON.stringify(error) })
+    }
   }
 }
 </script>
@@ -170,7 +177,9 @@ de:
     open: Vault öffnen
   description: Öffne eine vorhandene Vault
   error:
-    open: Vault konnte nicht geöffnet werden. \n Vermutlich ist das Passwort falsch
+    password:
+      title: Vault konnte nicht geöffnet werden
+      description: Bitte üperprüfe das Passwort
 
 en:
   open: Unlock
@@ -180,5 +189,7 @@ en:
   vault:
     open: Open Vault
   error:
-    open: Vault couldn't be opened. \n The password is probably wrong
+    password:
+      title: Vault couldn't be opened
+      description: Please check your password
 </i18n>

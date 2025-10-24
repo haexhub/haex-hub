@@ -10,7 +10,6 @@
       :initial-slide="currentWorkspaceIndex"
       :speed="300"
       :touch-angle="45"
-      :threshold="10"
       :no-swiping="true"
       no-swiping-class="no-swipe"
       :allow-touch-move="allowSwipe"
@@ -79,37 +78,95 @@
 
           <!-- Windows for this workspace -->
           <template
-            v-for="(window, index) in getWorkspaceWindows(workspace.id)"
+            v-for="window in getWorkspaceWindows(workspace.id)"
             :key="window.id"
           >
-            <!-- Wrapper for Overview Mode Click/Drag -->
+            <!-- Desktop container for when overview is closed -->
             <div
-              v-if="false"
-              :style="
-                getOverviewWindowGridStyle(
-                  index,
-                  getWorkspaceWindows(workspace.id).length,
-                )
-              "
-              class="absolute cursor-pointer group"
-              :draggable="true"
-              @dragstart="handleOverviewWindowDragStart($event, window.id)"
-              @dragend="handleOverviewWindowDragEnd"
-              @click="handleOverviewWindowClick(window.id)"
-            >
-              <!-- Overlay for click/drag events (prevents interaction with window content) -->
-              <div
-                class="absolute inset-0 z-[100] bg-transparent group-hover:ring-4 group-hover:ring-purple-500 rounded-xl transition-all"
-              />
+              :id="`desktop-container-${window.id}`"
+              class="absolute"
+            />
 
+            <!-- Window with dynamic teleport -->
+            <Teleport
+              :to="
+                windowManager.showWindowOverview
+                  ? `#window-preview-${window.id}`
+                  : `#desktop-container-${window.id}`
+              "
+            >
+              <template
+                v-if="
+                  windowManager.showWindowOverview &&
+                  overviewWindowState[window.id]
+                "
+              >
+                <div
+                  class="absolute origin-top-left"
+                  :style="{
+                    transform: `scale(${overviewWindowState[window.id]!.scale})`,
+                    width: `${overviewWindowState[window.id]!.width}px`,
+                    height: `${overviewWindowState[window.id]!.height}px`,
+                  }"
+                >
+                  <HaexWindow
+                    v-show="
+                      windowManager.showWindowOverview || !window.isMinimized
+                    "
+                    :id="window.id"
+                    :title="window.title"
+                    :icon="window.icon"
+                    v-model:x="overviewWindowState[window.id]!.x"
+                    v-model:y="overviewWindowState[window.id]!.y"
+                    v-model:width="overviewWindowState[window.id]!.width"
+                    v-model:height="overviewWindowState[window.id]!.height"
+                    :is-active="windowManager.isWindowActive(window.id)"
+                    :source-x="window.sourceX"
+                    :source-y="window.sourceY"
+                    :source-width="window.sourceWidth"
+                    :source-height="window.sourceHeight"
+                    :is-opening="window.isOpening"
+                    :is-closing="window.isClosing"
+                    class="no-swipe"
+                    @close="windowManager.closeWindow(window.id)"
+                    @minimize="windowManager.minimizeWindow(window.id)"
+                    @activate="windowManager.activateWindow(window.id)"
+                    @position-changed="
+                      (x, y) =>
+                        windowManager.updateWindowPosition(window.id, x, y)
+                    "
+                    @size-changed="
+                      (width, height) =>
+                        windowManager.updateWindowSize(window.id, width, height)
+                    "
+                    @drag-start="handleWindowDragStart(window.id)"
+                    @drag-end="handleWindowDragEnd"
+                  >
+                    <!-- System Window: Render Vue Component -->
+                    <component
+                      :is="getSystemWindowComponent(window.sourceId)"
+                      v-if="window.type === 'system'"
+                    />
+
+                    <!-- Extension Window: Render iFrame -->
+                    <HaexDesktopExtensionFrame
+                      v-else
+                      :extension-id="window.sourceId"
+                      :window-id="window.id"
+                    />
+                  </HaexWindow>
+                </div>
+              </template>
               <HaexWindow
+                v-else
+                v-show="windowManager.showWindowOverview || !window.isMinimized"
                 :id="window.id"
                 :title="window.title"
                 :icon="window.icon"
-                :initial-x="window.x"
-                :initial-y="window.y"
-                :initial-width="window.width"
-                :initial-height="window.height"
+                v-model:x="window.x"
+                v-model:y="window.y"
+                v-model:width="window.width"
+                v-model:height="window.height"
                 :is-active="windowManager.isWindowActive(window.id)"
                 :source-x="window.sourceX"
                 :source-y="window.sourceY"
@@ -117,7 +174,7 @@
                 :source-height="window.sourceHeight"
                 :is-opening="window.isOpening"
                 :is-closing="window.isClosing"
-                class="no-swipe pointer-events-none"
+                class="no-swipe"
                 @close="windowManager.closeWindow(window.id)"
                 @minimize="windowManager.minimizeWindow(window.id)"
                 @activate="windowManager.activateWindow(window.id)"
@@ -131,7 +188,6 @@
                 @drag-start="handleWindowDragStart(window.id)"
                 @drag-end="handleWindowDragEnd"
               >
-                {{ window }}
                 <!-- System Window: Render Vue Component -->
                 <component
                   :is="getSystemWindowComponent(window.sourceId)"
@@ -145,55 +201,14 @@
                   :window-id="window.id"
                 />
               </HaexWindow>
-            </div>
-
-            <!-- Normal Mode (non-overview) -->
-            <HaexWindow
-              :id="window.id"
-              :title="window.title"
-              :icon="window.icon"
-              :initial-x="window.x"
-              :initial-y="window.y"
-              :initial-width="window.width"
-              :initial-height="window.height"
-              :is-active="windowManager.isWindowActive(window.id)"
-              :source-x="window.sourceX"
-              :source-y="window.sourceY"
-              :source-width="window.sourceWidth"
-              :source-height="window.sourceHeight"
-              :is-opening="window.isOpening"
-              :is-closing="window.isClosing"
-              class="no-swipe"
-              @close="windowManager.closeWindow(window.id)"
-              @minimize="windowManager.minimizeWindow(window.id)"
-              @activate="windowManager.activateWindow(window.id)"
-              @position-changed="
-                (x, y) => windowManager.updateWindowPosition(window.id, x, y)
-              "
-              @size-changed="
-                (width, height) =>
-                  windowManager.updateWindowSize(window.id, width, height)
-              "
-              @drag-start="handleWindowDragStart(window.id)"
-              @drag-end="handleWindowDragEnd"
-            >
-              <!-- System Window: Render Vue Component -->
-              <component
-                :is="getSystemWindowComponent(window.sourceId)"
-                v-if="window.type === 'system'"
-              />
-
-              <!-- Extension Window: Render iFrame -->
-              <HaexDesktopExtensionFrame
-                v-else
-                :extension-id="window.sourceId"
-                :window-id="window.id"
-              />
-            </HaexWindow>
+            </Teleport>
           </template>
         </div>
       </SwiperSlide>
     </Swiper>
+
+    <!-- Window Overview Modal -->
+    <HaexWindowOverview />
 
     <!-- Workspace Drawer -->
     <UDrawer
@@ -202,8 +217,6 @@
       :dismissible="false"
       :overlay="false"
       :modal="false"
-      should-scale-background
-      set-background-color-on-scale
       title="Workspaces"
       description="Workspaces"
     >
@@ -252,17 +265,12 @@ import type { Swiper as SwiperType } from 'swiper'
 import 'swiper/css'
 import 'swiper/css/navigation'
 
-import { eq } from 'drizzle-orm'
-import { haexDesktopItems } from '~~/src-tauri/database/schemas'
-
 const SwiperNavigation = Navigation
 
 const desktopStore = useDesktopStore()
 const extensionsStore = useExtensionsStore()
 const windowManager = useWindowManagerStore()
 const workspaceStore = useWorkspaceStore()
-
-const { currentVault } = storeToRefs(useVaultStore())
 const { desktopItems } = storeToRefs(desktopStore)
 const { availableExtensions } = storeToRefs(extensionsStore)
 const {
@@ -315,7 +323,6 @@ const currentDraggedReferenceId = ref<string>()
 
 // Window drag state for snap zones
 const isWindowDragging = ref(false)
-const currentDraggingWindowId = ref<string | null>(null)
 const snapEdgeThreshold = 50 // pixels from edge to show snap zone
 
 // Computed visibility for snap zones (uses mouseX from above)
@@ -328,27 +335,6 @@ const showRightSnapZone = computed(() => {
   const viewportWidth = window.innerWidth
   return mouseX.value >= viewportWidth - snapEdgeThreshold
 })
-
-// Dropzone refs
-/* const removeDropzoneEl = ref<HTMLElement>()
-const uninstallDropzoneEl = ref<HTMLElement>() */
-
-// Setup dropzones with VueUse
-/* const { isOverDropZone: isOverRemoveZone } = useDropZone(removeDropzoneEl, {
-  onDrop: () => {
-    if (currentDraggedItemId.value) {
-      handleRemoveFromDesktop(currentDraggedItemId.value)
-    }
-  },
-}) */
-
-/* const { isOverDropZone: isOverUninstallZone } = useDropZone(uninstallDropzoneEl, {
-  onDrop: () => {
-    if (currentDraggedItemType.value && currentDraggedReferenceId.value) {
-      handleUninstall(currentDraggedItemType.value, currentDraggedReferenceId.value)
-    }
-  },
-}) */
 
 // Get icons for a specific workspace
 const getWorkspaceIcons = (workspaceId: string) => {
@@ -393,11 +379,9 @@ const getWorkspaceIcons = (workspaceId: string) => {
     })
 }
 
-// Get windows for a specific workspace
+// Get windows for a specific workspace (including minimized for teleport)
 const getWorkspaceWindows = (workspaceId: string) => {
-  return windowManager.windows.filter(
-    (w) => w.workspaceId === workspaceId && !w.isMinimized,
-  )
+  return windowManager.windows.filter((w) => w.workspaceId === workspaceId)
 }
 
 // Get Vue Component for system window
@@ -431,29 +415,6 @@ const handleDragEnd = async () => {
   allowSwipe.value = true // Re-enable Swiper after drag
 }
 
-// Move desktop item to different workspace
-const moveItemToWorkspace = async (
-  itemId: string,
-  targetWorkspaceId: string,
-) => {
-  const item = desktopItems.value.find((i) => i.id === itemId)
-  if (!item) return
-
-  try {
-    if (!currentVault.value?.drizzle) return
-
-    await currentVault.value.drizzle
-      .update(haexDesktopItems)
-      .set({ workspaceId: targetWorkspaceId })
-      .where(eq(haexDesktopItems.id, itemId))
-
-    // Update local state
-    item.workspaceId = targetWorkspaceId
-  } catch (error) {
-    console.error('Fehler beim Verschieben des Items:', error)
-  }
-}
-
 const handleDesktopClick = () => {
   // Only clear selection if it was a simple click, not an area selection
   // Check if we just finished an area selection (box size > threshold)
@@ -470,28 +431,21 @@ const handleDesktopClick = () => {
 }
 
 const handleWindowDragStart = (windowId: string) => {
+  console.log('[Desktop] handleWindowDragStart:', windowId)
   isWindowDragging.value = true
-  currentDraggingWindowId.value = windowId
+  windowManager.draggingWindowId = windowId // Set in store for workspace cards
+  console.log(
+    '[Desktop] draggingWindowId set to:',
+    windowManager.draggingWindowId,
+  )
   allowSwipe.value = false // Disable Swiper during window drag
 }
 
 const handleWindowDragEnd = async () => {
-  // Window handles snapping itself, we just need to cleanup state
+  console.log('[Desktop] handleWindowDragEnd')
   isWindowDragging.value = false
-  currentDraggingWindowId.value = null
+  windowManager.draggingWindowId = null // Clear from store
   allowSwipe.value = true // Re-enable Swiper after drag
-}
-
-// Move window to different workspace
-const moveWindowToWorkspace = async (
-  windowId: string,
-  targetWorkspaceId: string,
-) => {
-  const window = windowManager.windows.find((w) => w.id === windowId)
-  if (!window) return
-
-  // Update window's workspaceId
-  window.workspaceId = targetWorkspaceId
 }
 
 // Area selection handlers
@@ -579,13 +533,7 @@ const handleAddWorkspace = async () => {
   })
 }
 
-const handleSwitchToWorkspace = (index: number) => {
-  if (swiperInstance.value) {
-    swiperInstance.value.slideTo(index)
-  }
-}
-
-const handleRemoveWorkspace = async () => {
+/* const handleRemoveWorkspace = async () => {
   if (!currentWorkspace.value || workspaces.value.length <= 1) return
 
   const currentIndex = currentWorkspaceIndex.value
@@ -600,13 +548,6 @@ const handleRemoveWorkspace = async () => {
   })
 }
 
-// Drawer handlers
-const handleSwitchToWorkspaceFromDrawer = (index: number) => {
-  handleSwitchToWorkspace(index)
-  // Close drawer after switch
-  isOverviewMode.value = false
-}
-
 const handleDropWindowOnWorkspace = async (
   event: DragEvent,
   targetWorkspaceId: string,
@@ -616,116 +557,58 @@ const handleDropWindowOnWorkspace = async (
   if (windowId) {
     await moveWindowToWorkspace(windowId, targetWorkspaceId)
   }
-}
+} */
 
 // Overview Mode: Calculate grid positions and scale for windows
-const getOverviewWindowGridStyle = (index: number, totalWindows: number) => {
-  if (!viewportWidth.value || !viewportHeight.value) {
-    return {}
-  }
+// Calculate preview dimensions for window overview
+const MIN_PREVIEW_WIDTH = 300 // 50% increase from 200
+const MAX_PREVIEW_WIDTH = 600 // 50% increase from 400
+const MIN_PREVIEW_HEIGHT = 225 // 50% increase from 150
+const MAX_PREVIEW_HEIGHT = 450 // 50% increase from 300
 
-  // Determine grid layout based on number of windows
-  let cols = 1
-  let rows = 1
+// Store window state for overview (position only, size stays original)
+const overviewWindowState = reactive<
+  Record<
+    string,
+    { x: number; y: number; width: number; height: number; scale: number }
+  >
+>({})
 
-  if (totalWindows === 1) {
-    cols = 1
-    rows = 1
-  } else if (totalWindows === 2) {
-    cols = 2
-    rows = 1
-  } else if (totalWindows <= 4) {
-    cols = 2
-    rows = 2
-  } else if (totalWindows <= 6) {
-    cols = 3
-    rows = 2
-  } else if (totalWindows <= 9) {
-    cols = 3
-    rows = 3
-  } else {
-    cols = 4
-    rows = Math.ceil(totalWindows / 4)
-  }
+// Calculate scale and card dimensions for each window
+watch(
+  () => windowManager.showWindowOverview,
+  (isOpen) => {
+    if (isOpen) {
+      // Calculate scale for each window
+      windowManager.windows.forEach((window) => {
+        const scaleX = MAX_PREVIEW_WIDTH / window.width
+        const scaleY = MAX_PREVIEW_HEIGHT / window.height
+        const scale = Math.min(scaleX, scaleY, 1) // Never scale up, only down
 
-  // Calculate grid cell position
-  const col = index % cols
-  const row = Math.floor(index / cols)
+        // Ensure minimum card size
+        const scaledWidth = window.width * scale
+        const scaledHeight = window.height * scale
 
-  // Padding and gap
-  const padding = 40 // px from viewport edges
-  const gap = 30 // px between windows
+        let finalScale = scale
+        if (scaledWidth < MIN_PREVIEW_WIDTH) {
+          finalScale = MIN_PREVIEW_WIDTH / window.width
+        }
+        if (scaledHeight < MIN_PREVIEW_HEIGHT) {
+          finalScale = Math.max(finalScale, MIN_PREVIEW_HEIGHT / window.height)
+        }
 
-  // Available space
-  const availableWidth = viewportWidth.value - padding * 2 - gap * (cols - 1)
-  const availableHeight = viewportHeight.value - padding * 2 - gap * (rows - 1)
-
-  // Cell dimensions
-  const cellWidth = availableWidth / cols
-  const cellHeight = availableHeight / rows
-
-  // Window aspect ratio (assume 16:9 or use actual window dimensions)
-  const windowAspectRatio = 16 / 9
-
-  // Calculate scale to fit window in cell
-  const targetWidth = cellWidth
-  const targetHeight = cellHeight
-  const targetAspect = targetWidth / targetHeight
-
-  let scale = 0.25 // Default scale
-  let scaledWidth = 800 * scale
-  let scaledHeight = 600 * scale
-
-  if (targetAspect > windowAspectRatio) {
-    // Cell is wider than window aspect ratio - fit by height
-    scaledHeight = Math.min(targetHeight, 600 * 0.4)
-    scale = scaledHeight / 600
-    scaledWidth = 800 * scale
-  } else {
-    // Cell is taller than window aspect ratio - fit by width
-    scaledWidth = Math.min(targetWidth, 800 * 0.4)
-    scale = scaledWidth / 800
-    scaledHeight = 600 * scale
-  }
-
-  // Calculate position to center window in cell
-  const cellX = padding + col * (cellWidth + gap)
-  const cellY = padding + row * (cellHeight + gap)
-
-  // Center window in cell
-  const x = cellX + (cellWidth - scaledWidth) / 2
-  const y = cellY + (cellHeight - scaledHeight) / 2
-
-  return {
-    transform: `scale(${scale})`,
-    transformOrigin: 'top left',
-    left: `${x / scale}px`,
-    top: `${y / scale}px`,
-    width: '800px',
-    height: '600px',
-    zIndex: 91,
-    transition: 'all 0.3s ease',
-  }
-}
-
-// Overview Mode handlers
-const handleOverviewWindowClick = (windowId: string) => {
-  // Activate the window
-  windowManager.activateWindow(windowId)
-  // Close overview mode
-  isOverviewMode.value = false
-}
-
-const handleOverviewWindowDragStart = (event: DragEvent, windowId: string) => {
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('windowId', windowId)
-  }
-}
-
-const handleOverviewWindowDragEnd = () => {
-  // Cleanup after drag
-}
+        overviewWindowState[window.id] = {
+          x: 0,
+          y: 0,
+          width: window.width, // Keep original width
+          height: window.height, // Keep original height
+          scale: finalScale, // Store the scale factor
+        }
+      })
+    }
+  },
+  { immediate: true },
+)
 
 // Disable Swiper in overview mode
 watch(isOverviewMode, (newValue) => {

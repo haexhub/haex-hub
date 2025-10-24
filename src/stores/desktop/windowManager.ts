@@ -39,6 +39,15 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
   const activeWindowId = ref<string | null>(null)
   const nextZIndex = ref(100)
 
+  // Window Overview State
+  const showWindowOverview = ref(false)
+
+  // Computed: Count of all open windows (including minimized)
+  const openWindowsCount = computed(() => windows.value.length)
+
+  // Window Dragging State (for drag & drop to workspaces)
+  const draggingWindowId = ref<string | null>(null)
+
   // System Windows Registry
   const systemWindows: Record<string, SystemWindowDefinition> = {
     developer: {
@@ -332,6 +341,7 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
     activeWindowId,
     closeWindow,
     currentWorkspaceWindows,
+    draggingWindowId,
     getAllSystemWindows,
     getMinimizedWindows,
     getSystemWindow,
@@ -340,7 +350,9 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
     minimizeWindow,
     moveWindowsToWorkspace,
     openWindowAsync,
+    openWindowsCount,
     restoreWindow,
+    showWindowOverview,
     updateWindowPosition,
     updateWindowSize,
     windowAnimationDuration,

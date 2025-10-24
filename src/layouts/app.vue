@@ -37,6 +37,22 @@
             size="lg"
           >
           </UButton>
+          <UButton
+            color="neutral"
+            variant="outline"
+            :block="isSmallScreen"
+            @click="showWindowOverview = !showWindowOverview"
+            icon="i-heroicons-squares-2x2"
+            size="lg"
+          >
+            <template #trailing v-if="openWindowsCount > 0">
+              <UBadge
+                :label="openWindowsCount.toString()"
+                color="primary"
+                size="xs"
+              />
+            </template>
+          </UButton>
           <HaexExtensionLauncher :block="isSmallScreen" />
         </template>
       </UPageHeader>
@@ -54,6 +70,10 @@ const { currentVaultName } = storeToRefs(useVaultStore())
 const { isSmallScreen } = storeToRefs(useUiStore())
 
 const { isOverviewMode } = storeToRefs(useWorkspaceStore())
+
+const { showWindowOverview, openWindowsCount } = storeToRefs(
+  useWindowManagerStore(),
+)
 </script>
 
 <i18n lang="yaml">

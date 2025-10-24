@@ -437,6 +437,17 @@ impl ExtensionManager {
             &extracted.manifest.version,
         )?;
 
+        // If extension version already exists, remove it completely before installing
+        if extensions_dir.exists() {
+            eprintln!(
+                "Extension version already exists at {}, removing old version",
+                extensions_dir.display()
+            );
+            std::fs::remove_dir_all(&extensions_dir).map_err(|e| {
+                ExtensionError::filesystem_with_path(extensions_dir.display().to_string(), e)
+            })?;
+        }
+
         std::fs::create_dir_all(&extensions_dir).map_err(|e| {
             ExtensionError::filesystem_with_path(extensions_dir.display().to_string(), e)
         })?;
