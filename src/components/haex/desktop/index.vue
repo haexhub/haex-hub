@@ -90,7 +90,8 @@
             <!-- Window with dynamic teleport -->
             <Teleport
               :to="
-                windowManager.showWindowOverview
+                windowManager.showWindowOverview &&
+                overviewWindowState.has(window.id)
                   ? `#window-preview-${window.id}`
                   : `#desktop-container-${window.id}`
               "
@@ -98,15 +99,15 @@
               <template
                 v-if="
                   windowManager.showWindowOverview &&
-                  overviewWindowState[window.id]
+                  overviewWindowState.has(window.id)
                 "
               >
                 <div
                   class="absolute origin-top-left"
                   :style="{
-                    transform: `scale(${overviewWindowState[window.id]!.scale})`,
-                    width: `${overviewWindowState[window.id]!.width}px`,
-                    height: `${overviewWindowState[window.id]!.height}px`,
+                    transform: `scale(${overviewWindowState.get(window.id)!.scale})`,
+                    width: `${overviewWindowState.get(window.id)!.width}px`,
+                    height: `${overviewWindowState.get(window.id)!.height}px`,
                   }"
                 >
                   <HaexWindow
@@ -116,10 +117,10 @@
                     :id="window.id"
                     :title="window.title"
                     :icon="window.icon"
-                    v-model:x="overviewWindowState[window.id]!.x"
-                    v-model:y="overviewWindowState[window.id]!.y"
-                    v-model:width="overviewWindowState[window.id]!.width"
-                    v-model:height="overviewWindowState[window.id]!.height"
+                    v-model:x="overviewWindowState.get(window.id)!.x"
+                    v-model:y="overviewWindowState.get(window.id)!.y"
+                    v-model:width="overviewWindowState.get(window.id)!.width"
+                    v-model:height="overviewWindowState.get(window.id)!.height"
                     :is-active="windowManager.isWindowActive(window.id)"
                     :source-x="window.sourceX"
                     :source-y="window.sourceY"
@@ -567,47 +568,48 @@ const MIN_PREVIEW_HEIGHT = 225 // 50% increase from 150
 const MAX_PREVIEW_HEIGHT = 450 // 50% increase from 300
 
 // Store window state for overview (position only, size stays original)
-const overviewWindowState = reactive<
-  Record<
-    string,
-    { x: number; y: number; width: number; height: number; scale: number }
-  >
->({})
+const overviewWindowState = ref(
+  new Map<string, { x: number; y: number; width: number; height: number; scale: number }>(),
+)
 
 // Calculate scale and card dimensions for each window
 watch(
   () => windowManager.showWindowOverview,
   (isOpen) => {
     if (isOpen) {
-      // Calculate scale for each window
-      windowManager.windows.forEach((window) => {
-        const scaleX = MAX_PREVIEW_WIDTH / window.width
-        const scaleY = MAX_PREVIEW_HEIGHT / window.height
-        const scale = Math.min(scaleX, scaleY, 1) // Never scale up, only down
+      // Wait for the Overview modal to mount and create the teleport targets
+      nextTick(() => {
+        windowManager.windows.forEach((window) => {
+          const scaleX = MAX_PREVIEW_WIDTH / window.width
+          const scaleY = MAX_PREVIEW_HEIGHT / window.height
+          const scale = Math.min(scaleX, scaleY, 1)
 
-        // Ensure minimum card size
-        const scaledWidth = window.width * scale
-        const scaledHeight = window.height * scale
+          // Ensure minimum card size
+          const scaledWidth = window.width * scale
+          const scaledHeight = window.height * scale
 
-        let finalScale = scale
-        if (scaledWidth < MIN_PREVIEW_WIDTH) {
-          finalScale = MIN_PREVIEW_WIDTH / window.width
-        }
-        if (scaledHeight < MIN_PREVIEW_HEIGHT) {
-          finalScale = Math.max(finalScale, MIN_PREVIEW_HEIGHT / window.height)
-        }
+          let finalScale = scale
+          if (scaledWidth < MIN_PREVIEW_WIDTH) {
+            finalScale = MIN_PREVIEW_WIDTH / window.width
+          }
+          if (scaledHeight < MIN_PREVIEW_HEIGHT) {
+            finalScale = Math.max(finalScale, MIN_PREVIEW_HEIGHT / window.height)
+          }
 
-        overviewWindowState[window.id] = {
-          x: 0,
-          y: 0,
-          width: window.width, // Keep original width
-          height: window.height, // Keep original height
-          scale: finalScale, // Store the scale factor
-        }
+          overviewWindowState.value.set(window.id, {
+            x: 0,
+            y: 0,
+            width: window.width,
+            height: window.height,
+            scale: finalScale,
+          })
+        })
       })
+    } else {
+      // Clear state when overview is closed
+      overviewWindowState.value.clear()
     }
   },
-  { immediate: true },
 )
 
 // Disable Swiper in overview mode

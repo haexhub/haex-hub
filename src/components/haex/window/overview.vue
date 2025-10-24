@@ -1,20 +1,20 @@
 <template>
   <UModal
     v-model:open="localShowWindowOverview"
-    title=""
+    :title="t('modal.title')"
+    :description="t('modal.description')"
     fullscreen
   >
     <template #content>
       <div class="flex flex-col h-full">
         <!-- Header -->
         <div
-          class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700"
+          class="flex items-center justify-end border-b p-2 border-gray-200 dark:border-gray-700"
         >
-          <h3 class="text-2xl font-bold">Window Overview</h3>
           <UButton
             icon="i-heroicons-x-mark"
-            color="neutral"
-            variant="ghost"
+            color="error"
+            variant="soft"
             @click="localShowWindowOverview = false"
           />
         </div>
@@ -48,15 +48,15 @@
                   v-if="window.isMinimized"
                   color="info"
                   size="xs"
+                  :title="t('minimized')"
                 >
-                  Minimized
                 </UBadge>
               </div>
 
               <!-- Scaled Window Preview Container / Teleport Target -->
               <div
                 :id="`window-preview-${window.id}`"
-                class="relative bg-gray-100 dark:bg-gray-900 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700 group-hover:border-primary-500 transition-all shadow-lg"
+                class="relative bg-gray-100 dark:bg-gray-900 rounded-xl overflow-hidden border-2 border-gray-200 dark:border-gray-700 group-hover:border-primary-500 transition-all shadow-lg"
                 :style="getCardStyle(window)"
                 @click="handleRestoreAndActivateWindow(window.id)"
               >
@@ -75,7 +75,7 @@
           >
             <UIcon
               name="i-heroicons-window"
-              class="size-16 mb-4"
+              class="size-16 mb-4 shrink-0"
             />
             <p class="text-lg font-medium">No windows open</p>
             <p class="text-sm">
@@ -89,6 +89,8 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useI18n()
+
 const windowManager = useWindowManagerStore()
 const workspaceStore = useWorkspaceStore()
 
@@ -217,3 +219,19 @@ watch(
   },
 )
 </script>
+
+<i18n lang="yaml">
+de:
+  modal:
+    title: Fensterübersicht
+    description: Übersicht aller offenen Fenster auf allen Workspaces
+
+  minimized: Minimiert
+
+en:
+  modal:
+    title: Window Overview
+    description: Overview of all open windows on all workspaces
+
+  minimized: Minimized
+</i18n>

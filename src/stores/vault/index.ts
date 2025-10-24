@@ -178,11 +178,10 @@ const drizzleCallback = (async (
   }
 
   console.log('drizzleCallback', method, sql, params)
-  console.log('drizzleCallback rows', rows)
+  console.log('drizzleCallback rows', rows, rows.slice(0, 1))
 
   if (method === 'get') {
-    return { rows: rows.slice(0, 1) }
-    //return rows.length > 0 ? { rows: rows[0] } : { rows }
+    return rows.length > 0 ? { rows: rows.at(0) } : { rows }
   }
   return { rows }
 }) satisfies AsyncRemoteCallback

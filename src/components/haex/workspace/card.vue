@@ -1,7 +1,7 @@
 <template>
   <UCard
     ref="cardEl"
-    class="cursor-pointer transition-all h-32 w-72 shrink-0 group duration-500"
+    class="cursor-pointer transition-all h-32 w-72 shrink-0 group duration-500 rounded-lg"
     :class="[
       workspace.id === currentWorkspace?.id
         ? 'ring-2 ring-secondary bg-secondary/10'

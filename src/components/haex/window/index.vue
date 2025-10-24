@@ -3,7 +3,7 @@
     ref="windowEl"
     :style="windowStyle"
     :class="[
-      'absolute bg-default/80 backdrop-blur-xl rounded-xl shadow-2xl overflow-hidden isolate',
+      'absolute bg-default/80 backdrop-blur-xl rounded-lg shadow-xl overflow-hidden isolate',
       'border border-gray-200 dark:border-gray-700 transition-all ease-out duration-600 ',
       'flex flex-col @container',
       { 'select-none': isResizingOrDragging },
