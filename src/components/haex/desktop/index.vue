@@ -41,18 +41,17 @@
           />
 
           <!-- Snap Dropzones (only visible when window drag near edge) -->
-          <Transition name="fade">
-            <div
-              v-if="showLeftSnapZone"
-              class="absolute left-0 top-0 bottom-0 w-1/2 bg-blue-500/20 border-2 border-blue-500 pointer-events-none backdrop-blur-sm z-40"
-            />
-          </Transition>
-          <Transition name="fade">
-            <div
-              v-if="showRightSnapZone"
-              class="absolute right-0 top-0 bottom-0 w-1/2 bg-blue-500/20 border-2 border-blue-500 pointer-events-none backdrop-blur-sm z-40"
-            />
-          </Transition>
+
+          <div
+            class="absolute left-0 top-0 bottom-0 border-blue-500 pointer-events-none backdrop-blur-sm z-40 transition-all duration-500"
+            :class="showLeftSnapZone ? 'w-1/2 bg-blue-500/20 border-2' : 'w-0'"
+          />
+
+          <div
+            class="absolute right-0 top-0 bottom-0 border-blue-500 pointer-events-none backdrop-blur-sm z-40 transition-all duration-500 ease-in-out"
+            :class="showRightSnapZone ? 'w-1/2 bg-blue-500/20 border-2' : 'w-0'"
+          />
+          <!--  </Transition> -->
 
           <!-- Area Selection Box -->
           <div
@@ -494,6 +493,34 @@ const handleWindowDragStart = (windowId: string) => {
 
 const handleWindowDragEnd = async () => {
   console.log('[Desktop] handleWindowDragEnd')
+
+  // Check if window should snap to left or right
+  const draggingWindowId = windowManager.draggingWindowId
+
+  if (draggingWindowId) {
+    if (showLeftSnapZone.value) {
+      // Snap to left half
+      windowManager.updateWindowPosition(draggingWindowId, 0, 0)
+      windowManager.updateWindowSize(
+        draggingWindowId,
+        viewportWidth.value / 2,
+        viewportHeight.value,
+      )
+    } else if (showRightSnapZone.value) {
+      // Snap to right half
+      windowManager.updateWindowPosition(
+        draggingWindowId,
+        viewportWidth.value / 2,
+        0,
+      )
+      windowManager.updateWindowSize(
+        draggingWindowId,
+        viewportWidth.value / 2,
+        viewportHeight.value,
+      )
+    }
+  }
+
   isWindowDragging.value = false
   windowManager.draggingWindowId = null // Clear from store
   allowSwipe.value = true // Re-enable Swiper after drag

@@ -8,7 +8,7 @@
   >
     <div class="flex items-start gap-4">
       <!-- Icon -->
-      <div class="flex-shrink-0">
+      <div class="shrink-0">
         <div
           v-if="extension.icon"
           class="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center"

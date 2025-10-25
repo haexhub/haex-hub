@@ -80,7 +80,8 @@
         "id": "id",
         "workspaceId": "workspace_id",
         "itemType": "item_type",
-        "referenceId": "reference_id",
+        "extensionId": "extension_id",
+        "systemWindowId": "system_window_id",
         "positionX": "position_x",
         "positionY": "position_y",
 

@@ -12,6 +12,7 @@ export type DesktopItemType = 'extension' | 'file' | 'folder' | 'system'
 export interface IDesktopItem extends SelectHaexDesktopItems {
   label?: string
   icon?: string
+  referenceId: string // Computed: extensionId or systemWindowId
 }
 
 export const useDesktopStore = defineStore('desktopStore', () => {
@@ -45,7 +46,10 @@ export const useDesktopStore = defineStore('desktopStore', () => {
         .from(haexDesktopItems)
         .where(eq(haexDesktopItems.workspaceId, currentWorkspace.value.id))
 
-      desktopItems.value = items
+      desktopItems.value = items.map(item => ({
+        ...item,
+        referenceId: item.itemType === 'extension' ? item.extensionId! : item.systemWindowId!,
+      }))
     } catch (error) {
       console.error('Fehler beim Laden der Desktop-Items:', error)
       throw error
@@ -72,7 +76,8 @@ export const useDesktopStore = defineStore('desktopStore', () => {
       const newItem: InsertHaexDesktopItems = {
         workspaceId: targetWorkspaceId,
         itemType: itemType,
-        referenceId: referenceId,
+        extensionId: itemType === 'extension' ? referenceId : null,
+        systemWindowId: itemType === 'system' || itemType === 'file' || itemType === 'folder' ? referenceId : null,
         positionX: positionX,
         positionY: positionY,
       }
@@ -83,8 +88,12 @@ export const useDesktopStore = defineStore('desktopStore', () => {
         .returning()
 
       if (result.length > 0 && result[0]) {
-        desktopItems.value.push(result[0])
-        return result[0]
+        const itemWithRef = {
+          ...result[0],
+          referenceId: itemType === 'extension' ? result[0].extensionId! : result[0].systemWindowId!,
+        }
+        desktopItems.value.push(itemWithRef)
+        return itemWithRef
       }
     } catch (error) {
       console.error('Fehler beim Hinzufügen des Desktop-Items:', {
@@ -126,7 +135,11 @@ export const useDesktopStore = defineStore('desktopStore', () => {
       if (result.length > 0 && result[0]) {
         const index = desktopItems.value.findIndex((item) => item.id === id)
         if (index !== -1) {
-          desktopItems.value[index] = result[0]
+          const item = result[0]
+          desktopItems.value[index] = {
+            ...item,
+            referenceId: item.itemType === 'extension' ? item.extensionId! : item.systemWindowId!,
+          }
         }
       }
     } catch (error) {
@@ -159,7 +172,14 @@ export const useDesktopStore = defineStore('desktopStore', () => {
     referenceId: string,
   ) => {
     return desktopItems.value.find(
-      (item) => item.itemType === itemType && item.referenceId === referenceId,
+      (item) => {
+        if (item.itemType !== itemType) return false
+        if (itemType === 'extension') {
+          return item.extensionId === referenceId
+        } else {
+          return item.systemWindowId === referenceId
+        }
+      },
     )
   }
 

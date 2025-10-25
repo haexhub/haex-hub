@@ -28,11 +28,14 @@ CREATE TABLE `haex_desktop_items` (
 	`id` text PRIMARY KEY NOT NULL,
 	`workspace_id` text NOT NULL,
 	`item_type` text NOT NULL,
-	`reference_id` text NOT NULL,
+	`extension_id` text,
+	`system_window_id` text,
 	`position_x` integer DEFAULT 0 NOT NULL,
 	`position_y` integer DEFAULT 0 NOT NULL,
 	`haex_timestamp` text,
-	FOREIGN KEY (`workspace_id`) REFERENCES `haex_workspaces`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`workspace_id`) REFERENCES `haex_workspaces`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`extension_id`) REFERENCES `haex_extensions`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "item_reference" CHECK(("haex_desktop_items"."item_type" = 'extension' AND "haex_desktop_items"."extension_id" IS NOT NULL AND "haex_desktop_items"."system_window_id" IS NULL) OR ("haex_desktop_items"."item_type" = 'system' AND "haex_desktop_items"."system_window_id" IS NOT NULL AND "haex_desktop_items"."extension_id" IS NULL) OR ("haex_desktop_items"."item_type" = 'file' AND "haex_desktop_items"."system_window_id" IS NOT NULL AND "haex_desktop_items"."extension_id" IS NULL) OR ("haex_desktop_items"."item_type" = 'folder' AND "haex_desktop_items"."system_window_id" IS NOT NULL AND "haex_desktop_items"."extension_id" IS NULL))
 );
 --> statement-breakpoint
 CREATE TABLE `haex_extension_permissions` (

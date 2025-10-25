@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import {
+  check,
   integer,
   sqliteTable,
   text,
@@ -158,9 +159,13 @@ export const haexDesktopItems = sqliteTable(
       itemType: text(tableNames.haex.desktop_items.columns.itemType, {
         enum: ['system', 'extension', 'file', 'folder'],
       }).notNull(),
-      referenceId: text(
-        tableNames.haex.desktop_items.columns.referenceId,
-      ).notNull(), // systemId für system windows, extensionId für extensions, filePath für files/folders
+      // Für Extensions (wenn itemType = 'extension')
+      extensionId: text(tableNames.haex.desktop_items.columns.extensionId)
+        .references((): AnySQLiteColumn => haexExtensions.id, {
+          onDelete: 'cascade',
+        }),
+      // Für System Windows (wenn itemType = 'system')
+      systemWindowId: text(tableNames.haex.desktop_items.columns.systemWindowId),
       positionX: integer(tableNames.haex.desktop_items.columns.positionX)
         .notNull()
         .default(0),
@@ -170,6 +175,12 @@ export const haexDesktopItems = sqliteTable(
     },
     tableNames.haex.desktop_items.columns,
   ),
+  (table) => [
+    check(
+      'item_reference',
+      sql`(${table.itemType} = 'extension' AND ${table.extensionId} IS NOT NULL AND ${table.systemWindowId} IS NULL) OR (${table.itemType} = 'system' AND ${table.systemWindowId} IS NOT NULL AND ${table.extensionId} IS NULL) OR (${table.itemType} = 'file' AND ${table.systemWindowId} IS NOT NULL AND ${table.extensionId} IS NULL) OR (${table.itemType} = 'folder' AND ${table.systemWindowId} IS NOT NULL AND ${table.extensionId} IS NULL)`,
+    ),
+  ],
 )
 export type InsertHaexDesktopItems = typeof haexDesktopItems.$inferInsert
 export type SelectHaexDesktopItems = typeof haexDesktopItems.$inferSelect

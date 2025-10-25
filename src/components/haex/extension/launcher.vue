@@ -55,15 +55,33 @@
       </ul>
     </template>
   </UPopover>
+
+  <!-- Uninstall Confirmation Dialog -->
+  <UiDialogConfirm
+    v-model:open="showUninstallDialog"
+    :title="t('uninstall.confirm.title')"
+    :description="t('uninstall.confirm.description', { name: extensionToUninstall?.name || '' })"
+    :confirm-label="t('uninstall.confirm.button')"
+    confirm-icon="i-heroicons-trash"
+    @confirm="confirmUninstall"
+  />
 </template>
 
 <script setup lang="ts">
+defineOptions({
+  inheritAttrs: false,
+})
+
 const extensionStore = useExtensionsStore()
 const windowManagerStore = useWindowManagerStore()
 
 const { t } = useI18n()
 
 const open = ref(false)
+
+// Uninstall dialog state
+const showUninstallDialog = ref(false)
+const extensionToUninstall = ref<LauncherItem | null>(null)
 
 // Unified launcher item type
 interface LauncherItem {
@@ -127,17 +145,44 @@ const openItem = async (item: LauncherItem) => {
   }
 }
 
-// Uninstall extension
+// Uninstall extension - shows confirmation dialog first
 const uninstallExtension = async (item: LauncherItem) => {
+  extensionToUninstall.value = item
+  showUninstallDialog.value = true
+}
+
+// Confirm uninstall - actually removes the extension
+const confirmUninstall = async () => {
+  if (!extensionToUninstall.value) return
+
   try {
-    const extension = extensionStore.availableExtensions.find(ext => ext.id === item.id)
+    const extension = extensionStore.availableExtensions.find(
+      (ext) => ext.id === extensionToUninstall.value!.id,
+    )
     if (!extension) return
 
+    // Close all windows of this extension first
+    const extensionWindows = windowManagerStore.windows.filter(
+      (win) => win.type === 'extension' && win.sourceId === extension.id,
+    )
+
+    for (const win of extensionWindows) {
+      windowManagerStore.closeWindow(win.id)
+    }
+
+    // Uninstall the extension
     await extensionStore.removeExtensionAsync(
       extension.publicKey,
       extension.name,
-      extension.version
+      extension.version,
     )
+
+    // Refresh available extensions list
+    await extensionStore.loadExtensionsAsync()
+
+    // Close dialog and reset state
+    showUninstallDialog.value = false
+    extensionToUninstall.value = null
   } catch (error) {
     console.error('Failed to uninstall extension:', error)
   }
@@ -149,8 +194,8 @@ const getContextMenuItems = (item: LauncherItem) => {
     {
       label: t('contextMenu.open'),
       icon: 'i-heroicons-arrow-top-right-on-square',
-      click: () => openItem(item),
-    }
+      onSelect: () => openItem(item),
+    },
   ]
 
   // Add uninstall option for extensions
@@ -158,7 +203,7 @@ const getContextMenuItems = (item: LauncherItem) => {
     items.push({
       label: t('contextMenu.uninstall'),
       icon: 'i-heroicons-trash',
-      click: () => uninstallExtension(item),
+      onSelect: () => uninstallExtension(item),
     })
   }
 
@@ -171,7 +216,10 @@ const handleDragStart = (event: DragEvent, item: LauncherItem) => {
 
   // Store the launcher item data
   event.dataTransfer.effectAllowed = 'copy'
-  event.dataTransfer.setData('application/haex-launcher-item', JSON.stringify(item))
+  event.dataTransfer.setData(
+    'application/haex-launcher-item',
+    JSON.stringify(item),
+  )
 
   // Set drag image (optional - uses default if not set)
   const dragImage = event.target as HTMLElement
@@ -192,6 +240,11 @@ de:
   contextMenu:
     open: Öffnen
     uninstall: Deinstallieren
+  uninstall:
+    confirm:
+      title: Erweiterung deinstallieren
+      description: Möchtest du wirklich "{name}" deinstallieren? Diese Aktion kann nicht rückgängig gemacht werden.
+      button: Deinstallieren
 
 en:
   disabled: Disabled
@@ -199,4 +252,9 @@ en:
   contextMenu:
     open: Open
     uninstall: Uninstall
+  uninstall:
+    confirm:
+      title: Uninstall Extension
+      description: Do you really want to uninstall "{name}"? This action cannot be undone.
+      button: Uninstall
 </i18n>

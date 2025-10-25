@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "21ca1268-1057-48c1-8647-29bd7cb67d49",
+  "id": "bcdd9ad3-a87a-4a43-9eba-673f94b10287",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "haex_crdt_configs": {
@@ -179,11 +179,18 @@
           "notNull": true,
           "autoincrement": false
         },
-        "reference_id": {
-          "name": "reference_id",
+        "extension_id": {
+          "name": "extension_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "system_window_id": {
+          "name": "system_window_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "position_x": {
@@ -224,11 +231,29 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
+        },
+        "haex_desktop_items_extension_id_haex_extensions_id_fk": {
+          "name": "haex_desktop_items_extension_id_haex_extensions_id_fk",
+          "tableFrom": "haex_desktop_items",
+          "tableTo": "haex_extensions",
+          "columnsFrom": [
+            "extension_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "item_reference": {
+          "name": "item_reference",
+          "value": "(\"haex_desktop_items\".\"item_type\" = 'extension' AND \"haex_desktop_items\".\"extension_id\" IS NOT NULL AND \"haex_desktop_items\".\"system_window_id\" IS NULL) OR (\"haex_desktop_items\".\"item_type\" = 'system' AND \"haex_desktop_items\".\"system_window_id\" IS NOT NULL AND \"haex_desktop_items\".\"extension_id\" IS NULL) OR (\"haex_desktop_items\".\"item_type\" = 'file' AND \"haex_desktop_items\".\"system_window_id\" IS NOT NULL AND \"haex_desktop_items\".\"extension_id\" IS NULL) OR (\"haex_desktop_items\".\"item_type\" = 'folder' AND \"haex_desktop_items\".\"system_window_id\" IS NOT NULL AND \"haex_desktop_items\".\"extension_id\" IS NULL)"
+        }
+      }
     },
     "haex_extension_permissions": {
       "name": "haex_extension_permissions",
