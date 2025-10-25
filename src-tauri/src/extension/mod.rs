@@ -223,6 +223,16 @@ pub fn is_extension_installed(
 #[derive(serde::Deserialize, Debug)]
 struct HaextensionConfig {
     dev: DevConfig,
+    #[serde(default)]
+    keys: KeysConfig,
+}
+
+#[derive(serde::Deserialize, Debug, Default)]
+struct KeysConfig {
+    #[serde(default)]
+    public_key_path: Option<String>,
+    #[serde(default)]
+    private_key_path: Option<String>,
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -231,6 +241,8 @@ struct DevConfig {
     port: u16,
     #[serde(default = "default_host")]
     host: String,
+    #[serde(default = "default_haextension_dir")]
+    haextension_dir: String,
 }
 
 fn default_port() -> u16 {
@@ -239,6 +251,10 @@ fn default_port() -> u16 {
 
 fn default_host() -> String {
     "localhost".to_string()
+}
+
+fn default_haextension_dir() -> String {
+    "haextension".to_string()
 }
 
 /// Check if a dev server is reachable by making a simple HTTP request
@@ -276,29 +292,30 @@ pub async fn load_dev_extension(
 
     let extension_path_buf = PathBuf::from(&extension_path);
 
-    // 1. Read haextension.json to get dev server config
-    let config_path = extension_path_buf.join("haextension.json");
-    let (host, port) = if config_path.exists() {
+    // 1. Read haextension.config.json to get dev server config and haextension directory
+    let config_path = extension_path_buf.join("haextension.config.json");
+    let (host, port, haextension_dir) = if config_path.exists() {
         let config_content = std::fs::read_to_string(&config_path).map_err(|e| {
             ExtensionError::ValidationError {
-                reason: format!("Failed to read haextension.json: {}", e),
+                reason: format!("Failed to read haextension.config.json: {}", e),
             }
         })?;
 
         let config: HaextensionConfig = serde_json::from_str(&config_content).map_err(|e| {
             ExtensionError::ValidationError {
-                reason: format!("Failed to parse haextension.json: {}", e),
+                reason: format!("Failed to parse haextension.config.json: {}", e),
             }
         })?;
 
-        (config.dev.host, config.dev.port)
+        (config.dev.host, config.dev.port, config.dev.haextension_dir)
     } else {
         // Default values if config doesn't exist
-        (default_host(), default_port())
+        (default_host(), default_port(), default_haextension_dir())
     };
 
     let dev_server_url = format!("http://{}:{}", host, port);
     eprintln!("📡 Dev server URL: {}", dev_server_url);
+    eprintln!("📁 Haextension directory: {}", haextension_dir);
 
     // 1.5. Check if dev server is running
     if !check_dev_server_health(&dev_server_url).await {
@@ -311,8 +328,8 @@ pub async fn load_dev_extension(
     }
     eprintln!("✅ Dev server is reachable");
 
-    // 2. Build path to manifest: <extension_path>/haextension/manifest.json
-    let manifest_path = extension_path_buf.join("haextension").join("manifest.json");
+    // 2. Build path to manifest: <extension_path>/<haextension_dir>/manifest.json
+    let manifest_path = extension_path_buf.join(&haextension_dir).join("manifest.json");
 
     // Check if manifest exists
     if !manifest_path.exists() {

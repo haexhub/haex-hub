@@ -37,7 +37,7 @@
               :alt="label"
               class="w-14 h-14 object-contain transition-transform duration-200"
               :class="{ 'scale-110': isSelected }"
-            >
+            />
             <UIcon
               v-else
               name="i-heroicons-puzzle-piece-solid"
@@ -69,7 +69,7 @@
 <script setup lang="ts">
 const props = defineProps<{
   id: string
-  itemType: 'extension' | 'file' | 'folder'
+  itemType: DesktopItemType
   referenceId: string
   initialX: number
   initialY: number

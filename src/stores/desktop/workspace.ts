@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 import {
   haexWorkspaces,
   type SelectHaexWorkspaces,
@@ -32,18 +32,18 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
     }
 
     try {
-      /* const items = await currentVault.value.drizzle
+      const items = await currentVault.value.drizzle
         .select()
         .from(haexWorkspaces)
         .orderBy(asc(haexWorkspaces.position))
 
       console.log('loadWorkspacesAsync', items)
-      workspaces.value = items */
+      workspaces.value = items
 
       // Create default workspace if none exist
-      /* if (items.length === 0) { */
-      await addWorkspaceAsync('Workspace 1')
-      /* } */
+      if (items.length === 0) {
+        await addWorkspaceAsync('Workspace 1')
+      }
     } catch (error) {
       console.error('Fehler beim Laden der Workspaces:', error)
       throw error
@@ -61,15 +61,12 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
 
     try {
       const newIndex = workspaces.value.length + 1
-      const newWorkspace: SelectHaexWorkspaces = {
-        id: crypto.randomUUID(),
+      const newWorkspace = {
         name: name || `Workspace ${newIndex}`,
         position: workspaces.value.length,
-        haexTimestamp: '',
       }
-      workspaces.value.push(newWorkspace)
-      currentWorkspaceIndex.value = workspaces.value.length - 1
-      /* const result = await currentVault.value.drizzle
+
+      const result = await currentVault.value.drizzle
         .insert(haexWorkspaces)
         .values(newWorkspace)
         .returning()
@@ -78,7 +75,7 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
         workspaces.value.push(result[0])
         currentWorkspaceIndex.value = workspaces.value.length - 1
         return result[0]
-      } */
+      }
     } catch (error) {
       console.error('Fehler beim Hinzufügen des Workspace:', error)
       throw error
@@ -106,27 +103,27 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
     const index = workspaces.value.findIndex((ws) => ws.id === workspaceId)
     if (index === -1) return
 
-    workspaces.value.splice(index, 1)
-    workspaces.value.forEach((workspace, index) => (workspace.position = index))
-
     try {
-      /* await currentVault.value.drizzle.transaction(async (tx) => {
+      await currentVault.value.drizzle.transaction(async (tx) => {
+        // Delete workspace
         await tx
           .delete(haexWorkspaces)
           .where(eq(haexWorkspaces.id, workspaceId))
 
+        // Update local state
         workspaces.value.splice(index, 1)
-        workspaces.value.forEach(
-          (workspace, index) => (workspace.position = index),
-        )
+        workspaces.value.forEach((workspace, idx) => {
+          workspace.position = idx
+        })
 
+        // Update positions in database
         for (const workspace of workspaces.value) {
           await tx
             .update(haexWorkspaces)
-            .set({ position: index })
-            .where(eq(haexWorkspaces.position, workspace.position))
+            .set({ position: workspace.position })
+            .where(eq(haexWorkspaces.id, workspace.id))
         }
-      }) */
+      })
 
       // Adjust current index if needed
       if (currentWorkspaceIndex.value >= workspaces.value.length) {

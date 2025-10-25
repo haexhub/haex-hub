@@ -27,6 +27,8 @@
           class="w-full h-full relative isolate"
           @click.self.stop="handleDesktopClick"
           @mousedown.left.self="handleAreaSelectStart"
+          @dragover.prevent="handleDragOver"
+          @drop.prevent="handleDrop($event, workspace.id)"
         >
           <!-- Grid Pattern Background -->
           <div
@@ -81,128 +83,113 @@
             v-for="window in getWorkspaceWindows(workspace.id)"
             :key="window.id"
           >
-            <!-- Desktop container for when overview is closed -->
-            <div
-              :id="`desktop-container-${window.id}`"
-              class="absolute"
-            />
-
-            <!-- Window with dynamic teleport -->
+            <!-- Overview Mode: Teleport to window preview -->
             <Teleport
-              :to="
-                windowManager.showWindowOverview &&
-                overviewWindowState.has(window.id)
-                  ? `#window-preview-${window.id}`
-                  : `#desktop-container-${window.id}`
-              "
+              v-if="windowManager.showWindowOverview && overviewWindowState.has(window.id)"
+              :to="`#window-preview-${window.id}`"
             >
-              <template
-                v-if="
-                  windowManager.showWindowOverview &&
-                  overviewWindowState.has(window.id)
-                "
+              <div
+                class="absolute origin-top-left"
+                :style="{
+                  transform: `scale(${overviewWindowState.get(window.id)!.scale})`,
+                  width: `${overviewWindowState.get(window.id)!.width}px`,
+                  height: `${overviewWindowState.get(window.id)!.height}px`,
+                }"
               >
-                <div
-                  class="absolute origin-top-left"
-                  :style="{
-                    transform: `scale(${overviewWindowState.get(window.id)!.scale})`,
-                    width: `${overviewWindowState.get(window.id)!.width}px`,
-                    height: `${overviewWindowState.get(window.id)!.height}px`,
-                  }"
+                <HaexWindow
+                  v-show="
+                    windowManager.showWindowOverview || !window.isMinimized
+                  "
+                  :id="window.id"
+                  v-model:x="overviewWindowState.get(window.id)!.x"
+                  v-model:y="overviewWindowState.get(window.id)!.y"
+                  v-model:width="overviewWindowState.get(window.id)!.width"
+                  v-model:height="overviewWindowState.get(window.id)!.height"
+                  :title="window.title"
+                  :icon="window.icon"
+                  :is-active="windowManager.isWindowActive(window.id)"
+                  :source-x="window.sourceX"
+                  :source-y="window.sourceY"
+                  :source-width="window.sourceWidth"
+                  :source-height="window.sourceHeight"
+                  :is-opening="window.isOpening"
+                  :is-closing="window.isClosing"
+                  class="no-swipe"
+                  @close="windowManager.closeWindow(window.id)"
+                  @minimize="windowManager.minimizeWindow(window.id)"
+                  @activate="windowManager.activateWindow(window.id)"
+                  @position-changed="
+                    (x, y) =>
+                      windowManager.updateWindowPosition(window.id, x, y)
+                  "
+                  @size-changed="
+                    (width, height) =>
+                      windowManager.updateWindowSize(window.id, width, height)
+                  "
+                  @drag-start="handleWindowDragStart(window.id)"
+                  @drag-end="handleWindowDragEnd"
                 >
-                  <HaexWindow
-                    v-show="
-                      windowManager.showWindowOverview || !window.isMinimized
-                    "
-                    :id="window.id"
-                    v-model:x="overviewWindowState.get(window.id)!.x"
-                    v-model:y="overviewWindowState.get(window.id)!.y"
-                    v-model:width="overviewWindowState.get(window.id)!.width"
-                    v-model:height="overviewWindowState.get(window.id)!.height"
-                    :title="window.title"
-                    :icon="window.icon"
-                    :is-active="windowManager.isWindowActive(window.id)"
-                    :source-x="window.sourceX"
-                    :source-y="window.sourceY"
-                    :source-width="window.sourceWidth"
-                    :source-height="window.sourceHeight"
-                    :is-opening="window.isOpening"
-                    :is-closing="window.isClosing"
-                    class="no-swipe"
-                    @close="windowManager.closeWindow(window.id)"
-                    @minimize="windowManager.minimizeWindow(window.id)"
-                    @activate="windowManager.activateWindow(window.id)"
-                    @position-changed="
-                      (x, y) =>
-                        windowManager.updateWindowPosition(window.id, x, y)
-                    "
-                    @size-changed="
-                      (width, height) =>
-                        windowManager.updateWindowSize(window.id, width, height)
-                    "
-                    @drag-start="handleWindowDragStart(window.id)"
-                    @drag-end="handleWindowDragEnd"
-                  >
-                    <!-- System Window: Render Vue Component -->
-                    <component
-                      :is="getSystemWindowComponent(window.sourceId)"
-                      v-if="window.type === 'system'"
-                    />
+                  <!-- System Window: Render Vue Component -->
+                  <component
+                    :is="getSystemWindowComponent(window.sourceId)"
+                    v-if="window.type === 'system'"
+                  />
 
-                    <!-- Extension Window: Render iFrame -->
-                    <HaexDesktopExtensionFrame
-                      v-else
-                      :extension-id="window.sourceId"
-                      :window-id="window.id"
-                    />
-                  </HaexWindow>
-                </div>
-              </template>
-              <HaexWindow
-                v-else
-                v-show="windowManager.showWindowOverview || !window.isMinimized"
-                :id="window.id"
-                v-model:x="window.x"
-                v-model:y="window.y"
-                v-model:width="window.width"
-                v-model:height="window.height"
-                :title="window.title"
-                :icon="window.icon"
-                :is-active="windowManager.isWindowActive(window.id)"
-                :source-x="window.sourceX"
-                :source-y="window.sourceY"
-                :source-width="window.sourceWidth"
-                :source-height="window.sourceHeight"
-                :is-opening="window.isOpening"
-                :is-closing="window.isClosing"
-                class="no-swipe"
-                @close="windowManager.closeWindow(window.id)"
-                @minimize="windowManager.minimizeWindow(window.id)"
-                @activate="windowManager.activateWindow(window.id)"
-                @position-changed="
-                  (x, y) => windowManager.updateWindowPosition(window.id, x, y)
-                "
-                @size-changed="
-                  (width, height) =>
-                    windowManager.updateWindowSize(window.id, width, height)
-                "
-                @drag-start="handleWindowDragStart(window.id)"
-                @drag-end="handleWindowDragEnd"
-              >
-                <!-- System Window: Render Vue Component -->
-                <component
-                  :is="getSystemWindowComponent(window.sourceId)"
-                  v-if="window.type === 'system'"
-                />
-
-                <!-- Extension Window: Render iFrame -->
-                <HaexDesktopExtensionFrame
-                  v-else
-                  :extension-id="window.sourceId"
-                  :window-id="window.id"
-                />
-              </HaexWindow>
+                  <!-- Extension Window: Render iFrame -->
+                  <HaexDesktopExtensionFrame
+                    v-else
+                    :extension-id="window.sourceId"
+                    :window-id="window.id"
+                  />
+                </HaexWindow>
+              </div>
             </Teleport>
+
+            <!-- Desktop Mode: Render directly in workspace -->
+            <HaexWindow
+              v-else
+              v-show="windowManager.showWindowOverview || !window.isMinimized"
+              :id="window.id"
+              v-model:x="window.x"
+              v-model:y="window.y"
+              v-model:width="window.width"
+              v-model:height="window.height"
+              :title="window.title"
+              :icon="window.icon"
+              :is-active="windowManager.isWindowActive(window.id)"
+              :source-x="window.sourceX"
+              :source-y="window.sourceY"
+              :source-width="window.sourceWidth"
+              :source-height="window.sourceHeight"
+              :is-opening="window.isOpening"
+              :is-closing="window.isClosing"
+              class="no-swipe"
+              @close="windowManager.closeWindow(window.id)"
+              @minimize="windowManager.minimizeWindow(window.id)"
+              @activate="windowManager.activateWindow(window.id)"
+              @position-changed="
+                (x, y) => windowManager.updateWindowPosition(window.id, x, y)
+              "
+              @size-changed="
+                (width, height) =>
+                  windowManager.updateWindowSize(window.id, width, height)
+              "
+              @drag-start="handleWindowDragStart(window.id)"
+              @drag-end="handleWindowDragEnd"
+            >
+              <!-- System Window: Render Vue Component -->
+              <component
+                :is="getSystemWindowComponent(window.sourceId)"
+                v-if="window.type === 'system'"
+              />
+
+              <!-- Extension Window: Render iFrame -->
+              <HaexDesktopExtensionFrame
+                v-else
+                :extension-id="window.sourceId"
+                :window-id="window.id"
+              />
+            </HaexWindow>
           </template>
         </div>
       </SwiperSlide>
@@ -342,6 +329,18 @@ const getWorkspaceIcons = (workspaceId: string) => {
   return desktopItems.value
     .filter((item) => item.workspaceId === workspaceId)
     .map((item) => {
+      if (item.itemType === 'system') {
+        const systemWindow = windowManager.getAllSystemWindows().find(
+          (win) => win.id === item.referenceId,
+        )
+
+        return {
+          ...item,
+          label: systemWindow?.name || 'Unknown',
+          icon: systemWindow?.icon || '',
+        }
+      }
+
       if (item.itemType === 'extension') {
         const extension = availableExtensions.value.find(
           (ext) => ext.id === item.referenceId,
@@ -414,6 +413,49 @@ const handleDragEnd = async () => {
   currentDraggedItemType.value = undefined
   currentDraggedReferenceId.value = undefined
   allowSwipe.value = true // Re-enable Swiper after drag
+}
+
+// Handle drag over for launcher items
+const handleDragOver = (event: DragEvent) => {
+  if (!event.dataTransfer) return
+
+  // Check if this is a launcher item
+  if (event.dataTransfer.types.includes('application/haex-launcher-item')) {
+    event.dataTransfer.dropEffect = 'copy'
+  }
+}
+
+// Handle drop for launcher items
+const handleDrop = async (event: DragEvent, workspaceId: string) => {
+  if (!event.dataTransfer) return
+
+  const launcherItemData = event.dataTransfer.getData('application/haex-launcher-item')
+  if (!launcherItemData) return
+
+  try {
+    const item = JSON.parse(launcherItemData) as {
+      id: string
+      name: string
+      icon: string
+      type: 'system' | 'extension'
+    }
+
+    // Get drop position relative to desktop
+    const desktopRect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    const x = Math.max(0, event.clientX - desktopRect.left - 32) // Center icon (64px / 2)
+    const y = Math.max(0, event.clientY - desktopRect.top - 32)
+
+    // Create desktop icon on the specific workspace
+    await desktopStore.addDesktopItemAsync(
+      item.type as DesktopItemType,
+      item.id,
+      x,
+      y,
+      workspaceId
+    )
+  } catch (error) {
+    console.error('Failed to create desktop icon:', error)
+  }
 }
 
 const handleDesktopClick = () => {

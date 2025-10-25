@@ -7,7 +7,7 @@ import type {
 import de from './de.json'
 import en from './en.json'
 
-export type DesktopItemType = 'extension' | 'file' | 'folder'
+export type DesktopItemType = 'extension' | 'file' | 'folder' | 'system'
 
 export interface IDesktopItem extends SelectHaexDesktopItems {
   label?: string
@@ -57,18 +57,20 @@ export const useDesktopStore = defineStore('desktopStore', () => {
     referenceId: string,
     positionX: number = 0,
     positionY: number = 0,
+    workspaceId?: string,
   ) => {
     if (!currentVault.value?.drizzle) {
       throw new Error('Kein Vault geöffnet')
     }
 
-    if (!currentWorkspace.value) {
+    const targetWorkspaceId = workspaceId || currentWorkspace.value?.id
+    if (!targetWorkspaceId) {
       throw new Error('Kein Workspace aktiv')
     }
 
     try {
       const newItem: InsertHaexDesktopItems = {
-        workspaceId: currentWorkspace.value.id,
+        workspaceId: targetWorkspaceId,
         itemType: itemType,
         referenceId: referenceId,
         positionX: positionX,
@@ -85,7 +87,19 @@ export const useDesktopStore = defineStore('desktopStore', () => {
         return result[0]
       }
     } catch (error) {
-      console.error('Fehler beim Hinzufügen des Desktop-Items:', error)
+      console.error('Fehler beim Hinzufügen des Desktop-Items:', {
+        error,
+        itemType,
+        referenceId,
+        workspaceId: targetWorkspaceId,
+        position: { x: positionX, y: positionY }
+      })
+
+      // Log full error details
+      if (error && typeof error === 'object') {
+        console.error('Full error object:', JSON.stringify(error, null, 2))
+      }
+
       throw error
     }
   }
@@ -154,8 +168,23 @@ export const useDesktopStore = defineStore('desktopStore', () => {
     referenceId: string,
     sourcePosition?: { x: number; y: number; width: number; height: number },
   ) => {
-    if (itemType === 'extension') {
-      const windowManager = useWindowManagerStore()
+    const windowManager = useWindowManagerStore()
+
+    if (itemType === 'system') {
+      const systemWindow = windowManager.getAllSystemWindows().find(
+        (win) => win.id === referenceId,
+      )
+
+      if (systemWindow) {
+        windowManager.openWindowAsync({
+          sourceId: systemWindow.id,
+          type: 'system',
+          icon: systemWindow.icon,
+          title: systemWindow.name,
+          sourcePosition,
+        })
+      }
+    } else if (itemType === 'extension') {
       const extensionsStore = useExtensionsStore()
 
       const extension = extensionsStore.availableExtensions.find(

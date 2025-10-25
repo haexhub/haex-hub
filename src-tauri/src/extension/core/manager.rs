@@ -88,30 +88,64 @@ impl ExtensionManager {
                 reason: format!("Cannot extract ZIP: {}", e),
             })?;
 
-        // Check if manifest.json is directly in temp or in a subdirectory
-        let manifest_path = temp.join("manifest.json");
-        let actual_dir = if manifest_path.exists() {
-            temp.clone()
-        } else {
-            // manifest.json is in a subdirectory - find it
-            let mut found_dir = None;
-            for entry in fs::read_dir(&temp)
-                .map_err(|e| ExtensionError::filesystem_with_path(temp.display().to_string(), e))?
-            {
-                let entry = entry.map_err(|e| ExtensionError::Filesystem { source: e })?;
-                let path = entry.path();
-                if path.is_dir() && path.join("manifest.json").exists() {
-                    found_dir = Some(path);
-                    break;
-                }
+        // Read haextension_dir from config if it exists, otherwise use default
+        let config_path = temp.join("haextension.config.json");
+        let haextension_dir = if config_path.exists() {
+            let config_content = std::fs::read_to_string(&config_path)
+                .map_err(|e| ExtensionError::ManifestError {
+                    reason: format!("Cannot read haextension.config.json: {}", e),
+                })?;
+
+            let config: serde_json::Value = serde_json::from_str(&config_content)
+                .map_err(|e| ExtensionError::ManifestError {
+                    reason: format!("Invalid haextension.config.json: {}", e),
+                })?;
+
+            let dir = config
+                .get("dev")
+                .and_then(|dev| dev.get("haextension_dir"))
+                .and_then(|dir| dir.as_str())
+                .unwrap_or("haextension")
+                .to_string();
+
+            // Security: Validate that haextension_dir doesn't contain ".." for path traversal
+            if dir.contains("..") {
+                return Err(ExtensionError::ManifestError {
+                    reason: "Invalid haextension_dir: path traversal with '..' not allowed".to_string(),
+                });
             }
 
-            found_dir.ok_or_else(|| ExtensionError::ManifestError {
-                reason: "manifest.json not found in extension archive".to_string(),
-            })?
+            dir
+        } else {
+            "haextension".to_string()
         };
 
-        let manifest_path = actual_dir.join("manifest.json");
+        // Build the manifest path
+        let manifest_path = temp.join(&haextension_dir).join("manifest.json");
+
+        // Ensure the resolved path is still within temp directory (safety check against path traversal)
+        let canonical_temp = temp.canonicalize()
+            .map_err(|e| ExtensionError::Filesystem { source: e })?;
+
+        // Only check if manifest_path parent exists to avoid errors
+        if let Some(parent) = manifest_path.parent() {
+            if let Ok(canonical_manifest_dir) = parent.canonicalize() {
+                if !canonical_manifest_dir.starts_with(&canonical_temp) {
+                    return Err(ExtensionError::ManifestError {
+                        reason: "Security violation: manifest path outside extension directory".to_string(),
+                    });
+                }
+            }
+        }
+
+        // Check if manifest exists
+        if !manifest_path.exists() {
+            return Err(ExtensionError::ManifestError {
+                reason: format!("manifest.json not found at {}/manifest.json", haextension_dir),
+            });
+        }
+
+        let actual_dir = temp.clone();
         let manifest_content =
             std::fs::read_to_string(&manifest_path).map_err(|e| ExtensionError::ManifestError {
                 reason: format!("Cannot read manifest: {}", e),
@@ -119,7 +153,7 @@ impl ExtensionManager {
 
         let manifest: ExtensionManifest = serde_json::from_str(&manifest_content)?;
 
-        let content_hash = ExtensionCrypto::hash_directory(&actual_dir).map_err(|e| {
+        let content_hash = ExtensionCrypto::hash_directory(&actual_dir, &manifest_path).map_err(|e| {
             ExtensionError::SignatureVerificationFailed {
                 reason: e.to_string(),
             }

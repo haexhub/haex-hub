@@ -156,11 +156,11 @@ export const haexDesktopItems = sqliteTable(
         .notNull()
         .references(() => haexWorkspaces.id, { onDelete: 'cascade' }),
       itemType: text(tableNames.haex.desktop_items.columns.itemType, {
-        enum: ['extension', 'file', 'folder'],
+        enum: ['system', 'extension', 'file', 'folder'],
       }).notNull(),
       referenceId: text(
         tableNames.haex.desktop_items.columns.referenceId,
-      ).notNull(), // extensionId für extensions, filePath für files/folders
+      ).notNull(), // systemId für system windows, extensionId für extensions, filePath für files/folders
       positionX: integer(tableNames.haex.desktop_items.columns.positionX)
         .notNull()
         .default(0),

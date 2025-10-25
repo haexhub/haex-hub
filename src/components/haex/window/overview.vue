@@ -24,7 +24,7 @@
           <!-- Window Thumbnails Flex Layout -->
           <div
             v-if="windows.length > 0"
-            class="flex flex-wrap gap-6 justify-start items-start"
+            class="flex flex-wrap gap-6 justify-center-safe items-start"
           >
             <div
               v-for="window in windows"

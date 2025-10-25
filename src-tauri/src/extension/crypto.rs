@@ -4,28 +4,13 @@ use std::{
 };
 
 // src-tauri/src/extension/crypto.rs
+use crate::extension::error::ExtensionError;
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use sha2::{Digest, Sha256};
 
 pub struct ExtensionCrypto;
 
 impl ExtensionCrypto {
-    /// Berechnet Hash vom Public Key (wie im SDK)
-    pub fn calculate_key_hash(public_key_hex: &str) -> Result<String, String> {
-        let public_key_bytes =
-            hex::decode(public_key_hex).map_err(|e| format!("Invalid public key hex: {}", e))?;
-
-        let public_key = VerifyingKey::from_bytes(&public_key_bytes.try_into().unwrap())
-            .map_err(|e| format!("Invalid public key: {}", e))?;
-
-        let mut hasher = Sha256::new();
-        hasher.update(public_key.as_bytes());
-        let result = hasher.finalize();
-
-        // Ersten 20 Hex-Zeichen (10 Bytes) - wie im SDK
-        Ok(hex::encode(&result[..10]))
-    }
-
     /// Verifiziert Extension-Signatur
     pub fn verify_signature(
         public_key_hex: &str,
@@ -50,26 +35,48 @@ impl ExtensionCrypto {
     }
 
     /// Berechnet Hash eines Verzeichnisses (für Verifikation)
-    pub fn hash_directory(dir: &Path) -> Result<String, String> {
+    pub fn hash_directory(dir: &Path, manifest_path: &Path) -> Result<String, ExtensionError> {
         // 1. Alle Dateipfade rekursiv sammeln
         let mut all_files = Vec::new();
         Self::collect_files_recursively(dir, &mut all_files)
-            .map_err(|e| format!("Failed to collect files: {}", e))?;
-        all_files.sort();
+            .map_err(|e| ExtensionError::Filesystem { source: e })?;
+
+        // 2. Konvertiere zu relativen Pfaden für konsistente Sortierung (wie im SDK)
+        let mut relative_files: Vec<(String, PathBuf)> = all_files
+            .into_iter()
+            .map(|path| {
+                let relative = path.strip_prefix(dir)
+                    .unwrap_or(&path)
+                    .to_string_lossy()
+                    .to_string();
+                (relative, path)
+            })
+            .collect();
+
+        // 3. Sortiere nach relativen Pfaden
+        relative_files.sort_by(|a, b| a.0.cmp(&b.0));
+
+        println!("=== Files to hash ({}): ===", relative_files.len());
+        for (rel, _) in &relative_files {
+            println!("  - {}", rel);
+        }
 
         let mut hasher = Sha256::new();
-        let manifest_path = dir.join("manifest.json");
 
-        // 2. Inhalte der sortierten Dateien hashen
-        for file_path in all_files {
+        // 4. Inhalte der sortierten Dateien hashen
+        for (_relative, file_path) in relative_files {
             if file_path == manifest_path {
                 // FÜR DIE MANIFEST.JSON:
                 let content_str = fs::read_to_string(&file_path)
-                    .map_err(|e| format!("Cannot read manifest file: {}", e))?;
+                    .map_err(|e| ExtensionError::Filesystem { source: e })?;
 
                 // Parse zu einem generischen JSON-Wert
-                let mut manifest: serde_json::Value = serde_json::from_str(&content_str)
-                    .map_err(|e| format!("Cannot parse manifest JSON: {}", e))?;
+                let mut manifest: serde_json::Value =
+                    serde_json::from_str(&content_str).map_err(|e| {
+                        ExtensionError::ManifestError {
+                            reason: format!("Cannot parse manifest JSON: {}", e),
+                        }
+                    })?;
 
                 // Entferne oder leere das Signaturfeld, um den "kanonischen Inhalt" zu erhalten
                 if let Some(obj) = manifest.as_object_mut() {
@@ -80,13 +87,19 @@ impl ExtensionCrypto {
                 }
 
                 // Serialisiere das modifizierte Manifest zurück (mit 2 Spaces, wie in JS)
-                let canonical_manifest_content = serde_json::to_string_pretty(&manifest).unwrap();
+                // serde_json sortiert die Keys automatisch alphabetisch
+                let canonical_manifest_content =
+                    serde_json::to_string_pretty(&manifest).map_err(|e| {
+                        ExtensionError::ManifestError {
+                            reason: format!("Failed to serialize manifest: {}", e),
+                        }
+                    })?;
                 println!("canonical_manifest_content: {}", canonical_manifest_content);
                 hasher.update(canonical_manifest_content.as_bytes());
             } else {
                 // FÜR ALLE ANDEREN DATEIEN:
-                let content = fs::read(&file_path)
-                    .map_err(|e| format!("Cannot read file {}: {}", file_path.display(), e))?;
+                let content =
+                    fs::read(&file_path).map_err(|e| ExtensionError::Filesystem { source: e })?;
                 hasher.update(&content);
             }
         }
