@@ -89,7 +89,11 @@ const removeExtensionAsync = async () => {
   }
 
   try {
-    await extensionStore.removeExtensionAsync(extension.id, extension.version)
+    await extensionStore.removeExtensionAsync(
+      extension.publicKey,
+      extension.name,
+      extension.version,
+    )
     await extensionStore.loadExtensionsAsync()
 
     add({

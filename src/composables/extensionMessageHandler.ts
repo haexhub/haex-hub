@@ -166,20 +166,18 @@ const registerGlobalMessageHandler = () => {
     try {
       let result: unknown
 
-      if (request.method.startsWith('extension.')) {
-        result = await handleExtensionMethodAsync(request, instance.extension)
-      } else if (request.method.startsWith('db.')) {
-        result = await handleDatabaseMethodAsync(request, instance.extension)
-      } else if (request.method.startsWith('fs.')) {
-        result = await handleFilesystemMethodAsync(request, instance.extension)
-      } else if (request.method.startsWith('http.')) {
-        result = await handleHttpMethodAsync(request, instance.extension)
-      } else if (request.method.startsWith('permissions.')) {
-        result = await handlePermissionsMethodAsync(request, instance.extension)
-      } else if (request.method.startsWith('context.')) {
+      if (request.method.startsWith('haextension.context.')) {
         result = await handleContextMethodAsync(request)
-      } else if (request.method.startsWith('storage.')) {
+      } else if (request.method.startsWith('haextension.storage.')) {
         result = await handleStorageMethodAsync(request, instance)
+      } else if (request.method.startsWith('haextension.db.')) {
+        result = await handleDatabaseMethodAsync(request, instance.extension)
+      } else if (request.method.startsWith('haextension.fs.')) {
+        result = await handleFilesystemMethodAsync(request, instance.extension)
+      } else if (request.method.startsWith('haextension.http.')) {
+        result = await handleHttpMethodAsync(request, instance.extension)
+      } else if (request.method.startsWith('haextension.permissions.')) {
+        result = await handlePermissionsMethodAsync(request, instance.extension)
       } else {
         throw new Error(`Unknown method: ${request.method}`)
       }
@@ -328,30 +326,27 @@ export const getExtensionWindow = (extensionId: string): Window | undefined => {
   return getAllInstanceWindows(extensionId)[0]
 }
 
-// ==========================================
-// Extension Methods
-// ==========================================
+// Broadcast context changes to all extension instances
+export const broadcastContextToAllExtensions = (context: {
+  theme: string
+  locale: string
+  platform?: string
+}) => {
+  const message = {
+    type: 'haextension.context.changed',
+    data: { context },
+    timestamp: Date.now(),
+  }
 
-async function handleExtensionMethodAsync(
-  request: ExtensionRequest,
-  extension: IHaexHubExtension, // Direkter Typ, kein ComputedRef mehr
-) {
-  switch (request.method) {
-    case 'extension.getInfo': {
-      const info = (await invoke('get_extension_info', {
-        publicKey: extension.publicKey,
-        name: extension.name,
-      })) as Record<string, unknown>
-      // Override allowedOrigin with the actual window origin
-      // This fixes the dev-mode issue where Rust returns "tauri://localhost"
-      // but the actual origin is "http://localhost:3003"
-      return {
-        ...info,
-        allowedOrigin: window.location.origin,
-      }
+  console.log('[ExtensionHandler] Broadcasting context to all extensions:', context)
+
+  // Send to all registered extension windows
+  for (const [_, instance] of iframeRegistry.entries()) {
+    const win = windowIdToWindowMap.get(instance.windowId)
+    if (win) {
+      console.log('[ExtensionHandler] Sending context to:', instance.extension.name, instance.windowId)
+      win.postMessage(message, '*')
     }
-    default:
-      throw new Error(`Unknown extension method: ${request.method}`)
   }
 }
 
@@ -369,7 +364,7 @@ async function handleDatabaseMethodAsync(
   }
 
   switch (request.method) {
-    case 'db.query': {
+    case 'haextension.db.query': {
       const rows = await invoke<unknown[]>('extension_sql_select', {
         sql: params.query || '',
         params: params.params || [],
@@ -383,7 +378,7 @@ async function handleDatabaseMethodAsync(
       }
     }
 
-    case 'db.execute': {
+    case 'haextension.db.execute': {
       await invoke<string[]>('extension_sql_execute', {
         sql: params.query || '',
         params: params.params || [],
@@ -397,7 +392,7 @@ async function handleDatabaseMethodAsync(
       }
     }
 
-    case 'db.transaction': {
+    case 'haextension.db.transaction': {
       const statements =
         (request.params as { statements?: string[] }).statements || []
 
@@ -467,7 +462,7 @@ async function handlePermissionsMethodAsync(
 
 async function handleContextMethodAsync(request: ExtensionRequest) {
   switch (request.method) {
-    case 'context.get':
+    case 'haextension.context.get':
       if (!contextGetters) {
         throw new Error(
           'Context not initialized. Make sure useExtensionMessageHandler is called in a component.',
@@ -499,25 +494,25 @@ async function handleStorageMethodAsync(
   )
 
   switch (request.method) {
-    case 'storage.getItem': {
+    case 'haextension.storage.getItem': {
       const key = request.params.key as string
       return localStorage.getItem(storageKey + key)
     }
 
-    case 'storage.setItem': {
+    case 'haextension.storage.setItem': {
       const key = request.params.key as string
       const value = request.params.value as string
       localStorage.setItem(storageKey + key, value)
       return null
     }
 
-    case 'storage.removeItem': {
+    case 'haextension.storage.removeItem': {
       const key = request.params.key as string
       localStorage.removeItem(storageKey + key)
       return null
     }
 
-    case 'storage.clear': {
+    case 'haextension.storage.clear': {
       // Remove only instance-specific keys
       const keys = Object.keys(localStorage).filter((k) =>
         k.startsWith(storageKey),
@@ -526,7 +521,7 @@ async function handleStorageMethodAsync(
       return null
     }
 
-    case 'storage.keys': {
+    case 'haextension.storage.keys': {
       // Return only instance-specific keys (without prefix)
       const keys = Object.keys(localStorage)
         .filter((k) => k.startsWith(storageKey))

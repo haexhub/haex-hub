@@ -85,7 +85,10 @@
           >
             <!-- Overview Mode: Teleport to window preview -->
             <Teleport
-              v-if="windowManager.showWindowOverview && overviewWindowState.has(window.id)"
+              v-if="
+                windowManager.showWindowOverview &&
+                overviewWindowState.has(window.id)
+              "
               :to="`#window-preview-${window.id}`"
             >
               <div
@@ -330,9 +333,9 @@ const getWorkspaceIcons = (workspaceId: string) => {
     .filter((item) => item.workspaceId === workspaceId)
     .map((item) => {
       if (item.itemType === 'system') {
-        const systemWindow = windowManager.getAllSystemWindows().find(
-          (win) => win.id === item.referenceId,
-        )
+        const systemWindow = windowManager
+          .getAllSystemWindows()
+          .find((win) => win.id === item.referenceId)
 
         return {
           ...item,
@@ -346,6 +349,7 @@ const getWorkspaceIcons = (workspaceId: string) => {
           (ext) => ext.id === item.referenceId,
         )
 
+        console.log('found ext', extension)
         return {
           ...item,
           label: extension?.name || 'Unknown',
@@ -429,7 +433,9 @@ const handleDragOver = (event: DragEvent) => {
 const handleDrop = async (event: DragEvent, workspaceId: string) => {
   if (!event.dataTransfer) return
 
-  const launcherItemData = event.dataTransfer.getData('application/haex-launcher-item')
+  const launcherItemData = event.dataTransfer.getData(
+    'application/haex-launcher-item',
+  )
   if (!launcherItemData) return
 
   try {
@@ -441,7 +447,9 @@ const handleDrop = async (event: DragEvent, workspaceId: string) => {
     }
 
     // Get drop position relative to desktop
-    const desktopRect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    const desktopRect = (
+      event.currentTarget as HTMLElement
+    ).getBoundingClientRect()
     const x = Math.max(0, event.clientX - desktopRect.left - 32) // Center icon (64px / 2)
     const y = Math.max(0, event.clientY - desktopRect.top - 32)
 
@@ -451,7 +459,7 @@ const handleDrop = async (event: DragEvent, workspaceId: string) => {
       item.id,
       x,
       y,
-      workspaceId
+      workspaceId,
     )
   } catch (error) {
     console.error('Failed to create desktop icon:', error)
@@ -611,7 +619,10 @@ const MAX_PREVIEW_HEIGHT = 450 // 50% increase from 300
 
 // Store window state for overview (position only, size stays original)
 const overviewWindowState = ref(
-  new Map<string, { x: number; y: number; width: number; height: number; scale: number }>(),
+  new Map<
+    string,
+    { x: number; y: number; width: number; height: number; scale: number }
+  >(),
 )
 
 // Calculate scale and card dimensions for each window
@@ -635,7 +646,10 @@ watch(
             finalScale = MIN_PREVIEW_WIDTH / window.width
           }
           if (scaledHeight < MIN_PREVIEW_HEIGHT) {
-            finalScale = Math.max(finalScale, MIN_PREVIEW_HEIGHT / window.height)
+            finalScale = Math.max(
+              finalScale,
+              MIN_PREVIEW_HEIGHT / window.height,
+            )
           }
 
           overviewWindowState.value.set(window.id, {

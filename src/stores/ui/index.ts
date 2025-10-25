@@ -1,4 +1,5 @@
 import { breakpointsTailwind } from '@vueuse/core'
+import { broadcastContextToAllExtensions } from '~/composables/extensionMessageHandler'
 import de from './de.json'
 import en from './en.json'
 
@@ -9,6 +10,8 @@ export const useUiStore = defineStore('uiStore', () => {
   const isSmallScreen = breakpoints.smaller('sm')
 
   const { $i18n } = useNuxtApp()
+  const { locale } = useI18n()
+  const { platform } = useDeviceStore()
 
   $i18n.setLocaleMessage('de', {
     ui: de,
@@ -54,6 +57,15 @@ export const useUiStore = defineStore('uiStore', () => {
 
   watchImmediate(currentThemeName, () => {
     colorMode.preference = currentThemeName.value
+  })
+
+  // Broadcast theme and locale changes to extensions
+  watch([currentThemeName, locale], () => {
+    broadcastContextToAllExtensions({
+      theme: currentThemeName.value,
+      locale: locale.value,
+      platform,
+    })
   })
 
   const viewportHeightWithoutHeader = ref(0)

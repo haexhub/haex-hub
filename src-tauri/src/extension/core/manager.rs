@@ -695,10 +695,76 @@ impl ExtensionManager {
                 &extension_data.manifest.version,
             )?;
 
-            if !extension_path.exists() || !extension_path.join("manifest.json").exists() {
+            // Check if extension directory exists
+            if !extension_path.exists() {
                 eprintln!(
-                    "DEBUG: Extension files missing for: {} at {:?}",
+                    "DEBUG: Extension directory missing for: {} at {:?}",
                     extension_id, extension_path
+                );
+                self.missing_extensions
+                    .lock()
+                    .map_err(|e| ExtensionError::MutexPoisoned {
+                        reason: e.to_string(),
+                    })?
+                    .push(MissingExtension {
+                        id: extension_id.clone(),
+                        public_key: extension_data.manifest.public_key.clone(),
+                        name: extension_data.manifest.name.clone(),
+                        version: extension_data.manifest.version.clone(),
+                    });
+                continue;
+            }
+
+            // Read haextension_dir from config if it exists, otherwise use default
+            let config_path = extension_path.join("haextension.config.json");
+            let haextension_dir = if config_path.exists() {
+                match std::fs::read_to_string(&config_path) {
+                    Ok(config_content) => {
+                        match serde_json::from_str::<serde_json::Value>(&config_content) {
+                            Ok(config) => {
+                                let dir = config
+                                    .get("dev")
+                                    .and_then(|dev| dev.get("haextension_dir"))
+                                    .and_then(|dir| dir.as_str())
+                                    .unwrap_or("haextension")
+                                    .to_string();
+
+                                // Security: Validate that haextension_dir doesn't contain ".."
+                                if dir.contains("..") {
+                                    eprintln!(
+                                        "DEBUG: Invalid haextension_dir for: {}, contains '..'",
+                                        extension_id
+                                    );
+                                    self.missing_extensions
+                                        .lock()
+                                        .map_err(|e| ExtensionError::MutexPoisoned {
+                                            reason: e.to_string(),
+                                        })?
+                                        .push(MissingExtension {
+                                            id: extension_id.clone(),
+                                            public_key: extension_data.manifest.public_key.clone(),
+                                            name: extension_data.manifest.name.clone(),
+                                            version: extension_data.manifest.version.clone(),
+                                        });
+                                    continue;
+                                }
+                                dir
+                            }
+                            Err(_) => "haextension".to_string(),
+                        }
+                    }
+                    Err(_) => "haextension".to_string(),
+                }
+            } else {
+                "haextension".to_string()
+            };
+
+            // Check if manifest.json exists in the haextension_dir
+            let manifest_path = extension_path.join(&haextension_dir).join("manifest.json");
+            if !manifest_path.exists() {
+                eprintln!(
+                    "DEBUG: manifest.json missing for: {} at {:?}",
+                    extension_id, manifest_path
                 );
                 self.missing_extensions
                     .lock()

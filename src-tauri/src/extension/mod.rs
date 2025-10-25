@@ -37,7 +37,7 @@ pub async fn get_all_extensions(
     state: State<'_, AppState>,
 ) -> Result<Vec<ExtensionInfoResponse>, String> {
     // Check if extensions are loaded, if not load them first
-    let needs_loading = {
+    /*  let needs_loading = {
         let prod_exts = state
             .extension_manager
             .production_extensions
@@ -45,15 +45,15 @@ pub async fn get_all_extensions(
             .unwrap();
         let dev_exts = state.extension_manager.dev_extensions.lock().unwrap();
         prod_exts.is_empty() && dev_exts.is_empty()
-    };
+    }; */
 
-    if needs_loading {
-        state
-            .extension_manager
-            .load_installed_extensions(&app_handle, &state)
-            .await
-            .map_err(|e| format!("Failed to load extensions: {:?}", e))?;
-    }
+    /* if needs_loading { */
+    state
+        .extension_manager
+        .load_installed_extensions(&app_handle, &state)
+        .await
+        .map_err(|e| format!("Failed to load extensions: {:?}", e))?;
+    /* } */
 
     let mut extensions = Vec::new();
 
@@ -193,13 +193,7 @@ pub async fn remove_extension(
 ) -> Result<(), ExtensionError> {
     state
         .extension_manager
-        .remove_extension_internal(
-            &app_handle,
-            &public_key,
-            &name,
-            &version,
-            &state,
-        )
+        .remove_extension_internal(&app_handle, &public_key, &name, &version, &state)
         .await
 }
 
@@ -259,8 +253,8 @@ fn default_haextension_dir() -> String {
 
 /// Check if a dev server is reachable by making a simple HTTP request
 async fn check_dev_server_health(url: &str) -> bool {
-    use tauri_plugin_http::reqwest;
     use std::time::Duration;
+    use tauri_plugin_http::reqwest;
 
     // Try to connect with a short timeout
     let client = reqwest::Client::builder()
@@ -295,17 +289,15 @@ pub async fn load_dev_extension(
     // 1. Read haextension.config.json to get dev server config and haextension directory
     let config_path = extension_path_buf.join("haextension.config.json");
     let (host, port, haextension_dir) = if config_path.exists() {
-        let config_content = std::fs::read_to_string(&config_path).map_err(|e| {
-            ExtensionError::ValidationError {
+        let config_content =
+            std::fs::read_to_string(&config_path).map_err(|e| ExtensionError::ValidationError {
                 reason: format!("Failed to read haextension.config.json: {}", e),
-            }
-        })?;
+            })?;
 
-        let config: HaextensionConfig = serde_json::from_str(&config_content).map_err(|e| {
-            ExtensionError::ValidationError {
+        let config: HaextensionConfig =
+            serde_json::from_str(&config_content).map_err(|e| ExtensionError::ValidationError {
                 reason: format!("Failed to parse haextension.config.json: {}", e),
-            }
-        })?;
+            })?;
 
         (config.dev.host, config.dev.port, config.dev.haextension_dir)
     } else {
@@ -329,7 +321,9 @@ pub async fn load_dev_extension(
     eprintln!("✅ Dev server is reachable");
 
     // 2. Build path to manifest: <extension_path>/<haextension_dir>/manifest.json
-    let manifest_path = extension_path_buf.join(&haextension_dir).join("manifest.json");
+    let manifest_path = extension_path_buf
+        .join(&haextension_dir)
+        .join("manifest.json");
 
     // Check if manifest exists
     if !manifest_path.exists() {
@@ -342,20 +336,15 @@ pub async fn load_dev_extension(
     }
 
     // 3. Read and parse manifest
-    let manifest_content = std::fs::read_to_string(&manifest_path).map_err(|e| {
-        ExtensionError::ManifestError {
+    let manifest_content =
+        std::fs::read_to_string(&manifest_path).map_err(|e| ExtensionError::ManifestError {
             reason: format!("Failed to read manifest: {}", e),
-        }
-    })?;
+        })?;
 
     let manifest: ExtensionManifest = serde_json::from_str(&manifest_content)?;
 
     // 4. Generate a unique ID for dev extension: dev_<public_key_first_8>_<name>
-    let key_prefix = manifest
-        .public_key
-        .chars()
-        .take(8)
-        .collect::<String>();
+    let key_prefix = manifest.public_key.chars().take(8).collect::<String>();
     let extension_id = format!("dev_{}_{}", key_prefix, manifest.name);
 
     // 5. Check if dev extension already exists (allow reload)
@@ -404,13 +393,11 @@ pub fn remove_dev_extension(
     state: State<'_, AppState>,
 ) -> Result<(), ExtensionError> {
     // Only remove from dev_extensions, not production_extensions
-    let mut dev_exts = state
-        .extension_manager
-        .dev_extensions
-        .lock()
-        .map_err(|e| ExtensionError::MutexPoisoned {
+    let mut dev_exts = state.extension_manager.dev_extensions.lock().map_err(|e| {
+        ExtensionError::MutexPoisoned {
             reason: e.to_string(),
-        })?;
+        }
+    })?;
 
     // Find and remove by public_key and name
     let to_remove = dev_exts
@@ -423,10 +410,7 @@ pub fn remove_dev_extension(
         eprintln!("✅ Dev extension removed: {}", name);
         Ok(())
     } else {
-        Err(ExtensionError::NotFound {
-            public_key,
-            name,
-        })
+        Err(ExtensionError::NotFound { public_key, name })
     }
 }
 

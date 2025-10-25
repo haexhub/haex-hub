@@ -90,6 +90,7 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
       const extensions =
         await invoke<ExtensionInfoResponse[]>('get_all_extensions')
 
+      console.log('get_all_extensions', extensions)
       // ExtensionInfoResponse is now directly compatible with IHaexHubExtension
       availableExtensions.value = extensions
     } catch (error) {
