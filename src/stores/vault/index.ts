@@ -177,8 +177,8 @@ const drizzleCallback = (async (
     })
   }
 
-  console.log('drizzleCallback', method, sql, params)
-  console.log('drizzleCallback rows', rows, rows.slice(0, 1))
+  /* console.log('drizzleCallback', method, sql, params)
+  console.log('drizzleCallback rows', rows, rows.slice(0, 1)) */
 
   if (method === 'get') {
     return rows.length > 0 ? { rows: rows.at(0) } : { rows }

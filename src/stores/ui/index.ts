@@ -53,7 +53,6 @@ export const useUiStore = defineStore('uiStore', () => {
   const colorMode = useColorMode()
 
   watchImmediate(currentThemeName, () => {
-    console.log('set colorMode', currentThemeName.value)
     colorMode.preference = currentThemeName.value
   })
 

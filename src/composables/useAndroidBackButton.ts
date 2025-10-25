@@ -14,12 +14,20 @@ export function useAndroidBackButton() {
 
   // Track navigation history manually
   router.afterEach((to, from) => {
-    console.log('[AndroidBack] Navigation:', { to: to.path, from: from.path, stackSize: historyStack.value.length })
+    console.log('[AndroidBack] Navigation:', {
+      to: to.path,
+      from: from.path,
+      stackSize: historyStack.value.length,
+    })
 
     // If navigating forward (new page)
-    if (from.path && to.path !== from.path && !historyStack.value.includes(to.path)) {
+    if (
+      from.path &&
+      to.path !== from.path &&
+      !historyStack.value.includes(to.path)
+    ) {
       historyStack.value.push(from.path)
-      console.log('[AndroidBack] Added to stack:', from.path, 'Stack:', historyStack.value)
+      //console.log('[AndroidBack] Added to stack:', from.path, 'Stack:', historyStack.value)
     }
   })
 
@@ -31,7 +39,10 @@ export function useAndroidBackButton() {
 
       // Listen to close requested event (triggered by Android back button)
       unlisten = await appWindow.onCloseRequested(async (event) => {
-        console.log('[AndroidBack] Back button pressed, stack size:', historyStack.value.length)
+        console.log(
+          '[AndroidBack] Back button pressed, stack size:',
+          historyStack.value.length,
+        )
 
         // Check if we have history
         if (historyStack.value.length > 0) {
@@ -40,7 +51,10 @@ export function useAndroidBackButton() {
 
           // Remove current page from stack
           historyStack.value.pop()
-          console.log('[AndroidBack] Going back, new stack size:', historyStack.value.length)
+          console.log(
+            '[AndroidBack] Going back, new stack size:',
+            historyStack.value.length,
+          )
 
           // Navigate back in router
           router.back()

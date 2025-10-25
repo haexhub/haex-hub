@@ -40,7 +40,6 @@ export const useNotificationStore = defineStore('notificationStore', () => {
   const readNotificationsAsync = async (filter?: SQLWrapper[]) => {
     const { currentVault } = storeToRefs(useVaultStore())
 
-    console.log('readNotificationsAsync', filter)
     if (filter) {
       return await currentVault.value?.drizzle
         .select()

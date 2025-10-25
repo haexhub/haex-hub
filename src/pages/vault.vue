@@ -67,7 +67,6 @@ onMounted(async () => {
 
     const knownDevice = await isKnownDeviceAsync()
 
-    console.log('knownDevice', knownDevice)
     if (!knownDevice) {
       console.log('not known device')
       newDeviceName.value = hostname.value ?? 'unknown'

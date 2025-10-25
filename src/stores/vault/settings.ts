@@ -32,7 +32,6 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
           where: eq(schema.haexSettings.key, VaultSettingsKeyEnum.locale),
         })
 
-      console.log('found currentLocaleRow', currentLocaleRow)
       if (currentLocaleRow?.value) {
         const currentLocale = app.$i18n.availableLocales.find(
           (locale) => locale === currentLocaleRow.value,
@@ -129,7 +128,7 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
           eq(schema.haexSettings.key, id),
         ),
       })
-    console.log('store: readDeviceNameAsync', deviceName)
+
     return deviceName?.id ? deviceName : undefined
   }
 
@@ -149,7 +148,6 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
     }
 
     return currentVault?.drizzle?.insert(schema.haexSettings).values({
-      //id: crypto.randomUUID(),
       type: VaultSettingsTypeEnum.deviceName,
       key: deviceId,
       value: deviceName,
