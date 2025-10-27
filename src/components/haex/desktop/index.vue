@@ -43,12 +43,12 @@
           <!-- Snap Dropzones (only visible when window drag near edge) -->
 
           <div
-            class="absolute left-0 top-0 bottom-0 border-blue-500 pointer-events-none backdrop-blur-sm z-40 transition-all duration-500"
+            class="absolute left-0 top-0 bottom-0 border-blue-500 pointer-events-none backdrop-blur-sm z-50 transition-all duration-500 ease-in-out"
             :class="showLeftSnapZone ? 'w-1/2 bg-blue-500/20 border-2' : 'w-0'"
           />
 
           <div
-            class="absolute right-0 top-0 bottom-0 border-blue-500 pointer-events-none backdrop-blur-sm z-40 transition-all duration-500 ease-in-out"
+            class="absolute right-0 top-0 bottom-0 border-blue-500 pointer-events-none backdrop-blur-sm z-50 transition-all duration-500 ease-in-out"
             :class="showRightSnapZone ? 'w-1/2 bg-blue-500/20 border-2' : 'w-0'"
           />
           <!--  </Transition> -->

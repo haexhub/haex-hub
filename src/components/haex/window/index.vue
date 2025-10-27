@@ -7,7 +7,7 @@
       'border border-gray-200 dark:border-gray-700 transition-all ease-out duration-600 ',
       'flex flex-col @container',
       { 'select-none': isResizingOrDragging },
-      isActive ? 'z-100' : 'z-50',
+      isActive ? 'z-20' : 'z-10',
     ]"
     @mousedown="handleActivate"
   >
