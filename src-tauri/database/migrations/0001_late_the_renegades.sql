@@ -1,0 +1,1 @@
+ALTER TABLE `haex_workspaces` ADD `device_id` text NOT NULL;

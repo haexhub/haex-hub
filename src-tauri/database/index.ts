@@ -19,5 +19,3 @@ const dummyExecutor = async (
 // Erstelle die Drizzle-Instanz für den SQLite-Dialekt
 // Übergib den dummyExecutor und das importierte Schema
 export const db = drizzle(dummyExecutor, { schema })
-
-// Exportiere auch alle Schema-Definitionen weiter, damit man alles aus einer Datei importieren kann

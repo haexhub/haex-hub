@@ -16,6 +16,9 @@ export default defineNuxtConfig({
   },
 
   app: {
+    head: {
+      viewport: 'width=device-width, initial-scale=1.0, viewport-fit=cover',
+    },
     pageTransition: {
       name: 'fade',
     },
@@ -108,8 +111,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       haexVault: {
-        lastVaultFileName: 'lastVaults.json',
-        instanceFileName: 'instance.json',
+        deviceFileName: 'device.json',
         defaultVaultName: 'HaexHub',
       },
     },

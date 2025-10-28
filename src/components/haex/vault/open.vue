@@ -5,7 +5,7 @@
     :description="vault.path || path"
     @confirm="onOpenDatabase"
   >
-    <!-- <UiButton
+    <UiButton
       :label="t('vault.open')"
       :ui="{
         base: 'px-3 py-2',
@@ -14,8 +14,7 @@
       size="xl"
       variant="outline"
       block
-      @click.stop="onLoadDatabase"
-    /> -->
+    />
 
     <template #title>
       <i18n-t

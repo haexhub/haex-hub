@@ -1,9 +1,7 @@
 <template>
   <UApp :locale="locales[locale]">
     <div data-vaul-drawer-wrapper>
-      <NuxtLayout>
-        <NuxtPage />
-      </NuxtLayout>
+      <NuxtPage />
     </div>
   </UApp>
 </template>

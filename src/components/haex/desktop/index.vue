@@ -1,7 +1,7 @@
 <template>
   <div
     ref="desktopEl"
-    class="w-full h-full relative overflow-hidden isolate"
+    class="w-full h-full relative overflow-hidden"
   >
     <Swiper
       :modules="[SwiperNavigation]"
@@ -24,7 +24,7 @@
         class="w-full h-full"
       >
         <div
-          class="w-full h-full relative isolate"
+          class="w-full h-full relative"
           @click.self.stop="handleDesktopClick"
           @mousedown.left.self="handleAreaSelectStart"
           @dragover.prevent="handleDragOver"
@@ -51,7 +51,6 @@
             class="absolute right-0 top-0 bottom-0 border-blue-500 pointer-events-none backdrop-blur-sm z-50 transition-all duration-500 ease-in-out"
             :class="showRightSnapZone ? 'w-1/2 bg-blue-500/20 border-2' : 'w-0'"
           />
-          <!--  </Transition> -->
 
           <!-- Area Selection Box -->
           <div
@@ -199,52 +198,6 @@
 
     <!-- Window Overview Modal -->
     <HaexWindowOverview />
-
-    <!-- Workspace Drawer -->
-    <UDrawer
-      v-model:open="isOverviewMode"
-      direction="left"
-      :dismissible="false"
-      :overlay="false"
-      :modal="false"
-      title="Workspaces"
-      description="Workspaces"
-    >
-      <template #content>
-        <div class="p-6 h-full overflow-y-auto">
-          <UButton
-            block
-            trailing-icon="mdi-close"
-            class="text-2xl font-bold ext-gray-900 dark:text-white mb-4"
-            @click="isOverviewMode = false"
-          >
-            Workspaces
-          </UButton>
-
-          <!-- Workspace Cards -->
-          <div class="flex flex-col gap-3">
-            <HaexWorkspaceCard
-              v-for="workspace in workspaces"
-              :key="workspace.id"
-              :workspace
-            />
-          </div>
-
-          <!-- Add New Workspace Button -->
-          <UButton
-            block
-            variant="outline"
-            class="mt-6"
-            @click="handleAddWorkspace"
-          >
-            <template #leading>
-              <UIcon name="i-heroicons-plus" />
-            </template>
-            New Workspace
-          </UButton>
-        </div>
-      </template>
-    </UDrawer>
   </div>
 </template>
 
@@ -598,17 +551,6 @@ const onSlideChange = (swiper: SwiperType) => {
   workspaceStore.switchToWorkspace(
     workspaceStore.workspaces.at(swiper.activeIndex)?.id,
   )
-}
-
-// Workspace control handlers
-const handleAddWorkspace = async () => {
-  await workspaceStore.addWorkspaceAsync()
-  // Swiper will auto-slide to new workspace because we switch in addWorkspaceAsync
-  nextTick(() => {
-    if (swiperInstance.value) {
-      swiperInstance.value.slideTo(workspaces.value.length - 1)
-    }
-  })
 }
 
 /* const handleRemoveWorkspace = async () => {

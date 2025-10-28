@@ -10,6 +10,7 @@ export type IWorkspace = SelectHaexWorkspaces
 export const useWorkspaceStore = defineStore('workspaceStore', () => {
   const vaultStore = useVaultStore()
   const windowStore = useWindowManagerStore()
+  const { deviceId } = storeToRefs(useDeviceStore())
 
   const { currentVault } = storeToRefs(vaultStore)
 
@@ -31,10 +32,16 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
       return
     }
 
+    if (!deviceId.value) {
+      console.error('Keine DeviceId vergeben')
+      return
+    }
+
     try {
       const items = await currentVault.value.drizzle
         .select()
         .from(haexWorkspaces)
+        .where(eq(haexWorkspaces.deviceId, deviceId.value))
         .orderBy(asc(haexWorkspaces.position))
 
       workspaces.value = items
@@ -58,11 +65,16 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
       throw new Error('Kein Vault geöffnet')
     }
 
+    if (!deviceId.value) {
+      return
+    }
+
     try {
       const newIndex = workspaces.value.length + 1
       const newWorkspace = {
         name: name || `Workspace ${newIndex}`,
         position: workspaces.value.length,
+        deviceId: deviceId.value,
       }
 
       const result = await currentVault.value.drizzle

@@ -118,8 +118,10 @@ export const useVaultSettingsStore = defineStore('vaultSettingsStore', () => {
       .where(eq(schema.haexSettings.key, 'vaultName'))
   }
 
-  const readDeviceNameAsync = async (id: string) => {
+  const readDeviceNameAsync = async (id?: string) => {
     const { currentVault } = useVaultStore()
+
+    if (!id) return undefined
 
     const deviceName =
       await currentVault?.drizzle?.query.haexSettings.findFirst({

@@ -4,8 +4,18 @@ import {
   platform as tauriPlatform,
 } from '@tauri-apps/plugin-os'
 
-export const useDeviceStore = defineStore('vaultInstanceStore', () => {
-  const deviceId = ref<string>()
+const deviceIdKey = 'deviceId'
+const defaultDeviceFileName = 'device.json'
+
+export const useDeviceStore = defineStore('vaultDeviceStore', () => {
+  const deviceId = ref<string | undefined>('')
+
+  const syncDeviceIdAsync = async () => {
+    deviceId.value = await getDeviceIdAsync()
+    if (deviceId.value) return deviceId.value
+
+    deviceId.value = await setDeviceIdAsync()
+  }
 
   const platform = computedAsync(() => tauriPlatform())
 
@@ -15,7 +25,7 @@ export const useDeviceStore = defineStore('vaultInstanceStore', () => {
 
   const getDeviceIdAsync = async () => {
     const store = await getStoreAsync()
-    return store.get<string>('id')
+    return await store.get<string>(deviceIdKey)
   }
 
   const getStoreAsync = async () => {
@@ -23,30 +33,19 @@ export const useDeviceStore = defineStore('vaultInstanceStore', () => {
       public: { haexVault },
     } = useRuntimeConfig()
 
-    return await load(haexVault.instanceFileName || 'instance.json')
+    return await load(haexVault.deviceFileName || defaultDeviceFileName)
   }
 
   const setDeviceIdAsync = async (id?: string) => {
     const store = await getStoreAsync()
     const _id = id || crypto.randomUUID()
-    await store.set('id', _id)
-    deviceId.value = _id
+    await store.set(deviceIdKey, _id)
     return _id
-  }
-
-  const setDeviceIdIfNotExistsAsync = async () => {
-    const _deviceId = await getDeviceIdAsync()
-    if (_deviceId) {
-      deviceId.value = _deviceId
-      return deviceId.value
-    }
-    return await setDeviceIdAsync()
   }
 
   const isKnownDeviceAsync = async () => {
     const { readDeviceNameAsync } = useVaultSettingsStore()
-    const deviceId = await getDeviceIdAsync()
-    return deviceId ? (await readDeviceNameAsync(deviceId)) || false : false
+    return !!(await readDeviceNameAsync(deviceId.value))
   }
 
   const readDeviceNameAsync = async (id?: string) => {
@@ -99,12 +98,13 @@ export const useDeviceStore = defineStore('vaultInstanceStore', () => {
     addDeviceNameAsync,
     deviceId,
     deviceName,
+    getDeviceIdAsync,
     hostname,
     isKnownDeviceAsync,
     platform,
     readDeviceNameAsync,
     setDeviceIdAsync,
-    setDeviceIdIfNotExistsAsync,
+    syncDeviceIdAsync,
     updateDeviceNameAsync,
   }
 })

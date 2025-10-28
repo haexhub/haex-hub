@@ -1,6 +1,6 @@
 <template>
-  <div class="w-full h-full overflow-y-auto">
-    <NuxtLayout name="app">
+  <div>
+    <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
 
@@ -48,7 +48,7 @@ const newDeviceName = ref<string>('unknown')
 const { readNotificationsAsync } = useNotificationStore()
 const { isKnownDeviceAsync } = useDeviceStore()
 const { loadExtensionsAsync } = useExtensionsStore()
-const { setDeviceIdIfNotExistsAsync, addDeviceNameAsync } = useDeviceStore()
+const { addDeviceNameAsync } = useDeviceStore()
 const { deviceId } = storeToRefs(useDeviceStore())
 const { syncLocaleAsync, syncThemeAsync, syncVaultNameAsync } =
   useVaultSettingsStore()
@@ -56,11 +56,11 @@ const { syncLocaleAsync, syncThemeAsync, syncVaultNameAsync } =
 onMounted(async () => {
   try {
     // Sync settings first before other initialization
+
     await Promise.allSettled([
       syncLocaleAsync(),
       syncThemeAsync(),
       syncVaultNameAsync(),
-      setDeviceIdIfNotExistsAsync(),
       loadExtensionsAsync(),
       readNotificationsAsync(),
     ])

@@ -38,37 +38,21 @@
 
       <!-- Right: Window Controls -->
       <div class="flex items-center gap-1 justify-end">
-        <button
-          class="w-8 h-8 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-colors"
+        <HaexWindowButton
+          variant="minimize"
           @click.stop="handleMinimize"
-        >
-          <UIcon
-            name="i-heroicons-minus"
-            class="w-4 h-4 text-gray-600 dark:text-gray-400"
-          />
-        </button>
-        <button
-          class="w-8 h-8 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-colors"
+        />
+
+        <HaexWindowButton
+          :is-maximized
+          variant="maximize"
           @click.stop="handleMaximize"
-        >
-          <UIcon
-            :name="
-              isMaximized
-                ? 'i-heroicons-arrows-pointing-in'
-                : 'i-heroicons-arrows-pointing-out'
-            "
-            class="w-4 h-4 text-gray-600 dark:text-gray-400"
-          />
-        </button>
-        <button
-          class="w-8 h-8 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center justify-center transition-colors group"
+        />
+
+        <HaexWindowButton
+          variant="close"
           @click.stop="handleClose"
-        >
-          <UIcon
-            name="i-heroicons-x-mark"
-            class="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400"
-          />
-        </button>
+        />
       </div>
     </div>
 

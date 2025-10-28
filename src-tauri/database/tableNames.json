@@ -67,6 +67,7 @@
       "name": "haex_workspaces",
       "columns": {
         "id": "id",
+        "deviceId": "device_id",
         "name": "name",
         "position": "position",
         "createdAt": "created_at",
