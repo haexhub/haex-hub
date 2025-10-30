@@ -66,6 +66,91 @@ impl ExtensionManager {
         Self::default()
     }
 
+    /// Helper function to validate path and check for path traversal
+    /// Returns the cleaned path if valid, or None if invalid/not found
+    /// If require_exists is true, returns None if path doesn't exist
+    pub fn validate_path_in_directory(
+        base_dir: &PathBuf,
+        relative_path: &str,
+        require_exists: bool,
+    ) -> Result<Option<PathBuf>, ExtensionError> {
+        // Check for path traversal patterns
+        if relative_path.contains("..") {
+            return Err(ExtensionError::SecurityViolation {
+                reason: format!("Path traversal attempt: {}", relative_path),
+            });
+        }
+
+        // Clean the path (same logic as in protocol.rs)
+        let clean_path = relative_path
+            .replace('\\', "/")
+            .trim_start_matches('/')
+            .split('/')
+            .filter(|&part| !part.is_empty() && part != "." && part != "..")
+            .collect::<PathBuf>();
+
+        let full_path = base_dir.join(&clean_path);
+
+        // Check if file/directory exists (if required)
+        if require_exists && !full_path.exists() {
+            return Ok(None);
+        }
+
+        // Verify path is within base directory
+        let canonical_base = base_dir
+            .canonicalize()
+            .map_err(|e| ExtensionError::Filesystem { source: e })?;
+
+        if let Ok(canonical_path) = full_path.canonicalize() {
+            if !canonical_path.starts_with(&canonical_base) {
+                return Err(ExtensionError::SecurityViolation {
+                    reason: format!("Path outside base directory: {}", relative_path),
+                });
+            }
+            Ok(Some(canonical_path))
+        } else {
+            // Path doesn't exist yet - still validate it would be within base
+            if full_path.starts_with(&canonical_base) {
+                Ok(Some(full_path))
+            } else {
+                Err(ExtensionError::SecurityViolation {
+                    reason: format!("Path outside base directory: {}", relative_path),
+                })
+            }
+        }
+    }
+
+    /// Validates icon path and falls back to favicon.ico if not specified
+    fn validate_and_resolve_icon_path(
+        extension_dir: &PathBuf,
+        haextension_dir: &str,
+        icon_path: Option<&str>,
+    ) -> Result<Option<String>, ExtensionError> {
+        // If icon is specified in manifest, validate it
+        if let Some(icon) = icon_path {
+            if let Some(clean_path) = Self::validate_path_in_directory(extension_dir, icon, true)? {
+                return Ok(Some(clean_path.to_string_lossy().to_string()));
+            } else {
+                eprintln!("WARNING: Icon path specified in manifest not found: {}", icon);
+                // Continue to fallback logic
+            }
+        }
+
+        // Fallback 1: Check haextension/favicon.ico
+        let haextension_favicon = format!("{}/favicon.ico", haextension_dir);
+        if let Some(clean_path) = Self::validate_path_in_directory(extension_dir, &haextension_favicon, true)? {
+            return Ok(Some(clean_path.to_string_lossy().to_string()));
+        }
+
+        // Fallback 2: Check public/favicon.ico
+        if let Some(clean_path) = Self::validate_path_in_directory(extension_dir, "public/favicon.ico", true)? {
+            return Ok(Some(clean_path.to_string_lossy().to_string()));
+        }
+
+        // No icon found
+        Ok(None)
+    }
+
     /// Extrahiert eine Extension-ZIP-Datei und validiert das Manifest
     fn extract_and_validate_extension(
         bytes: Vec<u8>,
@@ -108,42 +193,17 @@ impl ExtensionManager {
                 .unwrap_or("haextension")
                 .to_string();
 
-            // Security: Validate that haextension_dir doesn't contain ".." for path traversal
-            if dir.contains("..") {
-                return Err(ExtensionError::ManifestError {
-                    reason: "Invalid haextension_dir: path traversal with '..' not allowed".to_string(),
-                });
-            }
-
             dir
         } else {
             "haextension".to_string()
         };
 
-        // Build the manifest path
-        let manifest_path = temp.join(&haextension_dir).join("manifest.json");
-
-        // Ensure the resolved path is still within temp directory (safety check against path traversal)
-        let canonical_temp = temp.canonicalize()
-            .map_err(|e| ExtensionError::Filesystem { source: e })?;
-
-        // Only check if manifest_path parent exists to avoid errors
-        if let Some(parent) = manifest_path.parent() {
-            if let Ok(canonical_manifest_dir) = parent.canonicalize() {
-                if !canonical_manifest_dir.starts_with(&canonical_temp) {
-                    return Err(ExtensionError::ManifestError {
-                        reason: "Security violation: manifest path outside extension directory".to_string(),
-                    });
-                }
-            }
-        }
-
-        // Check if manifest exists
-        if !manifest_path.exists() {
-            return Err(ExtensionError::ManifestError {
+        // Validate manifest path using helper function
+        let manifest_relative_path = format!("{}/manifest.json", haextension_dir);
+        let manifest_path = Self::validate_path_in_directory(&temp, &manifest_relative_path, true)?
+            .ok_or_else(|| ExtensionError::ManifestError {
                 reason: format!("manifest.json not found at {}/manifest.json", haextension_dir),
-            });
-        }
+            })?;
 
         let actual_dir = temp.clone();
         let manifest_content =
@@ -151,7 +211,11 @@ impl ExtensionManager {
                 reason: format!("Cannot read manifest: {}", e),
             })?;
 
-        let manifest: ExtensionManifest = serde_json::from_str(&manifest_content)?;
+        let mut manifest: ExtensionManifest = serde_json::from_str(&manifest_content)?;
+
+        // Validate and resolve icon path with fallback logic
+        let validated_icon = Self::validate_and_resolve_icon_path(&actual_dir, &haextension_dir, manifest.icon.as_deref())?;
+        manifest.icon = validated_icon;
 
         let content_hash = ExtensionCrypto::hash_directory(&actual_dir, &manifest_path).map_err(|e| {
             ExtensionError::SignatureVerificationFailed {
@@ -525,7 +589,7 @@ impl ExtensionManager {
 
             // 1. Extension-Eintrag erstellen mit generierter UUID
             let insert_ext_sql = format!(
-                "INSERT INTO {} (id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO {} (id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled, single_instance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 TABLE_EXTENSIONS
             );
 
@@ -545,6 +609,7 @@ impl ExtensionManager {
                         extracted.manifest.homepage,
                         extracted.manifest.description,
                         true, // enabled
+                        extracted.manifest.single_instance.unwrap_or(false),
                     ],
                 )?;
 
@@ -623,7 +688,7 @@ impl ExtensionManager {
         // Lade alle Daten aus der Datenbank
         let extensions = with_connection(&state.db, |conn| {
             let sql = format!(
-            "SELECT id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled FROM {}",
+            "SELECT id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled, single_instance FROM {}",
             TABLE_EXTENSIONS
         );
             eprintln!("DEBUG: SQL Query before transformation: {}", sql);
@@ -655,13 +720,16 @@ impl ExtensionManager {
                         })?
                         .to_string(),
                     author: row[3].as_str().map(String::from),
-                    entry: row[4].as_str().unwrap_or("index.html").to_string(),
+                    entry: row[4].as_str().map(String::from),
                     icon: row[5].as_str().map(String::from),
                     public_key: row[6].as_str().unwrap_or("").to_string(),
                     signature: row[7].as_str().unwrap_or("").to_string(),
                     permissions: ExtensionPermissions::default(),
                     homepage: row[8].as_str().map(String::from),
                     description: row[9].as_str().map(String::from),
+                    single_instance: row[11]
+                        .as_bool()
+                        .or_else(|| row[11].as_i64().map(|v| v != 0)),
                 };
 
                 let enabled = row[10]
@@ -722,33 +790,12 @@ impl ExtensionManager {
                     Ok(config_content) => {
                         match serde_json::from_str::<serde_json::Value>(&config_content) {
                             Ok(config) => {
-                                let dir = config
+                                config
                                     .get("dev")
                                     .and_then(|dev| dev.get("haextension_dir"))
                                     .and_then(|dir| dir.as_str())
                                     .unwrap_or("haextension")
-                                    .to_string();
-
-                                // Security: Validate that haextension_dir doesn't contain ".."
-                                if dir.contains("..") {
-                                    eprintln!(
-                                        "DEBUG: Invalid haextension_dir for: {}, contains '..'",
-                                        extension_id
-                                    );
-                                    self.missing_extensions
-                                        .lock()
-                                        .map_err(|e| ExtensionError::MutexPoisoned {
-                                            reason: e.to_string(),
-                                        })?
-                                        .push(MissingExtension {
-                                            id: extension_id.clone(),
-                                            public_key: extension_data.manifest.public_key.clone(),
-                                            name: extension_data.manifest.name.clone(),
-                                            version: extension_data.manifest.version.clone(),
-                                        });
-                                    continue;
-                                }
-                                dir
+                                    .to_string()
                             }
                             Err(_) => "haextension".to_string(),
                         }
@@ -759,12 +806,14 @@ impl ExtensionManager {
                 "haextension".to_string()
             };
 
-            // Check if manifest.json exists in the haextension_dir
-            let manifest_path = extension_path.join(&haextension_dir).join("manifest.json");
-            if !manifest_path.exists() {
+            // Validate manifest.json path using helper function
+            let manifest_relative_path = format!("{}/manifest.json", haextension_dir);
+            if Self::validate_path_in_directory(&extension_path, &manifest_relative_path, true)?
+                .is_none()
+            {
                 eprintln!(
-                    "DEBUG: manifest.json missing for: {} at {:?}",
-                    extension_id, manifest_path
+                    "DEBUG: manifest.json missing or invalid for: {} at {}/manifest.json",
+                    extension_id, haextension_dir
                 );
                 self.missing_extensions
                     .lock()

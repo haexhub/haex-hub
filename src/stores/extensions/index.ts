@@ -50,7 +50,7 @@ export const useExtensionsStore = defineStore('extensionsStore', () => {
       currentExtension.value.publicKey,
       currentExtension.value.name,
       currentExtension.value.version,
-      'index.html',
+      currentExtension.value.entry ?? 'index.html',
       currentExtension.value.devServerUrl ?? undefined,
     )
   })

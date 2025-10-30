@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "bcdd9ad3-a87a-4a43-9eba-673f94b10287",
+  "id": "8dc25226-70f9-4d2e-89d4-f3a6b2bdf58d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "haex_crdt_configs": {
@@ -411,7 +411,7 @@
           "name": "entry",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false,
           "default": "'index.html'"
         },
@@ -443,6 +443,14 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "single_instance": {
+          "name": "single_instance",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": false
         },
         "haex_timestamp": {
           "name": "haex_timestamp",
@@ -616,6 +624,13 @@
           "name": "id",
           "type": "text",
           "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "device_id": {
+          "name": "device_id",
+          "type": "text",
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },

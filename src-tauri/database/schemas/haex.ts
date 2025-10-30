@@ -47,11 +47,12 @@ export const haexExtensions = sqliteTable(
     version: text().notNull(),
     author: text(),
     description: text(),
-    entry: text().notNull().default('index.html'),
+    entry: text().default('index.html'),
     homepage: text(),
     enabled: integer({ mode: 'boolean' }).default(true),
     icon: text(),
     signature: text().notNull(),
+    single_instance: integer({ mode: 'boolean' }).default(false),
   }),
   (table) => [
     // UNIQUE constraint: Pro Developer (public_key) kann nur eine Extension mit diesem Namen existieren

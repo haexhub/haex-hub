@@ -60,11 +60,12 @@ CREATE TABLE `haex_extensions` (
 	`version` text NOT NULL,
 	`author` text,
 	`description` text,
-	`entry` text DEFAULT 'index.html' NOT NULL,
+	`entry` text DEFAULT 'index.html',
 	`homepage` text,
 	`enabled` integer DEFAULT true,
 	`icon` text,
 	`signature` text NOT NULL,
+	`single_instance` integer DEFAULT false,
 	`haex_timestamp` text
 );
 --> statement-breakpoint
@@ -94,6 +95,7 @@ CREATE TABLE `haex_settings` (
 CREATE UNIQUE INDEX `haex_settings_key_type_value_unique` ON `haex_settings` (`key`,`type`,`value`);--> statement-breakpoint
 CREATE TABLE `haex_workspaces` (
 	`id` text PRIMARY KEY NOT NULL,
+	`device_id` text NOT NULL,
 	`name` text NOT NULL,
 	`position` integer DEFAULT 0 NOT NULL,
 	`haex_timestamp` text

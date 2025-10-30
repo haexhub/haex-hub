@@ -57,13 +57,20 @@ pub struct ExtensionManifest {
     pub name: String,
     pub version: String,
     pub author: Option<String>,
-    pub entry: String,
+    #[serde(default = "default_entry_value")]
+    pub entry: Option<String>,
     pub icon: Option<String>,
     pub public_key: String,
     pub signature: String,
     pub permissions: ExtensionPermissions,
     pub homepage: Option<String>,
     pub description: Option<String>,
+    #[serde(default)]
+    pub single_instance: Option<bool>,
+}
+
+fn default_entry_value() -> Option<String> {
+    Some("index.html".to_string())
 }
 
 impl ExtensionManifest {
@@ -172,6 +179,8 @@ pub struct ExtensionInfoResponse {
     pub description: Option<String>,
     pub homepage: Option<String>,
     pub icon: Option<String>,
+    pub entry: Option<String>,
+    pub single_instance: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dev_server_url: Option<String>,
 }
@@ -197,6 +206,8 @@ impl ExtensionInfoResponse {
             description: extension.manifest.description.clone(),
             homepage: extension.manifest.homepage.clone(),
             icon: extension.manifest.icon.clone(),
+            entry: extension.manifest.entry.clone(),
+            single_instance: extension.manifest.single_instance,
             dev_server_url,
         })
     }

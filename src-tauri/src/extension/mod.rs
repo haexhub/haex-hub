@@ -1,7 +1,7 @@
 /// src-tauri/src/extension/mod.rs
 use crate::{
     extension::{
-        core::{EditablePermissions, ExtensionInfoResponse, ExtensionPreview},
+        core::{manager::ExtensionManager, EditablePermissions, ExtensionInfoResponse, ExtensionPreview},
         error::ExtensionError,
     },
     AppState,
@@ -320,20 +320,19 @@ pub async fn load_dev_extension(
     }
     eprintln!("✅ Dev server is reachable");
 
-    // 2. Build path to manifest: <extension_path>/<haextension_dir>/manifest.json
-    let manifest_path = extension_path_buf
-        .join(&haextension_dir)
-        .join("manifest.json");
-
-    // Check if manifest exists
-    if !manifest_path.exists() {
-        return Err(ExtensionError::ManifestError {
-            reason: format!(
-                "Manifest not found at: {}. Make sure you run 'npx @haexhub/sdk init' first.",
-                manifest_path.display()
-            ),
-        });
-    }
+    // 2. Validate and build path to manifest: <extension_path>/<haextension_dir>/manifest.json
+    let manifest_relative_path = format!("{}/manifest.json", haextension_dir);
+    let manifest_path = ExtensionManager::validate_path_in_directory(
+        &extension_path_buf,
+        &manifest_relative_path,
+        true,
+    )?
+    .ok_or_else(|| ExtensionError::ManifestError {
+        reason: format!(
+            "Manifest not found at: {}/manifest.json. Make sure you run 'npx @haexhub/sdk init' first.",
+            haextension_dir
+        ),
+    })?;
 
     // 3. Read and parse manifest
     let manifest_content =
