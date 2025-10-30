@@ -197,6 +197,30 @@ impl PermissionManager {
         action: Action,
         table_name: &str,
     ) -> Result<(), ExtensionError> {
+        // Remove quotes from table name if present (from SDK's getTableName())
+        let clean_table_name = table_name.trim_matches('"');
+
+        // Auto-allow: Extensions have full access to their own tables
+        // Table format: {publicKey}__{extensionName}__{tableName}
+        // Extension ID format: dev_{publicKey}_{extensionName} or {publicKey}_{extensionName}
+
+        // Get the extension to check if this is its own table
+        let extension = app_state
+            .extension_manager
+            .get_extension(extension_id)
+            .ok_or_else(|| ExtensionError::ValidationError {
+                reason: format!("Extension with ID {} not found", extension_id),
+            })?;
+
+        // Build expected table prefix: {publicKey}__{extensionName}__
+        let expected_prefix = format!("{}__{}__", extension.manifest.public_key, extension.manifest.name);
+
+        if clean_table_name.starts_with(&expected_prefix) {
+            // This is the extension's own table - auto-allow
+            return Ok(());
+        }
+
+        // Not own table - check explicit permissions
         let permissions = Self::get_permissions(app_state, extension_id).await?;
 
         let has_permission = permissions
@@ -205,7 +229,7 @@ impl PermissionManager {
             .filter(|perm| perm.resource_type == ResourceType::Db)
             .filter(|perm| perm.action == action) // action ist nicht mehr Option
             .any(|perm| {
-                if perm.target != "*" && perm.target != table_name {
+                if perm.target != "*" && perm.target != clean_table_name {
                     return false;
                 }
                 true

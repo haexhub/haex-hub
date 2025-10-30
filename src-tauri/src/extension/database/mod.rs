@@ -5,6 +5,7 @@ use crate::crdt::transformer::CrdtTransformer;
 use crate::crdt::trigger;
 use crate::database::core::{parse_sql_statements, with_connection, ValueConverter};
 use crate::database::error::DatabaseError;
+use crate::extension::database::executor::SqlExecutor;
 use crate::extension::error::ExtensionError;
 use crate::extension::permissions::validator::SqlPermissionValidator;
 use crate::AppState;
@@ -110,7 +111,7 @@ pub async fn extension_sql_execute(
     public_key: String,
     name: String,
     state: State<'_, AppState>,
-) -> Result<Vec<String>, ExtensionError> {
+) -> Result<Vec<Vec<JsonValue>>, ExtensionError> {
     // Get extension to retrieve its ID
     let extension = state
         .extension_manager
@@ -129,58 +130,87 @@ pub async fn extension_sql_execute(
     // SQL parsing
     let mut ast_vec = parse_sql_statements(sql)?;
 
+    if ast_vec.len() != 1 {
+        return Err(ExtensionError::Database {
+            source: DatabaseError::ExecutionError {
+                sql: sql.to_string(),
+                reason: "extension_sql_execute should only receive a single SQL statement"
+                    .to_string(),
+                table: None,
+            },
+        });
+    }
+
+    let mut statement = ast_vec.pop().unwrap();
+
+    // Check if statement has RETURNING clause
+    let has_returning = crate::database::core::statement_has_returning(&statement);
+
     // Database operation
     with_connection(&state.db, |conn| {
         let tx = conn.transaction().map_err(DatabaseError::from)?;
 
         let transformer = CrdtTransformer::new();
-        let executor = StatementExecutor::new(&tx);
+
+        // Get HLC service reference
+        let hlc_service = state.hlc.lock().map_err(|_| DatabaseError::MutexPoisoned {
+            reason: "Failed to lock HLC service".to_string(),
+        })?;
 
         // Generate HLC timestamp
-        let hlc_timestamp = state
-            .hlc
-            .lock()
-            .unwrap()
+        let hlc_timestamp = hlc_service
             .new_timestamp_and_persist(&tx)
             .map_err(|e| DatabaseError::HlcError {
                 reason: e.to_string(),
             })?;
 
-        // Transform statements
-        let mut modified_schema_tables = HashSet::new();
-        for statement in &mut ast_vec {
-            if let Some(table_name) =
-                transformer.transform_execute_statement(statement, &hlc_timestamp)?
-            {
-                modified_schema_tables.insert(table_name);
-            }
-        }
+        // Transform statement
+        transformer.transform_execute_statement(&mut statement, &hlc_timestamp)?;
 
-        // Convert parameters
+        // Convert parameters to references
         let sql_values = ValueConverter::convert_params(&params)?;
+        let param_refs: Vec<&dyn rusqlite::ToSql> = sql_values.iter().map(|v| v as &dyn rusqlite::ToSql).collect();
 
-        // Execute statements
-        for statement in ast_vec {
-            executor.execute_statement_with_params(&statement, &sql_values)?;
+        let result = if has_returning {
+            // Use query_internal for statements with RETURNING
+            let (_, rows) = SqlExecutor::query_internal_typed(&tx, &hlc_service, &statement.to_string(), &param_refs)?;
+            rows
+        } else {
+            // Use execute_internal for statements without RETURNING
+            SqlExecutor::execute_internal_typed(&tx, &hlc_service, &statement.to_string(), &param_refs)?;
+            vec![]
+        };
 
-            if let Statement::CreateTable(create_table_details) = statement {
-                let table_name_str = create_table_details.name.to_string();
-                println!(
-                    "Table '{}' created by extension, setting up CRDT triggers...",
-                    table_name_str
-                );
-                trigger::setup_triggers_for_table(&tx, &table_name_str, false)?;
-                println!(
-                    "Triggers for table '{}' successfully created.",
-                    table_name_str
-                );
-            }
+        // Handle CREATE TABLE trigger setup
+        if let Statement::CreateTable(ref create_table_details) = statement {
+            // Extract table name and remove quotes (both " and `)
+            let raw_name = create_table_details.name.to_string();
+            println!("DEBUG: Raw table name from AST: {:?}", raw_name);
+            println!("DEBUG: Raw table name chars: {:?}", raw_name.chars().collect::<Vec<_>>());
+
+            let table_name_str = raw_name
+                .trim_matches('"')
+                .trim_matches('`')
+                .to_string();
+
+            println!("DEBUG: Cleaned table name: {:?}", table_name_str);
+            println!("DEBUG: Cleaned table name chars: {:?}", table_name_str.chars().collect::<Vec<_>>());
+
+            println!(
+                "Table '{}' created by extension, setting up CRDT triggers...",
+                table_name_str
+            );
+            trigger::setup_triggers_for_table(&tx, &table_name_str, false)?;
+            println!(
+                "Triggers for table '{}' successfully created.",
+                table_name_str
+            );
         }
 
         // Commit transaction
         tx.commit().map_err(DatabaseError::from)?;
 
-        Ok(modified_schema_tables.into_iter().collect())
+        Ok(result)
     })
     .map_err(ExtensionError::from)
 }
@@ -192,7 +222,7 @@ pub async fn extension_sql_select(
     public_key: String,
     name: String,
     state: State<'_, AppState>,
-) -> Result<Vec<JsonValue>, ExtensionError> {
+) -> Result<Vec<Vec<JsonValue>>, ExtensionError> {
     // Get extension to retrieve its ID
     let extension = state
         .extension_manager
@@ -229,10 +259,9 @@ pub async fn extension_sql_select(
         }
     }
 
-    // Database operation
+    // Database operation - return Vec<Vec<JsonValue>> like sql_select_with_crdt
     with_connection(&state.db, |conn| {
         let sql_params = ValueConverter::convert_params(&params)?;
-        // Hard Delete: Keine SELECT-Transformation mehr nötig
         let stmt_to_execute = ast_vec.pop().unwrap();
         let transformed_sql = stmt_to_execute.to_string();
 
@@ -245,51 +274,34 @@ pub async fn extension_sql_select(
                     table: None,
                 })?;
 
-        let column_names: Vec<String> = prepared_stmt
-            .column_names()
-            .into_iter()
-            .map(|s| s.to_string())
-            .collect();
-
-        let rows = prepared_stmt
-            .query_map(params_from_iter(sql_params.iter()), |row| {
-                row_to_json_value(row, &column_names)
-            })
+        let num_columns = prepared_stmt.column_count();
+        let mut rows = prepared_stmt
+            .query(params_from_iter(sql_params.iter()))
             .map_err(|e| DatabaseError::QueryError {
                 reason: e.to_string(),
             })?;
 
-        let mut results = Vec::new();
-        for row_result in rows {
-            results.push(row_result.map_err(|e| DatabaseError::RowProcessingError {
-                reason: e.to_string(),
-            })?);
+        let mut result_vec: Vec<Vec<JsonValue>> = Vec::new();
+
+        while let Some(row) = rows.next().map_err(|e| DatabaseError::QueryError {
+            reason: e.to_string(),
+        })? {
+            let mut row_values: Vec<JsonValue> = Vec::new();
+            for i in 0..num_columns {
+                let value_ref = row.get_ref(i).map_err(|e| DatabaseError::QueryError {
+                    reason: e.to_string(),
+                })?;
+                let json_value = crate::database::core::convert_value_ref_to_json(value_ref)?;
+                row_values.push(json_value);
+            }
+            result_vec.push(row_values);
         }
 
-        Ok(results)
+        Ok(result_vec)
     })
     .map_err(ExtensionError::from)
 }
 
-/// Konvertiert eine SQLite-Zeile zu JSON
-fn row_to_json_value(
-    row: &rusqlite::Row,
-    columns: &[String],
-) -> Result<JsonValue, rusqlite::Error> {
-    let mut map = serde_json::Map::new();
-    for (i, col_name) in columns.iter().enumerate() {
-        let value = row.get::<usize, rusqlite::types::Value>(i)?;
-        let json_value = match value {
-            rusqlite::types::Value::Null => JsonValue::Null,
-            rusqlite::types::Value::Integer(i) => json!(i),
-            rusqlite::types::Value::Real(f) => json!(f),
-            rusqlite::types::Value::Text(s) => json!(s),
-            rusqlite::types::Value::Blob(blob) => json!(blob.to_vec()),
-        };
-        map.insert(col_name.clone(), json_value);
-    }
-    Ok(JsonValue::Object(map))
-}
 
 /// Validiert Parameter gegen SQL-Platzhalter
 fn validate_params(sql: &str, params: &[JsonValue]) -> Result<(), DatabaseError> {

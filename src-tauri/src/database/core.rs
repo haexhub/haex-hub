@@ -89,8 +89,15 @@ pub fn parse_single_statement(sql: &str) -> Result<Statement, DatabaseError> {
 /// Utility für SQL-Parsing - parst mehrere SQL-Statements
 pub fn parse_sql_statements(sql: &str) -> Result<Vec<Statement>, DatabaseError> {
     let dialect = SQLiteDialect {};
-    Parser::parse_sql(&dialect, sql).map_err(|e| DatabaseError::ParseError {
-        reason: e.to_string(),
+
+    // Normalize whitespace: replace multiple whitespaces (including newlines, tabs) with single space
+    let normalized_sql = sql
+        .split_whitespace()
+        .collect::<Vec<&str>>()
+        .join(" ");
+
+    Parser::parse_sql(&dialect, &normalized_sql).map_err(|e| DatabaseError::ParseError {
+        reason: format!("Failed to parse SQL: {}", e),
         sql: sql.to_string(),
     })
 }

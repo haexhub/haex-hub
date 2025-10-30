@@ -64,7 +64,13 @@ impl SqlExecutor {
 
         // Trigger-Logik für CREATE TABLE
         if let Statement::CreateTable(create_table_details) = statement {
-            let table_name_str = create_table_details.name.to_string();
+            let raw_name = create_table_details.name.to_string();
+            // Remove quotes from table name
+            let table_name_str = raw_name
+                .trim_matches('"')
+                .trim_matches('`')
+                .to_string();
+            eprintln!("DEBUG: Setting up triggers for table: {}", table_name_str);
             trigger::setup_triggers_for_table(tx, &table_name_str, false)?;
         }
 
@@ -158,7 +164,13 @@ impl SqlExecutor {
 
         // Trigger-Logik für CREATE TABLE
         if let Statement::CreateTable(create_table_details) = statement {
-            let table_name_str = create_table_details.name.to_string();
+            let raw_name = create_table_details.name.to_string();
+            // Remove quotes from table name
+            let table_name_str = raw_name
+                .trim_matches('"')
+                .trim_matches('`')
+                .to_string();
+            eprintln!("DEBUG: Setting up triggers for table (RETURNING): {}", table_name_str);
             trigger::setup_triggers_for_table(tx, &table_name_str, false)?;
         }
 

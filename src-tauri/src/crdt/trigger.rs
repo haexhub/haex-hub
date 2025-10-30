@@ -85,7 +85,8 @@ impl ColumnInfo {
 }
 
 fn is_safe_identifier(name: &str) -> bool {
-    !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_')
+    // Allow alphanumeric characters, underscores, and hyphens (for extension names like "nuxt-app")
+    !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-')
 }
 
 /// Richtet CRDT-Trigger für eine einzelne Tabelle ein.

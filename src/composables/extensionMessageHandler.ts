@@ -368,7 +368,8 @@ async function handleDatabaseMethodAsync(
       const rows = await invoke<unknown[]>('extension_sql_select', {
         sql: params.query || '',
         params: params.params || [],
-        extensionId: extension.id,
+        publicKey: extension.publicKey,
+        name: extension.name,
       })
 
       return {
@@ -379,14 +380,15 @@ async function handleDatabaseMethodAsync(
     }
 
     case 'haextension.db.execute': {
-      await invoke<string[]>('extension_sql_execute', {
+      const rows = await invoke<unknown[]>('extension_sql_execute', {
         sql: params.query || '',
         params: params.params || [],
-        extensionId: extension.id,
+        publicKey: extension.publicKey,
+        name: extension.name,
       })
 
       return {
-        rows: [],
+        rows,
         rowsAffected: 1,
         lastInsertId: undefined,
       }
@@ -400,7 +402,8 @@ async function handleDatabaseMethodAsync(
         await invoke('extension_sql_execute', {
           sql: stmt,
           params: [],
-          extensionId: extension.id,
+          publicKey: extension.publicKey,
+          name: extension.name,
         })
       }
 

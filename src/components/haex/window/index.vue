@@ -4,10 +4,14 @@
     :style="windowStyle"
     :class="[
       'absolute bg-default/80 backdrop-blur-xl rounded-lg shadow-xl overflow-hidden isolate',
-      'border border-gray-200 dark:border-gray-700 transition-all ease-out duration-600 ',
+      'transition-all ease-out duration-600',
       'flex flex-col @container',
       { 'select-none': isResizingOrDragging },
       isActive ? 'z-20' : 'z-10',
+      // Border colors based on warning level
+      warningLevel === 'warning' ? 'border-2 border-warning-500' :
+      warningLevel === 'danger' ? 'border-2 border-danger-500' :
+      'border border-gray-200 dark:border-gray-700',
     ]"
     @mousedown="handleActivate"
   >
@@ -86,6 +90,7 @@ const props = defineProps<{
   sourceHeight?: number
   isOpening?: boolean
   isClosing?: boolean
+  warningLevel?: 'warning' | 'danger' // Warning indicator (e.g., dev extension, dangerous permissions)
 }>()
 
 const emit = defineEmits<{

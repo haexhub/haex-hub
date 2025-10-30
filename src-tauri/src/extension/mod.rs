@@ -343,9 +343,8 @@ pub async fn load_dev_extension(
 
     let manifest: ExtensionManifest = serde_json::from_str(&manifest_content)?;
 
-    // 4. Generate a unique ID for dev extension: dev_<public_key_first_8>_<name>
-    let key_prefix = manifest.public_key.chars().take(8).collect::<String>();
-    let extension_id = format!("dev_{}_{}", key_prefix, manifest.name);
+    // 4. Generate a unique ID for dev extension: dev_<public_key>_<name>
+    let extension_id = format!("dev_{}_{}", manifest.public_key, manifest.name);
 
     // 5. Check if dev extension already exists (allow reload)
     if let Some(existing) = state
