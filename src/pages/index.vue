@@ -54,10 +54,18 @@
                     :key="vault.name"
                     class="flex items-center justify-between group overflow-x-scroll"
                   >
-                    <UButton
+                    <UiButtonContext
                       variant="ghost"
                       color="neutral"
                       class="flex items-center no-underline justify-between text-nowrap text-sm md:text-base shrink w-full px-3"
+                      :context-menu-items="[
+                        {
+                          icon: 'mdi:trash-can-outline',
+                          label: t('remove.button'),
+                          onSelect: () => prepareRemoveVault(vault.name),
+                          color: 'error',
+                        },
+                      ]"
                       @click="
                         () => {
                           passwordPromptOpen = true
@@ -68,7 +76,7 @@
                       <span class="block">
                         {{ vault.name }}
                       </span>
-                    </UButton>
+                    </UiButtonContext>
                     <UButton
                       color="error"
                       square
@@ -129,6 +137,9 @@ const showRemoveDialog = ref(false)
 
 const { lastVaults } = storeToRefs(useLastVaultStore())
 
+const { syncLastVaultsAsync, moveVaultToTrashAsync } = useLastVaultStore()
+const { syncDeviceIdAsync } = useDeviceStore()
+
 const vaultToBeRemoved = ref('')
 const prepareRemoveVault = (vaultName: string) => {
   vaultToBeRemoved.value = vaultName
@@ -138,7 +149,7 @@ const prepareRemoveVault = (vaultName: string) => {
 const toast = useToast()
 const onConfirmRemoveAsync = async () => {
   try {
-    await removeVaultAsync(vaultToBeRemoved.value)
+    await moveVaultToTrashAsync(vaultToBeRemoved.value)
     showRemoveDialog.value = false
     await syncLastVaultsAsync()
   } catch (error) {
@@ -148,9 +159,6 @@ const onConfirmRemoveAsync = async () => {
     })
   }
 }
-
-const { syncLastVaultsAsync, removeVaultAsync } = useLastVaultStore()
-const { syncDeviceIdAsync } = useDeviceStore()
 
 onMounted(async () => {
   try {
@@ -168,6 +176,7 @@ de:
   lastUsed: 'Zuletzt verwendete Vaults'
   sponsors: Supported by
   remove:
+    button: Löschen
     title: Vault löschen
     description: Möchtest du die Vault {vaultName} wirklich löschen?
 
@@ -176,6 +185,7 @@ en:
   lastUsed: 'Last used Vaults'
   sponsors: 'Supported by'
   remove:
+    button: Delete
     title: Delete Vault
     description: Are you sure you really want to delete {vaultName}?
 </i18n>

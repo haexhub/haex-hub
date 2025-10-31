@@ -20,6 +20,7 @@ use std::time::UNIX_EPOCH;
 use std::{fs, sync::Arc};
 use tauri::{path::BaseDirectory, AppHandle, Manager, State};
 use tauri_plugin_fs::FsExt;
+use trash;
 use ts_rs::TS;
 
 pub struct DbConnection(pub Arc<Mutex<Option<Connection>>>);
@@ -212,7 +213,46 @@ pub fn vault_exists(app_handle: AppHandle, vault_name: String) -> Result<bool, D
     Ok(Path::new(&vault_path).exists())
 }
 
-/// Deletes a vault database file
+/// Moves a vault database file to trash (or deletes permanently if trash is unavailable)
+#[tauri::command]
+pub fn move_vault_to_trash(
+    app_handle: AppHandle,
+    vault_name: String,
+) -> Result<String, DatabaseError> {
+    let vault_path = get_vault_path(&app_handle, &vault_name)?;
+    let vault_shm_path = format!("{}-shm", vault_path);
+    let vault_wal_path = format!("{}-wal", vault_path);
+
+    if !Path::new(&vault_path).exists() {
+        return Err(DatabaseError::IoError {
+            path: vault_path,
+            reason: "Vault does not exist".to_string(),
+        });
+    }
+
+    // Try to move to trash first (works on desktop systems)
+    let moved_to_trash = trash::delete(&vault_path).is_ok();
+
+    if moved_to_trash {
+        // Also try to move auxiliary files to trash (ignore errors as they might not exist)
+        let _ = trash::delete(&vault_shm_path);
+        let _ = trash::delete(&vault_wal_path);
+
+        Ok(format!(
+            "Vault '{}' successfully moved to trash",
+            vault_name
+        ))
+    } else {
+        // Fallback: Permanent deletion (e.g., on mobile devices without trash)
+        println!(
+            "Trash not available, falling back to permanent deletion for vault '{}'",
+            vault_name
+        );
+        delete_vault(app_handle, vault_name)
+    }
+}
+
+/// Deletes a vault database file permanently (bypasses trash)
 #[tauri::command]
 pub fn delete_vault(app_handle: AppHandle, vault_name: String) -> Result<String, DatabaseError> {
     let vault_path = get_vault_path(&app_handle, &vault_name)?;

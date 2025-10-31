@@ -68,6 +68,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             database::create_encrypted_database,
             database::delete_vault,
+            database::move_vault_to_trash,
             database::list_vaults,
             database::open_encrypted_database,
             database::sql_execute_with_crdt,

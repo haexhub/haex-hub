@@ -22,9 +22,14 @@ export const useLastVaultStore = defineStore('lastVaultStore', () => {
     return await invoke('delete_vault', { vaultName })
   }
 
+  const moveVaultToTrashAsync = async (vaultName: string) => {
+    return await invoke('move_vault_to_trash', { vaultName })
+  }
+
   return {
     syncLastVaultsAsync,
     lastVaults,
     removeVaultAsync,
+    moveVaultToTrashAsync,
   }
 })
