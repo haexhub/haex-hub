@@ -3,15 +3,17 @@
     ref="windowEl"
     :style="windowStyle"
     :class="[
-      'absolute bg-default/80 backdrop-blur-xl rounded-lg shadow-xl overflow-hidden isolate',
+      'absolute bg-default/80 backdrop-blur-xl rounded-lg shadow-xl overflow-hidden',
       'transition-all ease-out duration-600',
       'flex flex-col @container',
       { 'select-none': isResizingOrDragging },
       isActive ? 'z-20' : 'z-10',
       // Border colors based on warning level
-      warningLevel === 'warning' ? 'border-2 border-warning-500' :
-      warningLevel === 'danger' ? 'border-2 border-danger-500' :
-      'border border-gray-200 dark:border-gray-700',
+      warningLevel === 'warning'
+        ? 'border-2 border-warning-500'
+        : warningLevel === 'danger'
+          ? 'border-2 border-danger-500'
+          : 'border border-gray-200 dark:border-gray-700',
     ]"
     @mousedown="handleActivate"
   >
@@ -320,13 +322,33 @@ const handleMaximize = () => {
     const bounds = getViewportBounds()
 
     if (bounds && bounds.width > 0 && bounds.height > 0) {
+      // Get safe-area-insets from CSS variables for debug
+      const safeAreaTop = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue(
+          '--safe-area-inset-top',
+        ) || '0',
+      )
+      const safeAreaBottom = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue(
+          '--safe-area-inset-bottom',
+        ) || '0',
+      )
+
+      // Desktop container uses 'absolute inset-0' which stretches over full viewport
+      // bounds.height = full viewport height (includes header area + safe-areas)
+      // We need to calculate available space properly
+
+      // Get header height from UI store (measured reactively in layout)
+      const uiStore = useUiStore()
+      const headerHeight = uiStore.headerHeight
+
       x.value = 0
-      y.value = 0
+      y.value = 0 // Start below header and status bar
       width.value = bounds.width
-      height.value = bounds.height
+      // Height: viewport - header - both safe-areas
+      height.value = bounds.height - headerHeight - safeAreaTop - safeAreaBottom
       isMaximized.value = true
     }
-    console.log('handleMaximize', preMaximizeState, bounds)
   }
 }
 

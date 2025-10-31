@@ -82,12 +82,13 @@ pub async fn get_all_extensions(
 
 #[tauri::command]
 pub async fn preview_extension(
+    app_handle: AppHandle,
     state: State<'_, AppState>,
     file_bytes: Vec<u8>,
 ) -> Result<ExtensionPreview, ExtensionError> {
     state
         .extension_manager
-        .preview_extension_internal(file_bytes)
+        .preview_extension_internal(&app_handle, file_bytes)
         .await
 }
 

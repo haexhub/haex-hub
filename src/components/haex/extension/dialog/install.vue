@@ -15,7 +15,7 @@
           <div class="flex items-start gap-4">
             <div
               v-if="preview?.manifest.icon"
-              class="w-16 h-16 flex-shrink-0"
+              class="w-16 h-16 shrink-0"
             >
               <UIcon
                 :name="preview.manifest.icon"
@@ -183,7 +183,6 @@ const shellPermissions = computed({
     }
   },
 })
-
 
 const permissionAccordionItems = computed(() => {
   const items = []

@@ -1,6 +1,7 @@
 <template>
-  <div class="w-dvw h-dvh flex flex-col">
+  <div class="w-full h-full flex flex-col">
     <UPageHeader
+      ref="headerEl"
       as="header"
       :ui="{
         root: ['px-8 py-0'],
@@ -53,7 +54,7 @@
       </template>
     </UPageHeader>
 
-    <main class="flex-1 overflow-hidden bg-elevated flex flex-col">
+    <main class="flex-1 overflow-hidden bg-elevated flex flex-col relative">
       <slot />
     </main>
 
@@ -93,11 +94,9 @@
             variant="outline"
             class="mt-6"
             @click="handleAddWorkspace"
+            icon="i-heroicons-plus"
+            :label="t('add')"
           >
-            <template #leading>
-              <UIcon name="i-heroicons-plus" />
-            </template>
-            New Workspace
           </UButton>
         </div>
       </template>
@@ -127,6 +126,15 @@ const handleAddWorkspace = async () => {
     workspaceStore.slideToWorkspace(workspace?.id)
   })
 }
+
+// Measure header height and store it in UI store
+const headerEl = useTemplateRef('headerEl')
+const { height } = useElementSize(headerEl)
+const uiStore = useUiStore()
+
+watch(height, (newHeight) => {
+  uiStore.headerHeight = newHeight
+})
 </script>
 
 <i18n lang="yaml">
@@ -136,10 +144,12 @@ de:
 
   header:
     workspaces: Workspaces
+    add: Workspace hinzufügen
 en:
   search:
     label: Search
 
   header:
     workspaces: Workspaces
+    add: Add Workspace
 </i18n>

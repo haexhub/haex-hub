@@ -1,7 +1,7 @@
 <template>
   <div
     ref="desktopEl"
-    class="w-full h-full relative overflow-hidden"
+    class="absolute inset-0 overflow-hidden"
   >
     <Swiper
       :modules="[SwiperNavigation]"
@@ -13,7 +13,7 @@
       :no-swiping="true"
       no-swiping-class="no-swipe"
       :allow-touch-move="allowSwipe"
-      class="w-full h-full"
+      class="h-full w-full"
       direction="vertical"
       @swiper="onSwiperInit"
       @slide-change="onSlideChange"
@@ -115,7 +115,14 @@
                   :source-height="window.sourceHeight"
                   :is-opening="window.isOpening"
                   :is-closing="window.isClosing"
-                  :warning-level="window.type === 'extension' && availableExtensions.find(ext => ext.id === window.sourceId)?.devServerUrl ? 'warning' : undefined"
+                  :warning-level="
+                    window.type === 'extension' &&
+                    availableExtensions.find(
+                      (ext) => ext.id === window.sourceId,
+                    )?.devServerUrl
+                      ? 'warning'
+                      : undefined
+                  "
                   class="no-swipe"
                   @close="windowManager.closeWindow(window.id)"
                   @minimize="windowManager.minimizeWindow(window.id)"
@@ -165,7 +172,13 @@
               :source-height="window.sourceHeight"
               :is-opening="window.isOpening"
               :is-closing="window.isClosing"
-              :warning-level="window.type === 'extension' && availableExtensions.find(ext => ext.id === window.sourceId)?.devServerUrl ? 'warning' : undefined"
+              :warning-level="
+                window.type === 'extension' &&
+                availableExtensions.find((ext) => ext.id === window.sourceId)
+                  ?.devServerUrl
+                  ? 'warning'
+                  : undefined
+              "
               class="no-swipe"
               @close="windowManager.closeWindow(window.id)"
               @minimize="windowManager.minimizeWindow(window.id)"

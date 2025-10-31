@@ -155,13 +155,35 @@ impl ExtensionManager {
     fn extract_and_validate_extension(
         bytes: Vec<u8>,
         temp_prefix: &str,
+        app_handle: &AppHandle,
     ) -> Result<ExtractedExtension, ExtensionError> {
-        let temp = std::env::temp_dir().join(format!("{}_{}", temp_prefix, uuid::Uuid::new_v4()));
+        // Use app_cache_dir for better Android compatibility
+        let cache_dir = app_handle
+            .path()
+            .app_cache_dir()
+            .map_err(|e| ExtensionError::InstallationFailed {
+                reason: format!("Cannot get app cache dir: {}", e),
+            })?;
 
+        let temp_id = uuid::Uuid::new_v4();
+        let temp = cache_dir.join(format!("{}_{}", temp_prefix, temp_id));
+        let zip_file_path = cache_dir.join(format!("{}_{}_{}.haextension", temp_prefix, temp_id, "temp"));
+
+        // Write bytes to a temporary ZIP file first (important for Android file system)
+        fs::write(&zip_file_path, &bytes).map_err(|e| {
+            ExtensionError::filesystem_with_path(zip_file_path.display().to_string(), e)
+        })?;
+
+        // Create extraction directory
         fs::create_dir_all(&temp)
             .map_err(|e| ExtensionError::filesystem_with_path(temp.display().to_string(), e))?;
 
-        let mut archive = ZipArchive::new(Cursor::new(bytes)).map_err(|e| {
+        // Open ZIP file from disk (more reliable on Android than from memory)
+        let zip_file = fs::File::open(&zip_file_path).map_err(|e| {
+            ExtensionError::filesystem_with_path(zip_file_path.display().to_string(), e)
+        })?;
+
+        let mut archive = ZipArchive::new(zip_file).map_err(|e| {
             ExtensionError::InstallationFailed {
                 reason: format!("Invalid ZIP: {}", e),
             }
@@ -172,6 +194,9 @@ impl ExtensionManager {
             .map_err(|e| ExtensionError::InstallationFailed {
                 reason: format!("Cannot extract ZIP: {}", e),
             })?;
+
+        // Clean up temporary ZIP file
+        let _ = fs::remove_file(&zip_file_path);
 
         // Read haextension_dir from config if it exists, otherwise use default
         let config_path = temp.join("haextension.config.json");
@@ -491,9 +516,10 @@ impl ExtensionManager {
 
     pub async fn preview_extension_internal(
         &self,
+        app_handle: &AppHandle,
         file_bytes: Vec<u8>,
     ) -> Result<ExtensionPreview, ExtensionError> {
-        let extracted = Self::extract_and_validate_extension(file_bytes, "haexhub_preview")?;
+        let extracted = Self::extract_and_validate_extension(file_bytes, "haexhub_preview", app_handle)?;
 
         let is_valid_signature = ExtensionCrypto::verify_signature(
             &extracted.manifest.public_key,
@@ -518,7 +544,7 @@ impl ExtensionManager {
         custom_permissions: EditablePermissions,
         state: &State<'_, AppState>,
     ) -> Result<String, ExtensionError> {
-        let extracted = Self::extract_and_validate_extension(file_bytes, "haexhub_ext")?;
+        let extracted = Self::extract_and_validate_extension(file_bytes, "haexhub_ext", &app_handle)?;
 
         // Signatur verifizieren (bei Installation wird ein Fehler geworfen, nicht nur geprüft)
         ExtensionCrypto::verify_signature(

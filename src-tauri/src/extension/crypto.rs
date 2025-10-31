@@ -48,7 +48,9 @@ impl ExtensionCrypto {
                 let relative = path.strip_prefix(dir)
                     .unwrap_or(&path)
                     .to_string_lossy()
-                    .to_string();
+                    .to_string()
+                    // Normalisiere Pfad-Separatoren zu Unix-Style (/) für plattformübergreifende Konsistenz
+                    .replace('\\', "/");
                 (relative, path)
             })
             .collect();
@@ -56,16 +58,30 @@ impl ExtensionCrypto {
         // 3. Sortiere nach relativen Pfaden
         relative_files.sort_by(|a, b| a.0.cmp(&b.0));
 
-        println!("=== Files to hash ({}): ===", relative_files.len());
-        for (rel, _) in &relative_files {
-            println!("  - {}", rel);
-        }
-
         let mut hasher = Sha256::new();
+
+        // Canonicalize manifest path for comparison (important on Android where symlinks may differ)
+        // Also ensure the canonical path is still within the allowed directory (security check)
+        let canonical_manifest_path = manifest_path.canonicalize()
+            .unwrap_or_else(|_| manifest_path.to_path_buf());
+
+        // Security: Verify canonical manifest path is still within dir
+        let canonical_dir = dir.canonicalize()
+            .unwrap_or_else(|_| dir.to_path_buf());
+
+        if !canonical_manifest_path.starts_with(&canonical_dir) {
+            return Err(ExtensionError::ManifestError {
+                reason: format!("Manifest path resolves outside of extension directory (potential path traversal)"),
+            });
+        }
 
         // 4. Inhalte der sortierten Dateien hashen
         for (_relative, file_path) in relative_files {
-            if file_path == manifest_path {
+            // Canonicalize file_path for comparison
+            let canonical_file_path = file_path.canonicalize()
+                .unwrap_or_else(|_| file_path.clone());
+
+            if canonical_file_path == canonical_manifest_path {
                 // FÜR DIE MANIFEST.JSON:
                 let content_str = fs::read_to_string(&file_path)
                     .map_err(|e| ExtensionError::Filesystem { source: e })?;
@@ -94,8 +110,12 @@ impl ExtensionCrypto {
                             reason: format!("Failed to serialize manifest: {}", e),
                         }
                     })?;
-                println!("canonical_manifest_content: {}", canonical_manifest_content);
-                hasher.update(canonical_manifest_content.as_bytes());
+
+                // Normalisiere Zeilenenden zu Unix-Style (\n), wie Node.js JSON.stringify es macht
+                // Dies ist wichtig für plattformübergreifende Konsistenz (Desktop vs Android)
+                let normalized_content = canonical_manifest_content.replace("\r\n", "\n");
+
+                hasher.update(normalized_content.as_bytes());
             } else {
                 // FÜR ALLE ANDEREN DATEIEN:
                 let content =

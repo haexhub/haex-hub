@@ -1,7 +1,7 @@
 <template>
-  <div class="w-full h-full flex items-center justify-center">
+  <UDashboardPanel resizable>
     <HaexDesktop />
-  </div>
+  </UDashboardPanel>
 </template>
 
 <script setup lang="ts">

@@ -69,10 +69,12 @@ export const useUiStore = defineStore('uiStore', () => {
   })
 
   const viewportHeightWithoutHeader = ref(0)
+  const headerHeight = ref(0)
 
   return {
     availableThemes,
     viewportHeightWithoutHeader,
+    headerHeight,
     currentTheme,
     currentThemeName,
     defaultTheme,
