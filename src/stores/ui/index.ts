@@ -10,7 +10,9 @@ export const useUiStore = defineStore('uiStore', () => {
   const isSmallScreen = breakpoints.smaller('sm')
 
   const { $i18n } = useNuxtApp()
-  const { locale } = useI18n()
+  const { locale } = useI18n({
+    useScope: 'global',
+  })
   const { platform } = useDeviceStore()
 
   $i18n.setLocaleMessage('de', {

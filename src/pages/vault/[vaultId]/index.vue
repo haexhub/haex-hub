@@ -1,7 +1,9 @@
 <template>
-  <UDashboardPanel resizable>
-    <HaexDesktop />
-  </UDashboardPanel>
+  <div>
+    <UDashboardPanel resizable>
+      <HaexDesktop />
+    </UDashboardPanel>
+  </div>
 </template>
 
 <script setup lang="ts">
