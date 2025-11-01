@@ -216,11 +216,8 @@ jobs:
             echo "No keystore configured, building unsigned APK"
           fi
 
-      - name: Build Android APK (unsigned if no keystore)
-        run: pnpm tauri android build --apk
-
-      - name: Build Android AAB (unsigned if no keystore)
-        run: pnpm tauri android build --aab
+      - name: Build Android APK and AAB (unsigned if no keystore)
+        run: pnpm tauri android build
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4

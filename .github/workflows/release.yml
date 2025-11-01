@@ -213,11 +213,8 @@ jobs:
           echo "ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $GITHUB_ENV
           echo "ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $GITHUB_ENV
 
-      - name: Build Android APK (signed)
-        run: pnpm tauri android build --apk
-
-      - name: Build Android AAB (signed)
-        run: pnpm tauri android build --aab
+      - name: Build Android APK and AAB (signed)
+        run: pnpm tauri android build
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
