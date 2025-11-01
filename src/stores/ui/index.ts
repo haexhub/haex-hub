@@ -1,5 +1,6 @@
 import { breakpointsTailwind } from '@vueuse/core'
 import { broadcastContextToAllExtensions } from '~/composables/extensionMessageHandler'
+
 import de from './de.json'
 import en from './en.json'
 
@@ -13,7 +14,6 @@ export const useUiStore = defineStore('uiStore', () => {
   const { locale } = useI18n({
     useScope: 'global',
   })
-  const { platform } = useDeviceStore()
 
   $i18n.setLocaleMessage('de', {
     ui: de,
@@ -62,11 +62,13 @@ export const useUiStore = defineStore('uiStore', () => {
   })
 
   // Broadcast theme and locale changes to extensions
-  watch([currentThemeName, locale], () => {
+  watch([currentThemeName, locale], async () => {
+    const deviceStore = useDeviceStore()
+    const platformValue = await deviceStore.platform
     broadcastContextToAllExtensions({
       theme: currentThemeName.value,
       locale: locale.value,
-      platform,
+      platform: platformValue,
     })
   })
 
