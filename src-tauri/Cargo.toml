@@ -55,4 +55,4 @@ trash = "5.2.0"
 rusqlite = { version = "0.37.0", features = ["load_extension", "bundled-sqlcipher-vendored-openssl", "functions"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
-rusqlite = { version = "0.37.0", features = ["load_extension", "bundled", "functions"] }
+rusqlite = { version = "0.37.0", features = ["load_extension", "bundled-sqlcipher-vendored-openssl", "functions"] }
