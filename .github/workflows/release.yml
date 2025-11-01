@@ -214,10 +214,10 @@ jobs:
           echo "ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $GITHUB_ENV
 
       - name: Build Android APK (signed)
-        run: pnpm tauri android build
+        run: pnpm tauri android build --apk
 
       - name: Build Android AAB (signed)
-        run: pnpm tauri android build --bundle aab
+        run: pnpm tauri android build --aab
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
