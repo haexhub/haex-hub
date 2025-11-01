@@ -1,5 +1,3 @@
-//import tailwindcss from '@tailwindcss/vite'
-
 import { fileURLToPath } from 'node:url'
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
@@ -31,7 +29,6 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@nuxt/icon',
     '@nuxt/eslint',
-    //"@nuxt/image",
     '@nuxt/fonts',
     '@nuxt/ui',
   ],
@@ -125,7 +122,6 @@ export default defineNuxtConfig({
   },
 
   vite: {
-    //plugins: [tailwindcss()],
     // Better support for Tauri CLI output
     clearScreen: false,
     // Enable environment variables

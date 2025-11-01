@@ -135,7 +135,6 @@ pub fn get_vaults_directory(app_handle: &AppHandle) -> Result<String, DatabaseEr
     Ok(vaults_dir.to_string_lossy().to_string())
 }
 
-//#[serde(tag = "type", content = "details")]
 #[derive(Debug, Serialize, Deserialize, TS)]
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
@@ -450,9 +449,6 @@ pub fn open_encrypted_database(
     state: State<'_, AppState>,
 ) -> Result<String, DatabaseError> {
     println!("Opening encrypted database vault_path: {}", vault_path);
-
-    // Vault-Pfad aus dem Namen ableiten
-    //let vault_path = get_vault_path(&app_handle, &vault_name)?;
     println!("Resolved vault path: {}", vault_path);
 
     if !Path::new(&vault_path).exists() {

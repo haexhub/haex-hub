@@ -11,8 +11,6 @@ const INSERT_TRIGGER_TPL: &str = "z_crdt_{TABLE_NAME}_insert";
 const UPDATE_TRIGGER_TPL: &str = "z_crdt_{TABLE_NAME}_update";
 const DELETE_TRIGGER_TPL: &str = "z_crdt_{TABLE_NAME}_delete";
 
-//const SYNC_ACTIVE_KEY: &str = "sync_active";
-
 pub const HLC_TIMESTAMP_COLUMN: &str = "haex_timestamp";
 
 /// Name der custom UUID-Generierungs-Funktion (registriert in database::core::open_and_init_db)

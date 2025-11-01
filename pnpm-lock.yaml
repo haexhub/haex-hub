@@ -41,9 +41,6 @@ importers:
       '@tauri-apps/plugin-fs':
         specifier: ^2.4.4
         version: 2.4.4
-      '@tauri-apps/plugin-http':
-        specifier: 2.5.2
-        version: 2.5.2
       '@tauri-apps/plugin-notification':
         specifier: 2.3.1
         version: 2.3.1
@@ -53,9 +50,6 @@ importers:
       '@tauri-apps/plugin-os':
         specifier: ^2.3.2
         version: 2.3.2
-      '@tauri-apps/plugin-sql':
-        specifier: 2.3.0
-        version: 2.3.0
       '@tauri-apps/plugin-store':
         specifier: ^2.4.1
         version: 2.4.1
@@ -77,9 +71,6 @@ importers:
       eslint:
         specifier: ^9.38.0
         version: 9.38.0(jiti@2.6.1)
-      fuse.js:
-        specifier: ^7.1.0
-        version: 7.1.0
       nuxt-zod-i18n:
         specifier: ^1.12.1
         version: 1.12.1(magicast@0.5.0)
@@ -2101,9 +2092,6 @@ packages:
   '@tauri-apps/plugin-fs@2.4.4':
     resolution: {integrity: sha512-MTorXxIRmOnOPT1jZ3w96vjSuScER38ryXY88vl5F0uiKdnvTKKTtaEjTEo8uPbl4e3gnUtfsDVwC7h77GQLvQ==}
 
-  '@tauri-apps/plugin-http@2.5.2':
-    resolution: {integrity: sha512-x1mQKHSLDk4mS2S938OTeyk8L7QyLpCrKZCZcjkljGsvTvRMojCvI9SeJ1kaxc7t8xSilkC7WdId8xER9TIGLg==}
-
   '@tauri-apps/plugin-notification@2.3.1':
     resolution: {integrity: sha512-7gqgfANSREKhh35fY1L4j3TUjUdePmU735FYDqRGeIf8nMXWpcx6j4FhN9/4nYz+m0mv79DCTPLqIPTySggGgg==}
 
@@ -2112,9 +2100,6 @@ packages:
 
   '@tauri-apps/plugin-os@2.3.2':
     resolution: {integrity: sha512-n+nXWeuSeF9wcEsSPmRnBEGrRgOy6jjkSU+UVCOV8YUGKb2erhDOxis7IqRXiRVHhY8XMKks00BJ0OAdkpf6+A==}
-
-  '@tauri-apps/plugin-sql@2.3.0':
-    resolution: {integrity: sha512-JYwIocfsLaDWa41LMiZWuzts7yCJR+EpZPRmgpO7Gd7XiAS9S67dKz306j/k/d9XntB0YopMRBol2OIWMschuA==}
 
   '@tauri-apps/plugin-store@2.4.1':
     resolution: {integrity: sha512-ckGSEzZ5Ii4Hf2D5x25Oqnm2Zf9MfDWAzR+volY0z/OOBz6aucPKEY0F649JvQ0Vupku6UJo7ugpGRDOFOunkA==}
@@ -7770,10 +7755,6 @@ snapshots:
     dependencies:
       '@tauri-apps/api': 2.9.0
 
-  '@tauri-apps/plugin-http@2.5.2':
-    dependencies:
-      '@tauri-apps/api': 2.9.0
-
   '@tauri-apps/plugin-notification@2.3.1':
     dependencies:
       '@tauri-apps/api': 2.9.0
@@ -7783,10 +7764,6 @@ snapshots:
       '@tauri-apps/api': 2.9.0
 
   '@tauri-apps/plugin-os@2.3.2':
-    dependencies:
-      '@tauri-apps/api': 2.9.0
-
-  '@tauri-apps/plugin-sql@2.3.0':
     dependencies:
       '@tauri-apps/api': 2.9.0
 
