@@ -11,7 +11,7 @@
     "eslint:fix": "eslint --fix",
     "generate:rust-types": "tsx ./src-tauri/database/generate-rust-types.ts",
     "generate:ts-types": "cd src-tauri && cargo test",
-    "generate": "nuxt generate",
+    "generate": "nuxt generate && node scripts/fix-vite-mapdeps.js",
     "postinstall": "nuxt prepare",
     "preview": "nuxt preview",
     "tauri:build:debug": "tauri build --debug",
