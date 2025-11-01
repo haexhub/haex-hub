@@ -12,7 +12,8 @@ jobs:
       contents: write
     runs-on: ubuntu-22.04
     outputs:
-      release_id: ${{ steps.create-release.outputs.result }}
+      release_id: ${{ steps.create-release.outputs.release_id }}
+      upload_url: ${{ steps.create-release.outputs.upload_url }}
 
     steps:
       - name: Checkout repository
@@ -40,6 +41,8 @@ jobs:
               draft: true,
               prerelease: false
             })
+            core.setOutput('release_id', data.id)
+            core.setOutput('upload_url', data.upload_url)
             return data.id
 
   build-desktop:
@@ -216,13 +219,14 @@ jobs:
       - name: Build Android APK and AAB (signed)
         run: pnpm tauri android build
 
-      - name: Upload to Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
-            src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
-          draft: true
+      - name: Upload Android artifacts to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.ref_name }} \
+            src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk \
+            src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab \
+            --clobber
 
   publish-release:
     permissions:
