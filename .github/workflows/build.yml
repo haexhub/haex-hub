@@ -165,10 +165,19 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Android APK
+      - name: Setup Keystore (if secrets available)
+        if: ${{ secrets.ANDROID_KEYSTORE != '' }}
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 -d > $HOME/keystore.jks
+          echo "ANDROID_KEYSTORE_PATH=$HOME/keystore.jks" >> $GITHUB_ENV
+          echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+          echo "ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $GITHUB_ENV
+          echo "ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $GITHUB_ENV
+
+      - name: Build Android APK (unsigned if no keystore)
         run: pnpm tauri android build --apk
 
-      - name: Build Android AAB
+      - name: Build Android AAB (unsigned if no keystore)
         run: pnpm tauri android build --aab
 
       - name: Upload Android artifacts
@@ -179,57 +188,58 @@ jobs:
             src-tauri/gen/android/app/build/outputs/apk/**/*.apk
             src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
 
-  build-ios:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Rust iOS targets
-        run: |
-          rustup target add aarch64-apple-ios
-          rustup target add x86_64-apple-ios
-          rustup target add aarch64-apple-ios-sim
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Setup Rust cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-
-      - name: Install frontend dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build iOS app
-        run: pnpm tauri ios build
-
-      - name: Upload iOS artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios
-          path: |
-            src-tauri/gen/apple/build/Build/Products/**/*.app
-            src-tauri/gen/apple/build/Build/Products/**/*.ipa
+  # iOS builds are disabled - uncomment when you have an Apple Developer Account
+  # build-ios:
+  #   runs-on: macos-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #
+  #     - name: Install pnpm
+  #       uses: pnpm/action-setup@v4
+  #
+  #     - name: Setup Rust
+  #       uses: dtolnay/rust-toolchain@stable
+  #
+  #     - name: Install Rust iOS targets
+  #       run: |
+  #         rustup target add aarch64-apple-ios
+  #         rustup target add x86_64-apple-ios
+  #         rustup target add aarch64-apple-ios-sim
+  #
+  #     - name: Get pnpm store directory
+  #       shell: bash
+  #       run: |
+  #         echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+  #
+  #     - name: Setup pnpm cache
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: ${{ env.STORE_PATH }}
+  #         key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-pnpm-store-
+  #
+  #     - name: Setup Rust cache
+  #       uses: Swatinem/rust-cache@v2
+  #       with:
+  #         workspaces: src-tauri
+  #
+  #     - name: Install frontend dependencies
+  #       run: pnpm install --frozen-lockfile
+  #
+  #     - name: Build iOS app
+  #       run: pnpm tauri ios build
+  #
+  #     - name: Upload iOS artifacts
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: ios
+  #         path: |
+  #           src-tauri/gen/apple/build/Build/Products/**/*.app
+  #           src-tauri/gen/apple/build/Build/Products/**/*.ipa
