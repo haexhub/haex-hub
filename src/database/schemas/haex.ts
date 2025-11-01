@@ -8,8 +8,11 @@ import {
   type AnySQLiteColumn,
   type SQLiteColumnBuilderBase,
 } from 'drizzle-orm/sqlite-core'
-import tableNames from '../tableNames.json'
-import { crdtColumnNames } from '.'
+import tableNames from '~/database/tableNames.json'
+
+const crdtColumnNames = {
+  haexTimestamp: 'haex_timestamp',
+}
 
 // Helper function to add common CRDT columns ( haexTimestamp)
 export const withCrdtColumns = <
@@ -25,8 +28,8 @@ export const haexSettings = sqliteTable(
   tableNames.haex.settings.name,
   withCrdtColumns({
     id: text()
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+      .$defaultFn(() => crypto.randomUUID())
+      .primaryKey(),
     key: text(),
     type: text(),
     value: text(),
@@ -40,8 +43,8 @@ export const haexExtensions = sqliteTable(
   tableNames.haex.extensions.name,
   withCrdtColumns({
     id: text()
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+      .$defaultFn(() => crypto.randomUUID())
+      .primaryKey(),
     public_key: text().notNull(),
     name: text().notNull(),
     version: text().notNull(),
@@ -66,8 +69,8 @@ export const haexExtensionPermissions = sqliteTable(
   tableNames.haex.extension_permissions.name,
   withCrdtColumns({
     id: text()
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+      .$defaultFn(() => crypto.randomUUID())
+      .primaryKey(),
     extensionId: text(tableNames.haex.extension_permissions.columns.extensionId)
       .notNull()
       .references((): AnySQLiteColumn => haexExtensions.id, {
@@ -104,7 +107,9 @@ export type SelecthaexExtensionPermissions =
 export const haexNotifications = sqliteTable(
   tableNames.haex.notifications.name,
   withCrdtColumns({
-    id: text().primaryKey(),
+    id: text()
+      .$defaultFn(() => crypto.randomUUID())
+      .primaryKey(),
     alt: text(),
     date: text(),
     icon: text(),
@@ -125,8 +130,8 @@ export const haexWorkspaces = sqliteTable(
   tableNames.haex.workspaces.name,
   withCrdtColumns({
     id: text(tableNames.haex.workspaces.columns.id)
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+      .$defaultFn(() => crypto.randomUUID())
+      .primaryKey(),
     deviceId: text(tableNames.haex.workspaces.columns.deviceId).notNull(),
     name: text(tableNames.haex.workspaces.columns.name).notNull(),
     position: integer(tableNames.haex.workspaces.columns.position)
@@ -142,8 +147,8 @@ export const haexDesktopItems = sqliteTable(
   tableNames.haex.desktop_items.name,
   withCrdtColumns({
     id: text(tableNames.haex.desktop_items.columns.id)
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+      .$defaultFn(() => crypto.randomUUID())
+      .primaryKey(),
     workspaceId: text(tableNames.haex.desktop_items.columns.workspaceId)
       .notNull()
       .references(() => haexWorkspaces.id, { onDelete: 'cascade' }),

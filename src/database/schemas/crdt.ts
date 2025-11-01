@@ -1,12 +1,12 @@
 import { integer, sqliteTable, text, index } from 'drizzle-orm/sqlite-core'
-import tableNames from '../tableNames.json'
+import tableNames from '~/database/tableNames.json'
 
 export const haexCrdtLogs = sqliteTable(
   tableNames.haex.crdt.logs.name,
   {
     id: text()
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+      .$defaultFn(() => crypto.randomUUID())
+      .primaryKey(),
     haexTimestamp: text(tableNames.haex.crdt.logs.columns.haexTimestamp),
     tableName: text(tableNames.haex.crdt.logs.columns.tableName),
     rowPks: text(tableNames.haex.crdt.logs.columns.rowPks, { mode: 'json' }),
@@ -33,8 +33,8 @@ export const haexCrdtSnapshots = sqliteTable(
   tableNames.haex.crdt.snapshots.name,
   {
     snapshotId: text(tableNames.haex.crdt.snapshots.columns.snapshotId)
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+      .$defaultFn(() => crypto.randomUUID())
+      .primaryKey(),
     created: text(),
     epochHlc: text(tableNames.haex.crdt.snapshots.columns.epochHlc),
     locationUrl: text(tableNames.haex.crdt.snapshots.columns.locationUrl),
@@ -45,8 +45,6 @@ export const haexCrdtSnapshots = sqliteTable(
 )
 
 export const haexCrdtConfigs = sqliteTable(tableNames.haex.crdt.configs.name, {
-  key: text()
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
+  key: text().primaryKey(),
   value: text(),
 })

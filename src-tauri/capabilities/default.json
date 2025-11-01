@@ -35,6 +35,7 @@
     "notification:allow-create-channel",
     "notification:allow-list-channels",
     "notification:allow-notify",
+    "notification:allow-is-permission-granted",
     "notification:default",
     "opener:allow-open-url",
     "opener:default",

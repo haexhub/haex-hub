@@ -21,7 +21,7 @@ struct TableDefinition {
 pub fn generate_table_names() {
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR ist nicht gesetzt.");
     println!("Generiere Tabellennamen nach {}", out_dir);
-    let schema_path = Path::new("database/tableNames.json");
+    let schema_path = Path::new("../src/database/tableNames.json");
     let dest_path = Path::new(&out_dir).join("tableNames.rs");
 
     let file = File::open(&schema_path).expect("Konnte tableNames.json nicht öffnen");
@@ -66,7 +66,7 @@ pub fn generate_table_names() {
     f.write_all(code.as_bytes())
         .expect("Konnte nicht in Zieldatei schreiben");
 
-    println!("cargo:rerun-if-changed=database/tableNames.json");
+    println!("cargo:rerun-if-changed=../src/database/tableNames.json");
 }
 
 /// Konvertiert einen String zu SCREAMING_SNAKE_CASE

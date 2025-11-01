@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import * as schema from '@/../src-tauri/database/schemas/haex'
+import * as schema from '~/database/schemas/haex'
 import type { Locale } from 'vue-i18n'
 
 export enum VaultSettingsTypeEnum {

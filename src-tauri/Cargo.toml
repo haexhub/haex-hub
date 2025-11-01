@@ -47,10 +47,11 @@ uhlc = "0.8.2"
 url = "2.5.7"
 uuid = { version = "1.18.1", features = ["v4"] }
 zip = "6.0.0"
+rusqlite = { version = "0.37.0", features = [
+  "load_extension",
+  "bundled-sqlcipher-vendored-openssl",
+  "functions",
+] }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
-trash = "5.2.0"
-rusqlite = { version = "0.37.0", features = ["load_extension", "bundled-sqlcipher-vendored-openssl", "functions"] }
-
-[target.'cfg(target_os = "android")'.dependencies]
-rusqlite = { version = "0.37.0", features = ["load_extension", "bundled-sqlcipher-vendored-openssl", "functions"] }
+trash = "5.2.5"

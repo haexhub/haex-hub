@@ -2,7 +2,7 @@
 
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { invoke } from '@tauri-apps/api/core'
-import { schema } from '@/../src-tauri/database/index'
+import { schema } from '~/database'
 import type {
   AsyncRemoteCallback,
   SqliteRemoteDatabase,
@@ -21,11 +21,12 @@ export const useVaultStore = defineStore('vaultStore', () => {
     public: { haexVault },
   } = useRuntimeConfig()
 
+  const router = useRouter()
   const currentVaultId = computed<string | undefined>({
     get: () =>
-      getSingleRouteParam(useRouter().currentRoute.value.params.vaultId),
+      getSingleRouteParam(router.currentRoute.value.params.vaultId),
     set: (newVaultId) => {
-      useRouter().currentRoute.value.params.vaultId = newVaultId ?? ''
+      router.currentRoute.value.params.vaultId = newVaultId ?? ''
     },
   })
 

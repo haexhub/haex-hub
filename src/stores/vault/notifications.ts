@@ -2,7 +2,7 @@ import { and, eq, or, type SQLWrapper } from 'drizzle-orm'
 import {
   haexNotifications,
   type InsertHaexNotifications,
-} from '~~/src-tauri/database/schemas/haex'
+} from '~/database/schemas/haex'
 import {
   isPermissionGranted,
   requestPermission,
@@ -31,7 +31,12 @@ export const useNotificationStore = defineStore('notificationStore', () => {
   }
 
   const checkNotificationAsync = async () => {
-    isNotificationAllowed.value = await isPermissionGranted()
+    try {
+      isNotificationAllowed.value = await isPermissionGranted()
+    } catch (error) {
+      console.warn('Notification permission check failed:', error)
+      isNotificationAllowed.value = false
+    }
     return isNotificationAllowed.value
   }
 

@@ -2,7 +2,7 @@ import { asc, eq } from 'drizzle-orm'
 import {
   haexWorkspaces,
   type SelectHaexWorkspaces,
-} from '~~/src-tauri/database/schemas'
+} from '~/database/schemas'
 import type { Swiper } from 'swiper/types'
 
 export type IWorkspace = SelectHaexWorkspaces

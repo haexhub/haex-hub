@@ -1,8 +1,8 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import tablesNames from './tableNames.json'
-import { schema } from './index'
+import tablesNames from '../../src/database/tableNames.json'
+import { schema } from '../../src/database/index'
 import { getTableColumns } from 'drizzle-orm'
 import type { AnySQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core'
 

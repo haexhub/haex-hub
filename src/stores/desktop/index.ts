@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
-import { haexDesktopItems } from '~~/src-tauri/database/schemas'
+import { haexDesktopItems } from '~/database/schemas'
 import type {
   InsertHaexDesktopItems,
   SelectHaexDesktopItems,
-} from '~~/src-tauri/database/schemas'
+} from '~/database/schemas'
 import de from './de.json'
 import en from './en.json'
 
