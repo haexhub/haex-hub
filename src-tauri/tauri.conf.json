@@ -25,7 +25,8 @@
           "'self'",
           "http://tauri.localhost",
           "haex-extension:",
-          "'wasm-unsafe-eval'"
+          "'wasm-unsafe-eval'",
+          "'unsafe-inline'"
         ],
         "style-src": [
           "'self'",
