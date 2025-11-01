@@ -4,11 +4,10 @@
       <UButton
         class="pointer-events-auto"
         v-bind="{
-          ...{ size: isSmallScreen ? 'lg' : 'md' },
           ...buttonProps,
           ...$attrs,
         }"
-        @click="(e) => $emit('click', e)"
+        @click="$emit('click', $event)"
       >
         <template
           v-for="(_, slotName) in $slots"

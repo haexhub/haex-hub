@@ -9,6 +9,7 @@
         v-model:open="showNewDeviceDialog"
         :confirm-label="t('newDevice.save')"
         :title="t('newDevice.title')"
+        :description="t('newDevice.setName')"
         confirm-icon="mdi:content-save-outline"
         @abort="showNewDeviceDialog = false"
         @confirm="onSetDeviceNameAsync"

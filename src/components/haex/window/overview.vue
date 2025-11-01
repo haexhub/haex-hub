@@ -1,90 +1,76 @@
 <template>
-  <UModal
+  <UDrawer
     v-model:open="localShowWindowOverview"
+    direction="bottom"
     :title="t('modal.title')"
     :description="t('modal.description')"
-    fullscreen
   >
     <template #content>
-      <div class="flex flex-col h-full">
-        <!-- Header -->
+      <div class="h-full overflow-y-auto p-6 justify-center flex">
+        <!-- Window Thumbnails Flex Layout -->
+
         <div
-          class="flex items-center justify-end border-b p-2 border-gray-200 dark:border-gray-700"
+          v-if="windows.length > 0"
+          class="flex flex-wrap gap-6 justify-center-safe items-start"
         >
-          <UButton
-            icon="i-heroicons-x-mark"
-            color="error"
-            variant="soft"
-            @click="localShowWindowOverview = false"
-          />
-        </div>
-
-        <!-- Scrollable Content -->
-        <div class="flex-1 overflow-y-auto p-6 justify-center flex">
-          <!-- Window Thumbnails Flex Layout -->
           <div
-            v-if="windows.length > 0"
-            class="flex flex-wrap gap-6 justify-center-safe items-start"
+            v-for="window in windows"
+            :key="window.id"
+            class="relative group cursor-pointer"
           >
-            <div
-              v-for="window in windows"
-              :key="window.id"
-              class="relative group cursor-pointer"
-            >
-              <!-- Window Title Bar -->
-              <div class="flex items-center gap-3 mb-2 px-2">
-                <UIcon
-                  v-if="window.icon"
-                  :name="window.icon"
-                  class="size-5 shrink-0"
-                />
-                <div class="flex-1 min-w-0">
-                  <p class="font-semibold text-sm truncate">
-                    {{ window.title }}
-                  </p>
-                </div>
-                <!-- Minimized Badge -->
-                <UBadge
-                  v-if="window.isMinimized"
-                  color="info"
-                  size="xs"
-                  :title="t('minimized')"
-                />
+            <!-- Window Title Bar -->
+            <div class="flex items-center gap-3 mb-2 px-2">
+              <UIcon
+                v-if="window.icon"
+                :name="window.icon"
+                class="size-5 shrink-0"
+              />
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-sm truncate">
+                  {{ window.title }}
+                </p>
               </div>
+              <!-- Minimized Badge -->
+              <UBadge
+                v-if="window.isMinimized"
+                color="info"
+                size="xs"
+                :title="t('minimized')"
+              />
+            </div>
 
-              <!-- Scaled Window Preview Container / Teleport Target -->
+            <!-- Scaled Window Preview Container / Teleport Target -->
+            <div
+              :id="`window-preview-${window.id}`"
+              class="relative bg-gray-100 dark:bg-gray-900 rounded-xl overflow-hidden border-2 border-gray-200 dark:border-gray-700 group-hover:border-primary-500 transition-all shadow-lg"
+              :style="getCardStyle(window)"
+              @click="handleRestoreAndActivateWindow(window.id)"
+            >
+              <!-- Hover Overlay -->
               <div
-                :id="`window-preview-${window.id}`"
-                class="relative bg-gray-100 dark:bg-gray-900 rounded-xl overflow-hidden border-2 border-gray-200 dark:border-gray-700 group-hover:border-primary-500 transition-all shadow-lg"
-                :style="getCardStyle(window)"
-                @click="handleRestoreAndActivateWindow(window.id)"
-              >
-                <!-- Hover Overlay -->
-                <div
-                  class="absolute inset-0 bg-primary-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-40"
-                />
-              </div>
+                class="absolute inset-0 bg-primary-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-40"
+              />
             </div>
           </div>
+        </div>
 
-          <!-- Empty State -->
-          <div
-            v-else
-            class="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400"
-          >
-            <UIcon
-              name="i-heroicons-window"
-              class="size-16 mb-4 shrink-0"
-            />
-            <p class="text-lg font-medium">No windows open</p>
-            <p class="text-sm">
-              Open an extension or system window to see it here
-            </p>
-          </div>
+        <!-- Empty State -->
+        <div
+          v-else
+          class="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400"
+        >
+          <UIcon
+            name="i-heroicons-window"
+            class="size-16 mb-4 shrink-0"
+          />
+          <p class="text-lg font-medium">No windows open</p>
+          <p class="text-sm">
+            Open an extension or system window to see it here
+          </p>
         </div>
       </div>
     </template>
-  </UModal>
+  </UDrawer>
 </template>
 
 <script setup lang="ts">

@@ -1,5 +1,13 @@
 <template>
-  <UPopover v-model:open="open">
+  <UDrawer
+    v-model:open="open"
+    direction="right"
+    :title="t('launcher.title')"
+    :description="t('launcher.description')"
+    :ui="{
+      content: 'w-dvw max-w-md sm:max-w-fit',
+    }"
+  >
     <UButton
       icon="material-symbols:apps"
       color="neutral"
@@ -9,58 +17,64 @@
     />
 
     <template #content>
-      <ul class="p-4 max-h-96 grid grid-cols-3 gap-2 overflow-scroll">
-        <!-- All launcher items (system windows + enabled extensions, alphabetically sorted) -->
-        <UContextMenu
-          v-for="item in launcherItems"
-          :key="item.id"
-          :items="getContextMenuItems(item)"
-        >
+      <div class="p-4 h-full overflow-y-auto">
+        <div class="flex flex-wrap">
+          <!-- All launcher items (system windows + enabled extensions, alphabetically sorted) -->
+          <UContextMenu
+            v-for="item in launcherItems"
+            :key="item.id"
+            :items="getContextMenuItems(item)"
+          >
+            <UiButton
+              square
+              size="lg"
+              variant="ghost"
+              :ui="{
+                base: 'size-24 flex flex-wrap text-sm items-center justify-center overflow-visible cursor-grab active:cursor-grabbing',
+                leadingIcon: 'size-10',
+                label: 'w-full',
+              }"
+              :icon="item.icon"
+              :label="item.name"
+              :tooltip="item.name"
+              draggable="true"
+              @click="openItem(item)"
+              @dragstart="handleDragStart($event, item)"
+              @dragend="handleDragEnd"
+            />
+          </UContextMenu>
+
+          <!-- Disabled Extensions (grayed out) -->
           <UiButton
+            v-for="extension in disabledExtensions"
+            :key="extension.id"
             square
-            size="lg"
+            size="xl"
             variant="ghost"
+            :disabled="true"
             :ui="{
-              base: 'size-24 flex flex-wrap text-sm items-center justify-center overflow-visible cursor-grab active:cursor-grabbing',
+              base: 'size-24 flex flex-wrap text-sm items-center justify-center overflow-visible opacity-40',
               leadingIcon: 'size-10',
               label: 'w-full',
             }"
-            :icon="item.icon"
-            :label="item.name"
-            :tooltip="item.name"
-            draggable="true"
-            @click="openItem(item)"
-            @dragstart="handleDragStart($event, item)"
-            @dragend="handleDragEnd"
+            :icon="extension.icon || 'i-heroicons-puzzle-piece-solid'"
+            :label="extension.name"
+            :tooltip="`${extension.name} (${t('disabled')})`"
           />
-        </UContextMenu>
-
-        <!-- Disabled Extensions (grayed out) -->
-        <UiButton
-          v-for="extension in disabledExtensions"
-          :key="extension.id"
-          square
-          size="xl"
-          variant="ghost"
-          :disabled="true"
-          :ui="{
-            base: 'size-24 flex flex-wrap text-sm items-center justify-center overflow-visible opacity-40',
-            leadingIcon: 'size-10',
-            label: 'w-full',
-          }"
-          :icon="extension.icon || 'i-heroicons-puzzle-piece-solid'"
-          :label="extension.name"
-          :tooltip="`${extension.name} (${t('disabled')})`"
-        />
-      </ul>
+        </div>
+      </div>
     </template>
-  </UPopover>
+  </UDrawer>
 
   <!-- Uninstall Confirmation Dialog -->
   <UiDialogConfirm
     v-model:open="showUninstallDialog"
     :title="t('uninstall.confirm.title')"
-    :description="t('uninstall.confirm.description', { name: extensionToUninstall?.name || '' })"
+    :description="
+      t('uninstall.confirm.description', {
+        name: extensionToUninstall?.name || '',
+      })
+    "
     :confirm-label="t('uninstall.confirm.button')"
     confirm-icon="i-heroicons-trash"
     @confirm="confirmUninstall"
@@ -237,6 +251,9 @@ const handleDragEnd = () => {
 de:
   disabled: Deaktiviert
   marketplace: Marketplace
+  launcher:
+    title: App Launcher
+    description: Wähle eine App zum Öffnen
   contextMenu:
     open: Öffnen
     uninstall: Deinstallieren
@@ -249,6 +266,9 @@ de:
 en:
   disabled: Disabled
   marketplace: Marketplace
+  launcher:
+    title: App Launcher
+    description: Select an app to open
   contextMenu:
     open: Open
     uninstall: Uninstall

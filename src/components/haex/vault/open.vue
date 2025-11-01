@@ -58,7 +58,9 @@ const props = defineProps<{
   path?: string
 }>()
 
-const { t } = useI18n()
+const { t } = useI18n({
+  useScope: 'local',
+})
 
 const vault = reactive<{
   name: string

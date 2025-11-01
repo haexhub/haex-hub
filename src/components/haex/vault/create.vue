@@ -2,6 +2,7 @@
   <UiDialogConfirm
     :confirm-label="t('create')"
     @confirm="onCreateAsync"
+    :description="t('description')"
   >
     <UiButton
       :label="t('vault.create')"
@@ -55,7 +56,9 @@
 <script setup lang="ts">
 import { vaultSchema } from './schema'
 
-const { t } = useI18n()
+const { t } = useI18n({
+  useScope: 'local',
+})
 
 const vault = reactive<{
   name: string
@@ -118,6 +121,7 @@ de:
     name: HaexVault
   title: Neue {haexvault} erstellen
   create: Erstellen
+  description: Erstelle eine neue Vault für deine Daten
 
 en:
   vault:
@@ -127,4 +131,5 @@ en:
     name: HaexVault
   title: Create new {haexvault}
   create: Create
+  description: Create a new vault for your data
 </i18n>

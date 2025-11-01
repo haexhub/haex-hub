@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full flex flex-col">
+  <div class="w-full h-dvh flex flex-col">
     <UPageHeader
       ref="headerEl"
       as="header"
@@ -25,7 +25,7 @@
               variant="outline"
               icon="i-bi-person-workspace"
               size="lg"
-              :tooltip="t('header.workspaces')"
+              :tooltip="t('workspaces.label')"
               @click="isOverviewMode = !isOverviewMode"
             />
           </div>
@@ -54,7 +54,7 @@
       </template>
     </UPageHeader>
 
-    <main class="flex-1 overflow-hidden bg-elevated flex flex-col relative">
+    <main class="overflow-hidden relative bg-elevated h-full">
       <slot />
     </main>
 
@@ -95,7 +95,7 @@
             class="mt-6"
             @click="handleAddWorkspace"
             icon="i-heroicons-plus"
-            :label="t('add')"
+            :label="t('workspaces.add')"
           >
           </UButton>
         </div>
@@ -142,14 +142,14 @@ de:
   search:
     label: Suche
 
-  header:
-    workspaces: Workspaces
+  workspaces:
+    label: Workspaces
     add: Workspace hinzufügen
 en:
   search:
     label: Search
 
-  header:
-    workspaces: Workspaces
+  workspaces:
+    label: Workspaces
     add: Add Workspace
 </i18n>

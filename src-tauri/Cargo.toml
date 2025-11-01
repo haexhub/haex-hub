@@ -49,9 +49,11 @@ tauri-plugin-os = "2.3.2"
 tauri-plugin-persisted-scope = "2.3.4"
 tauri-plugin-store = "2.4.1"
 thiserror = "2.0.17"
-trash = "5.2.0"
 ts-rs = { version = "11.1.0", features = ["serde-compat"] }
 uhlc = "0.8.2"
 url = "2.5.7"
 uuid = { version = "1.18.1", features = ["v4"] }
 zip = "6.0.0"
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+trash = "5.2.0"

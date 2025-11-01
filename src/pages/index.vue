@@ -1,120 +1,101 @@
 <template>
-  <div>
+  <div class="h-full">
     <NuxtLayout>
-      <UDashboardPanel
-        id="inbox-1"
-        resizable
-        class=""
+      <div
+        class="flex flex-col justify-center items-center gap-5 mx-auto h-full overflow-scroll"
       >
-        <template #body>
-          <div class="items-center justify-center flex relative flex-1">
-            <!-- <div class="absolute top-0 right-0">
-              <UiDropdownLocale @select="onSelectLocale" />
-            </div> -->
+        <UiLogoHaexhub class="bg-primary p-3 size-16 rounded-full shrink-0" />
+        <span
+          class="flex flex-wrap font-bold text-pretty text-xl gap-2 justify-center"
+        >
+          <p class="whitespace-nowrap">
+            {{ t('welcome') }}
+          </p>
+          <UiTextGradient>Haex Hub</UiTextGradient>
+        </span>
 
-            <div
-              class="flex flex-col justify-center items-center gap-5 max-w-3xl"
-            >
-              <UiLogoHaexhub
-                class="bg-primary p-3 size-16 rounded-full shrink-0"
-              />
-              <span
-                class="flex flex-wrap font-bold text-pretty text-xl gap-2 justify-center"
-              >
-                <p class="whitespace-nowrap">
-                  {{ t('welcome') }}
-                </p>
-                <UiTextGradient>Haex Hub</UiTextGradient>
-              </span>
+        <div class="flex flex-col gap-4 h-24 items-stretch justify-center">
+          <HaexVaultCreate />
 
-              <div
-                class="flex flex-col md:flex-row gap-4 w-full h-24 md:h-auto"
-              >
-                <HaexVaultCreate />
+          <HaexVaultOpen
+            v-model:open="passwordPromptOpen"
+            :path="selectedVault?.path"
+          />
+        </div>
 
-                <HaexVaultOpen
-                  v-model:open="passwordPromptOpen"
-                  :path="selectedVault?.path"
-                />
-              </div>
-
-              <div
-                v-show="lastVaults.length"
-                class="w-full"
-              >
-                <div class="font-thin text-sm justify-start px-2 pb-1">
-                  {{ t('lastUsed') }}
-                </div>
-
-                <div
-                  class="relative border-base-content/25 divide-base-content/25 flex w-full flex-col divide-y rounded-md border overflow-scroll"
-                >
-                  <div
-                    v-for="vault in lastVaults"
-                    :key="vault.name"
-                    class="flex items-center justify-between group overflow-x-scroll"
-                  >
-                    <UiButtonContext
-                      variant="ghost"
-                      color="neutral"
-                      class="flex items-center no-underline justify-between text-nowrap text-sm md:text-base shrink w-full px-3"
-                      :context-menu-items="[
-                        {
-                          icon: 'mdi:trash-can-outline',
-                          label: t('remove.button'),
-                          onSelect: () => prepareRemoveVault(vault.name),
-                          color: 'error',
-                        },
-                      ]"
-                      @click="
-                        () => {
-                          passwordPromptOpen = true
-                          selectedVault = vault
-                        }
-                      "
-                    >
-                      <span class="block">
-                        {{ vault.name }}
-                      </span>
-                    </UiButtonContext>
-                    <UButton
-                      color="error"
-                      square
-                      class="absolute right-2 hidden group-hover:flex min-w-6"
-                    >
-                      <Icon
-                        name="mdi:trash-can-outline"
-                        @click="prepareRemoveVault(vault.name)"
-                      />
-                    </UButton>
-                  </div>
-                </div>
-              </div>
-
-              <div class="flex flex-col items-center gap-2">
-                <h4>{{ t('sponsors') }}</h4>
-                <div>
-                  <UButton
-                    variant="link"
-                    @click="openUrl('https://itemis.com')"
-                  >
-                    <UiLogoItemis class="text-[#00457C]" />
-                  </UButton>
-                </div>
-              </div>
-            </div>
-
-            <UiDialogConfirm
-              v-model:open="showRemoveDialog"
-              :title="t('remove.title')"
-              :description="
-                t('remove.description', { vaultName: vaultToBeRemoved })
-              "
-              @confirm="onConfirmRemoveAsync"
-            />
+        <div
+          v-show="lastVaults.length"
+          class="max-w-md w-full sm:px-5"
+        >
+          <div class="font-thin text-sm pb-1 w-full">
+            {{ t('lastUsed') }}
           </div>
-        </template>
-      </UDashboardPanel>
+
+          <div
+            class="relative border-base-content/25 divide-base-content/25 flex w-full flex-col divide-y rounded-md border overflow-scroll"
+          >
+            <div
+              v-for="vault in lastVaults"
+              :key="vault.name"
+              class="flex items-center justify-between group overflow-x-scroll"
+            >
+              <UiButtonContext
+                variant="ghost"
+                color="neutral"
+                size="xl"
+                class="flex items-center no-underline justify-between text-nowrap text-sm md:text-base shrink w-full hover:bg-default"
+                :context-menu-items="[
+                  {
+                    icon: 'mdi:trash-can-outline',
+                    label: t('remove.button'),
+                    onSelect: () => prepareRemoveVault(vault.name),
+                    color: 'error',
+                  },
+                ]"
+                @click="
+                  () => {
+                    passwordPromptOpen = true
+                    selectedVault = vault
+                  }
+                "
+              >
+                <span class="block">
+                  {{ vault.name }}
+                </span>
+              </UiButtonContext>
+              <UButton
+                color="error"
+                square
+                class="absolute right-2 hidden group-hover:flex min-w-6"
+              >
+                <Icon
+                  name="mdi:trash-can-outline"
+                  @click="prepareRemoveVault(vault.name)"
+                />
+              </UButton>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col items-center gap-2">
+          <h4>{{ t('sponsors') }}</h4>
+          <div>
+            <UButton
+              variant="link"
+              @click="openUrl('https://itemis.com')"
+            >
+              <UiLogoItemis class="text-[#00457C]" />
+            </UButton>
+          </div>
+        </div>
+      </div>
+
+      <UiDialogConfirm
+        v-model:open="showRemoveDialog"
+        :title="t('remove.title')"
+        :description="t('remove.description', { vaultName: vaultToBeRemoved })"
+        @confirm="onConfirmRemoveAsync"
+      />
     </NuxtLayout>
   </div>
 </template>
