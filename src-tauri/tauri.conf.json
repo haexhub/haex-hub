@@ -15,12 +15,47 @@
       {
         "title": "haex-hub",
         "width": 800,
-        "height": 600,
-        "devtools": true
+        "height": 600
       }
     ],
     "security": {
-      "csp": null,
+      "csp": {
+        "default-src": ["'self'", "http://tauri.localhost", "haex-extension:"],
+        "script-src": [
+          "'self'",
+          "http://tauri.localhost",
+          "haex-extension:",
+          "'wasm-unsafe-eval'",
+          "'unsafe-inline'"
+        ],
+        "style-src": [
+          "'self'",
+          "http://tauri.localhost",
+          "haex-extension:",
+          "'unsafe-inline'"
+        ],
+        "connect-src": [
+          "'self'",
+          "http://tauri.localhost",
+          "haex-extension:",
+          "ipc:",
+          "http://ipc.localhost",
+          "ws://localhost:*"
+        ],
+        "img-src": [
+          "'self'",
+          "http://tauri.localhost",
+          "haex-extension:",
+          "data:",
+          "blob:"
+        ],
+        "font-src": ["'self'", "http://tauri.localhost", "haex-extension:"],
+        "object-src": ["'none'"],
+        "media-src": ["'self'", "http://tauri.localhost", "haex-extension:"],
+        "frame-src": ["haex-extension:"],
+        "frame-ancestors": ["'none'"],
+        "base-uri": ["'self'"]
+      },
       "assetProtocol": {
         "enable": true,
         "scope": ["$APPDATA", "$RESOURCE"]
