@@ -68,7 +68,7 @@ export default defineNuxtConfig({
       includeCustomCollections: true,
     },
     serverBundle: {
-      collections: ['mdi', 'line-md', 'solar', 'gg', 'emojione'],
+      collections: ['mdi', 'line-md', 'solar', 'gg', 'emojione', 'lucide', 'hugeicons'],
     },
 
     customCollections: [

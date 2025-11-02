@@ -20,10 +20,12 @@
     ],
     "security": {
       "csp": {
-        "default-src": ["'self'", "http://tauri.localhost", "haex-extension:"],
+        "default-src": ["'self'", "http://tauri.localhost", "https://tauri.localhost", "asset:", "haex-extension:"],
         "script-src": [
           "'self'",
           "http://tauri.localhost",
+          "https://tauri.localhost",
+          "asset:",
           "haex-extension:",
           "'wasm-unsafe-eval'",
           "'unsafe-inline'"
@@ -31,6 +33,8 @@
         "style-src": [
           "'self'",
           "http://tauri.localhost",
+          "https://tauri.localhost",
+          "asset:",
           "haex-extension:",
           "'unsafe-inline'"
         ],
@@ -45,13 +49,15 @@
         "img-src": [
           "'self'",
           "http://tauri.localhost",
+          "https://tauri.localhost",
+          "asset:",
           "haex-extension:",
           "data:",
           "blob:"
         ],
-        "font-src": ["'self'", "http://tauri.localhost", "haex-extension:"],
+        "font-src": ["'self'", "http://tauri.localhost", "https://tauri.localhost", "asset:", "haex-extension:"],
         "object-src": ["'none'"],
-        "media-src": ["'self'", "http://tauri.localhost", "haex-extension:"],
+        "media-src": ["'self'", "http://tauri.localhost", "https://tauri.localhost", "asset:", "haex-extension:"],
         "frame-src": ["haex-extension:"],
         "frame-ancestors": ["'none'"],
         "base-uri": ["'self'"]
