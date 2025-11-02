@@ -20,7 +20,6 @@ use std::time::UNIX_EPOCH;
 use std::{fs, sync::Arc};
 use tauri::{path::BaseDirectory, AppHandle, Manager, State};
 use tauri_plugin_fs::FsExt;
-#[cfg(not(target_os = "android"))]
 use ts_rs::TS;
 
 pub struct DbConnection(pub Arc<Mutex<Option<Connection>>>);
