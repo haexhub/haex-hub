@@ -337,7 +337,7 @@ pub fn extension_protocol_handler(
         }
     } else {
         // No base64 host - use path-based parsing (for localhost/Android/Windows)
-        parse_extension_info_from_path(path_str, origin, uri_ref, referer, allowed_origin)?
+        parse_extension_info_from_path(path_str, origin, uri_ref, referer)?
     };
 
     // Construct asset path from remaining segments
@@ -613,7 +613,6 @@ fn parse_extension_info_from_path(
     origin: &str,
     uri_ref: &Uri,
     referer: &str,
-    allowed_origin: &str,
 ) -> Result<(ExtensionInfo, Vec<String>), Box<dyn std::error::Error>> {
     let mut segments_iter = path_str.split('/').filter(|s| !s.is_empty());
 

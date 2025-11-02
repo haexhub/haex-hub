@@ -143,7 +143,6 @@ fn validate_path_pattern(pattern: &str) -> Result<(), ExtensionError> {
 /// Resolves a path pattern to actual filesystem paths using Tauri's BaseDirectory
 pub fn resolve_path_pattern(
     pattern: &str,
-    app_handle: &tauri::AppHandle,
 ) -> Result<(String, String), ExtensionError> {
     let (base_var, relative_path) = if let Some(slash_pos) = pattern.find('/') {
         (&pattern[..slash_pos], &pattern[slash_pos + 1..])
