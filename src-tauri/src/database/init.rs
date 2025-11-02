@@ -36,8 +36,7 @@ pub fn ensure_triggers_initialized(conn: &mut Connection) -> Result<bool, Databa
 
     // Check if triggers already initialized
     let check_sql = format!(
-        "SELECT value FROM {} WHERE key = ? AND type = ?",
-        TABLE_SETTINGS
+        "SELECT value FROM {TABLE_SETTINGS} WHERE key = ? AND type = ?"
     );
     let initialized: Option<String> = tx
         .query_row(
@@ -57,7 +56,7 @@ pub fn ensure_triggers_initialized(conn: &mut Connection) -> Result<bool, Databa
 
     // Create triggers for all CRDT tables
     for table_name in CRDT_TABLES {
-        eprintln!("  - Setting up triggers for: {}", table_name);
+        eprintln!("  - Setting up triggers for: {table_name}");
         trigger::setup_triggers_for_table(&tx, table_name, false)?;
     }
 

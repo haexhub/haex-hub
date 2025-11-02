@@ -32,17 +32,16 @@ pub enum CrdtSetupError {
 impl Display for CrdtSetupError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            CrdtSetupError::DatabaseError(e) => write!(f, "Database error: {}", e),
+            CrdtSetupError::DatabaseError(e) => write!(f, "Database error: {e}"),
             CrdtSetupError::HlcColumnMissing {
                 table_name,
                 column_name,
             } => write!(
                 f,
-                "Table '{}' is missing the required hlc column '{}'",
-                table_name, column_name
+                "Table '{table_name}' is missing the required hlc column '{column_name}'"
             ),
             CrdtSetupError::PrimaryKeyMissing { table_name } => {
-                write!(f, "Table '{}' has no primary key", table_name)
+                write!(f, "Table '{table_name}' has no primary key")
             }
         }
     }
@@ -129,7 +128,7 @@ pub fn setup_triggers_for_table(
     let delete_trigger_sql = generate_delete_trigger_sql(table_name, &pks, &cols_to_track);
 
     if recreate {
-        drop_triggers_for_table(&tx, table_name)?;
+        drop_triggers_for_table(tx, table_name)?;
     }
 
     tx.execute_batch(&insert_trigger_sql)?;
@@ -143,13 +142,11 @@ pub fn setup_triggers_for_table(
 pub fn get_table_schema(conn: &Connection, table_name: &str) -> RusqliteResult<Vec<ColumnInfo>> {
     if !is_safe_identifier(table_name) {
         return Err(rusqlite::Error::InvalidParameterName(format!(
-            "Invalid or unsafe table name provided: {}",
-            table_name
-        ))
-        .into());
+            "Invalid or unsafe table name provided: {table_name}"
+        )));
     }
 
-    let sql = format!("PRAGMA table_info(\"{}\");", table_name);
+    let sql = format!("PRAGMA table_info(\"{table_name}\");");
     let mut stmt = conn.prepare(&sql)?;
     let rows = stmt.query_map([], ColumnInfo::from_row)?;
     rows.collect()
@@ -163,8 +160,7 @@ pub fn drop_triggers_for_table(
 ) -> Result<(), CrdtSetupError> {
     if !is_safe_identifier(table_name) {
         return Err(rusqlite::Error::InvalidParameterName(format!(
-            "Invalid or unsafe table name provided: {}",
-            table_name
+            "Invalid or unsafe table name provided: {table_name}"
         ))
         .into());
     }
@@ -177,8 +173,7 @@ pub fn drop_triggers_for_table(
         drop_trigger_sql(DELETE_TRIGGER_TPL.replace("{TABLE_NAME}", table_name));
 
     let sql_batch = format!(
-        "{}\n{}\n{}",
-        drop_insert_trigger_sql, drop_update_trigger_sql, drop_delete_trigger_sql
+        "{drop_insert_trigger_sql}\n{drop_update_trigger_sql}\n{drop_delete_trigger_sql}"
     );
 
     tx.execute_batch(&sql_batch)?;
@@ -244,33 +239,22 @@ pub fn drop_triggers_for_table(
 fn generate_insert_trigger_sql(table_name: &str, pks: &[String], cols: &[String]) -> String {
     let pk_json_payload = pks
         .iter()
-        .map(|pk| format!("'{}', NEW.\"{}\"", pk, pk))
+        .map(|pk| format!("'{pk}', NEW.\"{pk}\""))
         .collect::<Vec<_>>()
         .join(", ");
 
     let column_inserts = if cols.is_empty() {
         // Nur PKs -> einfacher Insert ins Log
         format!(
-            "INSERT INTO {log_table} (id, haex_timestamp, op_type, table_name, row_pks)
-            VALUES ({uuid_fn}(), NEW.\"{hlc_col}\", 'INSERT', '{table}', json_object({pk_payload}));",
-            log_table = TABLE_CRDT_LOGS,
-            uuid_fn = UUID_FUNCTION_NAME,
-            hlc_col = HLC_TIMESTAMP_COLUMN,
-            table = table_name,
-            pk_payload = pk_json_payload
+            "INSERT INTO {TABLE_CRDT_LOGS} (id, haex_timestamp, op_type, table_name, row_pks)
+            VALUES ({UUID_FUNCTION_NAME}(), NEW.\"{HLC_TIMESTAMP_COLUMN}\", 'INSERT', '{table_name}', json_object({pk_json_payload}));"
         )
     } else {
         cols.iter().fold(String::new(), |mut acc, col| {
             writeln!(
                 &mut acc,
-                "INSERT INTO {log_table} (id, haex_timestamp, op_type, table_name, row_pks, column_name, new_value)
-                VALUES ({uuid_fn}(), NEW.\"{hlc_col}\", 'INSERT', '{table}', json_object({pk_payload}), '{column}', json_object('value', NEW.\"{column}\"));",
-                log_table = TABLE_CRDT_LOGS,
-                uuid_fn = UUID_FUNCTION_NAME,
-                hlc_col = HLC_TIMESTAMP_COLUMN,
-                table = table_name,
-                pk_payload = pk_json_payload,
-                column = col
+                "INSERT INTO {TABLE_CRDT_LOGS} (id, haex_timestamp, op_type, table_name, row_pks, column_name, new_value)
+                VALUES ({UUID_FUNCTION_NAME}(), NEW.\"{HLC_TIMESTAMP_COLUMN}\", 'INSERT', '{table_name}', json_object({pk_json_payload}), '{col}', json_object('value', NEW.\"{col}\"));"
             ).unwrap();
             acc
         })
@@ -290,14 +274,14 @@ fn generate_insert_trigger_sql(table_name: &str, pks: &[String], cols: &[String]
 
 /// Generiert das SQL zum Löschen eines Triggers.
 fn drop_trigger_sql(trigger_name: String) -> String {
-    format!("DROP TRIGGER IF EXISTS \"{}\";", trigger_name)
+    format!("DROP TRIGGER IF EXISTS \"{trigger_name}\";")
 }
 
 /// Generiert das SQL für den UPDATE-Trigger.
 fn generate_update_trigger_sql(table_name: &str, pks: &[String], cols: &[String]) -> String {
     let pk_json_payload = pks
         .iter()
-        .map(|pk| format!("'{}', NEW.\"{}\"", pk, pk))
+        .map(|pk| format!("'{pk}', NEW.\"{pk}\""))
         .collect::<Vec<_>>()
         .join(", ");
 
@@ -308,16 +292,10 @@ fn generate_update_trigger_sql(table_name: &str, pks: &[String], cols: &[String]
         for col in cols {
             writeln!(
                 &mut body,
-                "INSERT INTO {log_table} (id, haex_timestamp, op_type, table_name, row_pks, column_name, new_value, old_value)
-                    SELECT {uuid_fn}(), NEW.\"{hlc_col}\", 'UPDATE', '{table}', json_object({pk_payload}), '{column}',
-                    json_object('value', NEW.\"{column}\"), json_object('value', OLD.\"{column}\")
-                    WHERE NEW.\"{column}\" IS NOT OLD.\"{column}\";",
-                log_table = TABLE_CRDT_LOGS,
-                uuid_fn = UUID_FUNCTION_NAME,
-                hlc_col = HLC_TIMESTAMP_COLUMN,
-                table = table_name,
-                pk_payload = pk_json_payload,
-                column = col
+                "INSERT INTO {TABLE_CRDT_LOGS} (id, haex_timestamp, op_type, table_name, row_pks, column_name, new_value, old_value)
+                    SELECT {UUID_FUNCTION_NAME}(), NEW.\"{HLC_TIMESTAMP_COLUMN}\", 'UPDATE', '{table_name}', json_object({pk_json_payload}), '{col}',
+                    json_object('value', NEW.\"{col}\"), json_object('value', OLD.\"{col}\")
+                    WHERE NEW.\"{col}\" IS NOT OLD.\"{col}\";"
             ).unwrap();
         }
     }
@@ -341,7 +319,7 @@ fn generate_update_trigger_sql(table_name: &str, pks: &[String], cols: &[String]
 fn generate_delete_trigger_sql(table_name: &str, pks: &[String], cols: &[String]) -> String {
     let pk_json_payload = pks
         .iter()
-        .map(|pk| format!("'{}', OLD.\"{}\"", pk, pk))
+        .map(|pk| format!("'{pk}', OLD.\"{pk}\""))
         .collect::<Vec<_>>()
         .join(", ");
 
@@ -352,28 +330,17 @@ fn generate_delete_trigger_sql(table_name: &str, pks: &[String], cols: &[String]
         for col in cols {
             writeln!(
                 &mut body,
-                "INSERT INTO {log_table} (id, haex_timestamp, op_type, table_name, row_pks, column_name, old_value)
-                    VALUES ({uuid_fn}(), OLD.\"{hlc_col}\", 'DELETE', '{table}', json_object({pk_payload}), '{column}',
-                    json_object('value', OLD.\"{column}\"));",
-                log_table = TABLE_CRDT_LOGS,
-                uuid_fn = UUID_FUNCTION_NAME,
-                hlc_col = HLC_TIMESTAMP_COLUMN,
-                table = table_name,
-                pk_payload = pk_json_payload,
-                column = col
+                "INSERT INTO {TABLE_CRDT_LOGS} (id, haex_timestamp, op_type, table_name, row_pks, column_name, old_value)
+                    VALUES ({UUID_FUNCTION_NAME}(), OLD.\"{HLC_TIMESTAMP_COLUMN}\", 'DELETE', '{table_name}', json_object({pk_json_payload}), '{col}',
+                    json_object('value', OLD.\"{col}\"));"
             ).unwrap();
         }
     } else {
         // Nur PKs -> minimales Delete Log
         writeln!(
             &mut body,
-            "INSERT INTO {log_table} (id, haex_timestamp, op_type, table_name, row_pks)
-                VALUES ({uuid_fn}(), OLD.\"{hlc_col}\", 'DELETE', '{table}', json_object({pk_payload}));",
-            log_table = TABLE_CRDT_LOGS,
-            uuid_fn = UUID_FUNCTION_NAME,
-            hlc_col = HLC_TIMESTAMP_COLUMN,
-            table = table_name,
-            pk_payload = pk_json_payload
+            "INSERT INTO {TABLE_CRDT_LOGS} (id, haex_timestamp, op_type, table_name, row_pks)
+                VALUES ({UUID_FUNCTION_NAME}(), OLD.\"{HLC_TIMESTAMP_COLUMN}\", 'DELETE', '{table_name}', json_object({pk_json_payload}));"
         )
         .unwrap();
     }

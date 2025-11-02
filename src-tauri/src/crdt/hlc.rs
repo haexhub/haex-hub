@@ -74,15 +74,14 @@ impl HlcService {
         // Parse den String in ein Uuid-Objekt.
         let uuid = Uuid::parse_str(&node_id_str).map_err(|e| {
             HlcError::ParseNodeId(format!(
-                "Stored device ID is not a valid UUID: {}. Error: {}",
-                node_id_str, e
+                "Stored device ID is not a valid UUID: {node_id_str}. Error: {e}"
             ))
         })?;
 
         // Hol dir die rohen 16 Bytes und erstelle daraus die uhlc::ID.
         // Das `*` dereferenziert den `&[u8; 16]` zu `[u8; 16]`, was `try_from` erwartet.
         let node_id = ID::try_from(*uuid.as_bytes()).map_err(|e| {
-            HlcError::ParseNodeId(format!("Invalid node ID format from device store: {:?}", e))
+            HlcError::ParseNodeId(format!("Invalid node ID format from device store: {e:?}"))
         })?;
 
         // 2. Erstelle eine HLC-Instanz mit stabiler Identität
@@ -95,8 +94,7 @@ impl HlcService {
         if let Some(last_timestamp) = Self::load_last_timestamp(conn)? {
             hlc.update_with_timestamp(&last_timestamp).map_err(|e| {
                 HlcError::Parse(format!(
-                    "Failed to update HLC with persisted timestamp: {:?}",
-                    e
+                    "Failed to update HLC with persisted timestamp: {e:?}"
                 ))
             })?;
         }
@@ -119,7 +117,7 @@ impl HlcService {
                 if let Some(s) = value.as_str() {
                     // Das ist unser Erfolgsfall. Wir haben einen &str und können
                     // eine Kopie davon zurückgeben.
-                    println!("Gefundene und validierte Geräte-ID: {}", s);
+                    println!("Gefundene und validierte Geräte-ID: {s}");
                     if Uuid::parse_str(s).is_ok() {
                         // Erfolgsfall: Der Wert ist ein String UND eine gültige UUID.
                         // Wir können die Funktion direkt mit dem Wert verlassen.
@@ -183,19 +181,19 @@ impl HlcService {
         let hlc = hlc_guard.as_mut().ok_or(HlcError::NotInitialized)?;
 
         hlc.update_with_timestamp(timestamp)
-            .map_err(|e| HlcError::Parse(format!("Failed to update HLC: {:?}", e)))
+            .map_err(|e| HlcError::Parse(format!("Failed to update HLC: {e:?}")))
     }
 
     /// Lädt den letzten persistierten Zeitstempel aus der Datenbank.
     fn load_last_timestamp(conn: &Connection) -> Result<Option<Timestamp>, HlcError> {
-        let query = format!("SELECT value FROM {} WHERE key = ?1", TABLE_CRDT_CONFIGS);
+        let query = format!("SELECT value FROM {TABLE_CRDT_CONFIGS} WHERE key = ?1");
 
         match conn.query_row(&query, params![HLC_TIMESTAMP_TYPE], |row| {
             row.get::<_, String>(0)
         }) {
             Ok(state_str) => {
                 let timestamp = Timestamp::from_str(&state_str).map_err(|e| {
-                    HlcError::ParseTimestamp(format!("Invalid timestamp format: {:?}", e))
+                    HlcError::ParseTimestamp(format!("Invalid timestamp format: {e:?}"))
                 })?;
                 Ok(Some(timestamp))
             }
@@ -209,9 +207,8 @@ impl HlcService {
         let timestamp_str = timestamp.to_string();
         tx.execute(
             &format!(
-                "INSERT INTO {} (key, value) VALUES (?1, ?2)
-                 ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-                TABLE_CRDT_CONFIGS
+                "INSERT INTO {TABLE_CRDT_CONFIGS} (key, value) VALUES (?1, ?2)
+                 ON CONFLICT(key) DO UPDATE SET value = excluded.value"
             ),
             params![HLC_TIMESTAMP_TYPE, timestamp_str],
         )?;

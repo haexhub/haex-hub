@@ -174,7 +174,7 @@ impl serde::Serialize for ExtensionError {
         let mut state = serializer.serialize_struct("ExtensionError", 4)?;
 
         state.serialize_field("code", &self.code())?;
-        state.serialize_field("type", &format!("{:?}", self))?;
+        state.serialize_field("type", &format!("{self:?}"))?;
         state.serialize_field("message", &self.to_string())?;
 
         if let Some(ext_id) = self.extension_id() {

@@ -10,10 +10,8 @@ use crate::extension::permissions::manager::PermissionManager;
 use crate::extension::permissions::types::ExtensionPermission;
 use crate::table_names::{TABLE_EXTENSIONS, TABLE_EXTENSION_PERMISSIONS};
 use crate::AppState;
-use serde_json::Value as JsonValue;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs;
-use std::io::Cursor;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{Duration, SystemTime};
@@ -77,7 +75,7 @@ impl ExtensionManager {
         // Check for path traversal patterns
         if relative_path.contains("..") {
             return Err(ExtensionError::SecurityViolation {
-                reason: format!("Path traversal attempt: {}", relative_path),
+                reason: format!("Path traversal attempt: {relative_path}"),
             });
         }
 
@@ -104,7 +102,7 @@ impl ExtensionManager {
         if let Ok(canonical_path) = full_path.canonicalize() {
             if !canonical_path.starts_with(&canonical_base) {
                 return Err(ExtensionError::SecurityViolation {
-                    reason: format!("Path outside base directory: {}", relative_path),
+                    reason: format!("Path outside base directory: {relative_path}"),
                 });
             }
             Ok(Some(canonical_path))
@@ -114,7 +112,7 @@ impl ExtensionManager {
                 Ok(Some(full_path))
             } else {
                 Err(ExtensionError::SecurityViolation {
-                    reason: format!("Path outside base directory: {}", relative_path),
+                    reason: format!("Path outside base directory: {relative_path}"),
                 })
             }
         }
@@ -131,13 +129,13 @@ impl ExtensionManager {
             if let Some(clean_path) = Self::validate_path_in_directory(extension_dir, icon, true)? {
                 return Ok(Some(clean_path.to_string_lossy().to_string()));
             } else {
-                eprintln!("WARNING: Icon path specified in manifest not found: {}", icon);
+                eprintln!("WARNING: Icon path specified in manifest not found: {icon}");
                 // Continue to fallback logic
             }
         }
 
         // Fallback 1: Check haextension/favicon.ico
-        let haextension_favicon = format!("{}/favicon.ico", haextension_dir);
+        let haextension_favicon = format!("{haextension_dir}/favicon.ico");
         if let Some(clean_path) = Self::validate_path_in_directory(extension_dir, &haextension_favicon, true)? {
             return Ok(Some(clean_path.to_string_lossy().to_string()));
         }
@@ -162,11 +160,11 @@ impl ExtensionManager {
             .path()
             .app_cache_dir()
             .map_err(|e| ExtensionError::InstallationFailed {
-                reason: format!("Cannot get app cache dir: {}", e),
+                reason: format!("Cannot get app cache dir: {e}"),
             })?;
 
         let temp_id = uuid::Uuid::new_v4();
-        let temp = cache_dir.join(format!("{}_{}", temp_prefix, temp_id));
+        let temp = cache_dir.join(format!("{temp_prefix}_{temp_id}"));
         let zip_file_path = cache_dir.join(format!("{}_{}_{}.haextension", temp_prefix, temp_id, "temp"));
 
         // Write bytes to a temporary ZIP file first (important for Android file system)
@@ -185,14 +183,14 @@ impl ExtensionManager {
 
         let mut archive = ZipArchive::new(zip_file).map_err(|e| {
             ExtensionError::InstallationFailed {
-                reason: format!("Invalid ZIP: {}", e),
+                reason: format!("Invalid ZIP: {e}"),
             }
         })?;
 
         archive
             .extract(&temp)
             .map_err(|e| ExtensionError::InstallationFailed {
-                reason: format!("Cannot extract ZIP: {}", e),
+                reason: format!("Cannot extract ZIP: {e}"),
             })?;
 
         // Clean up temporary ZIP file
@@ -203,12 +201,12 @@ impl ExtensionManager {
         let haextension_dir = if config_path.exists() {
             let config_content = std::fs::read_to_string(&config_path)
                 .map_err(|e| ExtensionError::ManifestError {
-                    reason: format!("Cannot read haextension.config.json: {}", e),
+                    reason: format!("Cannot read haextension.config.json: {e}"),
                 })?;
 
             let config: serde_json::Value = serde_json::from_str(&config_content)
                 .map_err(|e| ExtensionError::ManifestError {
-                    reason: format!("Invalid haextension.config.json: {}", e),
+                    reason: format!("Invalid haextension.config.json: {e}"),
                 })?;
 
             let dir = config
@@ -224,16 +222,16 @@ impl ExtensionManager {
         };
 
         // Validate manifest path using helper function
-        let manifest_relative_path = format!("{}/manifest.json", haextension_dir);
+        let manifest_relative_path = format!("{haextension_dir}/manifest.json");
         let manifest_path = Self::validate_path_in_directory(&temp, &manifest_relative_path, true)?
             .ok_or_else(|| ExtensionError::ManifestError {
-                reason: format!("manifest.json not found at {}/manifest.json", haextension_dir),
+                reason: format!("manifest.json not found at {haextension_dir}/manifest.json"),
             })?;
 
         let actual_dir = temp.clone();
         let manifest_content =
             std::fs::read_to_string(&manifest_path).map_err(|e| ExtensionError::ManifestError {
-                reason: format!("Cannot read manifest: {}", e),
+                reason: format!("Cannot read manifest: {e}"),
             })?;
 
         let mut manifest: ExtensionManifest = serde_json::from_str(&manifest_content)?;
@@ -440,8 +438,7 @@ impl ExtensionManager {
 
         eprintln!("DEBUG: Removing extension with ID: {}", extension.id);
         eprintln!(
-            "DEBUG: Extension name: {}, version: {}",
-            extension_name, extension_version
+            "DEBUG: Extension name: {extension_name}, version: {extension_version}"
         );
 
         // Lösche Permissions und Extension-Eintrag in einer Transaktion
@@ -460,7 +457,7 @@ impl ExtensionManager {
             PermissionManager::delete_permissions_in_transaction(&tx, &hlc_service, &extension.id)?;
 
             // Lösche Extension-Eintrag mit extension_id
-            let sql = format!("DELETE FROM {} WHERE id = ?", TABLE_EXTENSIONS);
+            let sql = format!("DELETE FROM {TABLE_EXTENSIONS} WHERE id = ?");
             eprintln!("DEBUG: Executing SQL: {} with id = {}", sql, extension.id);
             SqlExecutor::execute_internal_typed(
                 &tx,
@@ -615,8 +612,7 @@ impl ExtensionManager {
 
             // 1. Extension-Eintrag erstellen mit generierter UUID
             let insert_ext_sql = format!(
-                "INSERT INTO {} (id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled, single_instance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                TABLE_EXTENSIONS
+                "INSERT INTO {TABLE_EXTENSIONS} (id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled, single_instance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             );
 
             SqlExecutor::execute_internal_typed(
@@ -641,8 +637,7 @@ impl ExtensionManager {
 
             // 2. Permissions speichern
             let insert_perm_sql = format!(
-                "INSERT INTO {} (id, extension_id, resource_type, action, target, constraints, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                TABLE_EXTENSION_PERMISSIONS
+                "INSERT INTO {TABLE_EXTENSION_PERMISSIONS} (id, extension_id, resource_type, action, target, constraints, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
             );
 
             for perm in &permissions {
@@ -714,10 +709,9 @@ impl ExtensionManager {
         // Lade alle Daten aus der Datenbank
         let extensions = with_connection(&state.db, |conn| {
             let sql = format!(
-            "SELECT id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled, single_instance FROM {}",
-            TABLE_EXTENSIONS
+            "SELECT id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled, single_instance FROM {TABLE_EXTENSIONS}"
         );
-            eprintln!("DEBUG: SQL Query before transformation: {}", sql);
+            eprintln!("DEBUG: SQL Query before transformation: {sql}");
 
             let results = SqlExecutor::query_select(conn, &sql, &[])?;
             eprintln!("DEBUG: Query returned {} results", results.len());
@@ -779,7 +773,7 @@ impl ExtensionManager {
 
         for extension_data in extensions {
             let extension_id = extension_data.id;
-            eprintln!("DEBUG: Processing extension: {}", extension_id);
+            eprintln!("DEBUG: Processing extension: {extension_id}");
 
             // Use public_key/name/version path structure
             let extension_path = self.get_extension_dir(
@@ -792,8 +786,7 @@ impl ExtensionManager {
             // Check if extension directory exists
             if !extension_path.exists() {
                 eprintln!(
-                    "DEBUG: Extension directory missing for: {} at {:?}",
-                    extension_id, extension_path
+                    "DEBUG: Extension directory missing for: {extension_id} at {extension_path:?}"
                 );
                 self.missing_extensions
                     .lock()
@@ -833,13 +826,12 @@ impl ExtensionManager {
             };
 
             // Validate manifest.json path using helper function
-            let manifest_relative_path = format!("{}/manifest.json", haextension_dir);
+            let manifest_relative_path = format!("{haextension_dir}/manifest.json");
             if Self::validate_path_in_directory(&extension_path, &manifest_relative_path, true)?
                 .is_none()
             {
                 eprintln!(
-                    "DEBUG: manifest.json missing or invalid for: {} at {}/manifest.json",
-                    extension_id, haextension_dir
+                    "DEBUG: manifest.json missing or invalid for: {extension_id} at {haextension_dir}/manifest.json"
                 );
                 self.missing_extensions
                     .lock()
@@ -855,7 +847,7 @@ impl ExtensionManager {
                 continue;
             }
 
-            eprintln!("DEBUG: Extension loaded successfully: {}", extension_id);
+            eprintln!("DEBUG: Extension loaded successfully: {extension_id}");
 
             let extension = Extension {
                 id: extension_id.clone(),

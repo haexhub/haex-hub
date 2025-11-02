@@ -52,7 +52,7 @@ pub async fn get_all_extensions(
         .extension_manager
         .load_installed_extensions(&app_handle, &state)
         .await
-        .map_err(|e| format!("Failed to load extensions: {:?}", e))?;
+        .map_err(|e| format!("Failed to load extensions: {e:?}"))?;
     /* } */
 
     let mut extensions = Vec::new();
@@ -292,12 +292,12 @@ pub async fn load_dev_extension(
     let (host, port, haextension_dir) = if config_path.exists() {
         let config_content =
             std::fs::read_to_string(&config_path).map_err(|e| ExtensionError::ValidationError {
-                reason: format!("Failed to read haextension.config.json: {}", e),
+                reason: format!("Failed to read haextension.config.json: {e}"),
             })?;
 
         let config: HaextensionConfig =
             serde_json::from_str(&config_content).map_err(|e| ExtensionError::ValidationError {
-                reason: format!("Failed to parse haextension.config.json: {}", e),
+                reason: format!("Failed to parse haextension.config.json: {e}"),
             })?;
 
         (config.dev.host, config.dev.port, config.dev.haextension_dir)
@@ -306,23 +306,22 @@ pub async fn load_dev_extension(
         (default_host(), default_port(), default_haextension_dir())
     };
 
-    let dev_server_url = format!("http://{}:{}", host, port);
-    eprintln!("📡 Dev server URL: {}", dev_server_url);
-    eprintln!("📁 Haextension directory: {}", haextension_dir);
+    let dev_server_url = format!("http://{host}:{port}");
+    eprintln!("📡 Dev server URL: {dev_server_url}");
+    eprintln!("📁 Haextension directory: {haextension_dir}");
 
     // 1.5. Check if dev server is running
     if !check_dev_server_health(&dev_server_url).await {
         return Err(ExtensionError::ValidationError {
             reason: format!(
-                "Dev server at {} is not reachable. Please start your dev server first (e.g., 'npm run dev')",
-                dev_server_url
+                "Dev server at {dev_server_url} is not reachable. Please start your dev server first (e.g., 'npm run dev')"
             ),
         });
     }
     eprintln!("✅ Dev server is reachable");
 
     // 2. Validate and build path to manifest: <extension_path>/<haextension_dir>/manifest.json
-    let manifest_relative_path = format!("{}/manifest.json", haextension_dir);
+    let manifest_relative_path = format!("{haextension_dir}/manifest.json");
     let manifest_path = ExtensionManager::validate_path_in_directory(
         &extension_path_buf,
         &manifest_relative_path,
@@ -330,15 +329,14 @@ pub async fn load_dev_extension(
     )?
     .ok_or_else(|| ExtensionError::ManifestError {
         reason: format!(
-            "Manifest not found at: {}/manifest.json. Make sure you run 'npx @haexhub/sdk init' first.",
-            haextension_dir
+            "Manifest not found at: {haextension_dir}/manifest.json. Make sure you run 'npx @haexhub/sdk init' first."
         ),
     })?;
 
     // 3. Read and parse manifest
     let manifest_content =
         std::fs::read_to_string(&manifest_path).map_err(|e| ExtensionError::ManifestError {
-            reason: format!("Failed to read manifest: {}", e),
+            reason: format!("Failed to read manifest: {e}"),
         })?;
 
     let manifest: ExtensionManifest = serde_json::from_str(&manifest_content)?;
@@ -406,7 +404,7 @@ pub fn remove_dev_extension(
 
     if let Some(id) = to_remove {
         dev_exts.remove(&id);
-        eprintln!("✅ Dev extension removed: {}", name);
+        eprintln!("✅ Dev extension removed: {name}");
         Ok(())
     } else {
         Err(ExtensionError::NotFound { public_key, name })

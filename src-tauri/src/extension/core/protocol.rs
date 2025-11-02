@@ -42,12 +42,12 @@ enum DataProcessingError {
 impl fmt::Display for DataProcessingError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DataProcessingError::HexDecoding(e) => write!(f, "Hex-Dekodierungsfehler: {}", e),
+            DataProcessingError::HexDecoding(e) => write!(f, "Hex-Dekodierungsfehler: {e}"),
             DataProcessingError::Utf8Conversion(e) => {
-                write!(f, "UTF-8-Konvertierungsfehler: {}", e)
+                write!(f, "UTF-8-Konvertierungsfehler: {e}")
             }
-            DataProcessingError::JsonParsing(e) => write!(f, "JSON-Parsing-Fehler: {}", e),
-            DataProcessingError::Custom(msg) => write!(f, "Datenverarbeitungsfehler: {}", msg),
+            DataProcessingError::JsonParsing(e) => write!(f, "JSON-Parsing-Fehler: {e}"),
+            DataProcessingError::Custom(msg) => write!(f, "Datenverarbeitungsfehler: {msg}"),
         }
     }
 }
@@ -101,7 +101,7 @@ pub fn resolve_secure_extension_asset_path(
             .all(|c| c.is_ascii_alphanumeric() || c == '-')
     {
         return Err(ExtensionError::ValidationError {
-            reason: format!("Invalid extension name: {}", extension_name),
+            reason: format!("Invalid extension name: {extension_name}"),
         });
     }
 
@@ -111,7 +111,7 @@ pub fn resolve_secure_extension_asset_path(
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '.')
     {
         return Err(ExtensionError::ValidationError {
-            reason: format!("Invalid extension version: {}", extension_version),
+            reason: format!("Invalid extension version: {extension_version}"),
         });
     }
 
@@ -146,11 +146,10 @@ pub fn resolve_secure_extension_asset_path(
                 Ok(canonical_path)
             } else {
                 eprintln!(
-                    "SECURITY WARNING: Path traversal attempt blocked: {}",
-                    requested_asset_path
+                    "SECURITY WARNING: Path traversal attempt blocked: {requested_asset_path}"
                 );
                 Err(ExtensionError::SecurityViolation {
-                    reason: format!("Path traversal attempt: {}", requested_asset_path),
+                    reason: format!("Path traversal attempt: {requested_asset_path}"),
                 })
             }
         }
@@ -159,11 +158,10 @@ pub fn resolve_secure_extension_asset_path(
                 Ok(final_path)
             } else {
                 eprintln!(
-                    "SECURITY WARNING: Invalid asset path: {}",
-                    requested_asset_path
+                    "SECURITY WARNING: Invalid asset path: {requested_asset_path}"
                 );
                 Err(ExtensionError::SecurityViolation {
-                    reason: format!("Invalid asset path: {}", requested_asset_path),
+                    reason: format!("Invalid asset path: {requested_asset_path}"),
                 })
             }
         }
@@ -184,7 +182,7 @@ pub fn extension_protocol_handler(
 
     // Only allow same-protocol requests or tauri origin
     // For null/empty origin (initial load), use wildcard
-    let protocol_prefix = format!("{}://", EXTENSION_PROTOCOL_NAME);
+    let protocol_prefix = format!("{EXTENSION_PROTOCOL_NAME}://");
     let allowed_origin = if origin.starts_with(&protocol_prefix) || origin == get_tauri_origin() {
         origin
     } else if origin.is_empty() || origin == "null" {
@@ -216,9 +214,9 @@ pub fn extension_protocol_handler(
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
 
-    println!("Protokoll Handler für: {}", uri_ref);
-    println!("Origin: {}", origin);
-    println!("Referer: {}", referer);
+    println!("Protokoll Handler für: {uri_ref}");
+    println!("Origin: {origin}");
+    println!("Referer: {referer}");
 
     let path_str = uri_ref.path();
 
@@ -227,16 +225,16 @@ pub fn extension_protocol_handler(
     // - Desktop: haex-extension://<base64>/{assetPath}
     // - Android: http://localhost/{base64}/{assetPath}
     let host = uri_ref.host().unwrap_or("");
-    println!("URI Host: {}", host);
+    println!("URI Host: {host}");
 
-    let (info, segments_after_version) = if host == "localhost" || host == format!("{}.localhost", EXTENSION_PROTOCOL_NAME).as_str() {
+    let (info, segments_after_version) = if host == "localhost" || host == format!("{EXTENSION_PROTOCOL_NAME}.localhost").as_str() {
         // Android format: http://haex-extension.localhost/{base64}/{assetPath}
         // Extract base64 from first path segment
-        println!("Android format detected: http://{}/...", host);
+        println!("Android format detected: http://{host}/...");
         let mut segments_iter = path_str.split('/').filter(|s| !s.is_empty());
 
         if let Some(first_segment) = segments_iter.next() {
-            println!("First path segment (base64): {}", first_segment);
+            println!("First path segment (base64): {first_segment}");
             match BASE64_STANDARD.decode(first_segment) {
                 Ok(decoded_bytes) => match String::from_utf8(decoded_bytes) {
                     Ok(json_str) => match serde_json::from_str::<ExtensionInfo>(&json_str) {
@@ -252,29 +250,29 @@ pub fn extension_protocol_handler(
                             (info, remaining)
                         }
                         Err(e) => {
-                            eprintln!("Failed to parse JSON from base64 path: {}", e);
+                            eprintln!("Failed to parse JSON from base64 path: {e}");
                             return Response::builder()
                                 .status(400)
                                 .header("Access-Control-Allow-Origin", allowed_origin)
-                                .body(Vec::from(format!("Invalid extension info in base64 path: {}", e)))
+                                .body(Vec::from(format!("Invalid extension info in base64 path: {e}")))
                                 .map_err(|e| e.into());
                         }
                     },
                     Err(e) => {
-                        eprintln!("Failed to decode UTF-8 from base64 path: {}", e);
+                        eprintln!("Failed to decode UTF-8 from base64 path: {e}");
                         return Response::builder()
                             .status(400)
                             .header("Access-Control-Allow-Origin", allowed_origin)
-                            .body(Vec::from(format!("Invalid UTF-8 in base64 path: {}", e)))
+                            .body(Vec::from(format!("Invalid UTF-8 in base64 path: {e}")))
                             .map_err(|e| e.into());
                     }
                 },
                 Err(e) => {
-                    eprintln!("Failed to decode base64 from path: {}", e);
+                    eprintln!("Failed to decode base64 from path: {e}");
                     return Response::builder()
                         .status(400)
                         .header("Access-Control-Allow-Origin", allowed_origin)
-                        .body(Vec::from(format!("Invalid base64 in path: {}", e)))
+                        .body(Vec::from(format!("Invalid base64 in path: {e}")))
                         .map_err(|e| e.into());
                 }
             }
@@ -311,35 +309,35 @@ pub fn extension_protocol_handler(
                         (info, segments)
                     }
                     Err(e) => {
-                        eprintln!("Failed to parse JSON from base64 host: {}", e);
+                        eprintln!("Failed to parse JSON from base64 host: {e}");
                         return Response::builder()
                             .status(400)
                             .header("Access-Control-Allow-Origin", allowed_origin)
-                            .body(Vec::from(format!("Invalid extension info in base64 host: {}", e)))
+                            .body(Vec::from(format!("Invalid extension info in base64 host: {e}")))
                             .map_err(|e| e.into());
                     }
                 },
                 Err(e) => {
-                    eprintln!("Failed to decode UTF-8 from base64 host: {}", e);
+                    eprintln!("Failed to decode UTF-8 from base64 host: {e}");
                     return Response::builder()
                         .status(400)
                         .header("Access-Control-Allow-Origin", allowed_origin)
-                        .body(Vec::from(format!("Invalid UTF-8 in base64 host: {}", e)))
+                        .body(Vec::from(format!("Invalid UTF-8 in base64 host: {e}")))
                         .map_err(|e| e.into());
                 }
             },
             Err(e) => {
-                eprintln!("Failed to decode base64 host: {}", e);
+                eprintln!("Failed to decode base64 host: {e}");
                 return Response::builder()
                     .status(400)
                     .header("Access-Control-Allow-Origin", allowed_origin)
-                    .body(Vec::from(format!("Invalid base64 in host: {}", e)))
+                    .body(Vec::from(format!("Invalid base64 in host: {e}")))
                     .map_err(|e| e.into());
             }
         }
     } else {
         // No base64 host - use path-based parsing (for localhost/Android/Windows)
-        parse_extension_info_from_path(path_str, origin, uri_ref, referer, &allowed_origin)?
+        parse_extension_info_from_path(path_str, origin, uri_ref, referer, allowed_origin)?
     };
 
     // Construct asset path from remaining segments
@@ -353,8 +351,8 @@ pub fn extension_protocol_handler(
         &raw_asset_path
     };
 
-    println!("Path: {}", path_str);
-    println!("Asset to load: {}", asset_to_load);
+    println!("Path: {path_str}");
+    println!("Asset to load: {asset_to_load}");
 
     let absolute_secure_path = resolve_secure_extension_asset_path(
         app_handle,
@@ -362,7 +360,7 @@ pub fn extension_protocol_handler(
         &info.public_key,
         &info.name,
         &info.version,
-        &asset_to_load,
+        asset_to_load,
     )?;
 
     println!("Resolved path: {}", absolute_secure_path.display());
@@ -497,7 +495,7 @@ fn parse_encoded_info_from_origin_or_uri_or_referer_or_cache(
         if let Ok(hex) = parse_from_origin(origin) {
             if let Ok(info) = process_hex_encoded_json(&hex) {
                 cache_extension_info(&info); // Cache setzen
-                println!("Parsed und gecached aus Origin: {}", hex);
+                println!("Parsed und gecached aus Origin: {hex}");
                 return Ok(info);
             }
         }
@@ -507,17 +505,17 @@ fn parse_encoded_info_from_origin_or_uri_or_referer_or_cache(
     if let Ok(hex) = parse_from_uri_path(uri_ref) {
         if let Ok(info) = process_hex_encoded_json(&hex) {
             cache_extension_info(&info); // Cache setzen
-            println!("Parsed und gecached aus URI: {}", hex);
+            println!("Parsed und gecached aus URI: {hex}");
             return Ok(info);
         }
     }
 
-    println!("Fallback zu Referer-Parsing: {}", referer);
+    println!("Fallback zu Referer-Parsing: {referer}");
     if !referer.is_empty() && referer != "null" {
         if let Ok(hex) = parse_from_uri_string(referer) {
             if let Ok(info) = process_hex_encoded_json(&hex) {
                 cache_extension_info(&info); // Cache setzen
-                println!("Parsed und gecached aus Referer: {}", hex);
+                println!("Parsed und gecached aus Referer: {hex}");
                 return Ok(info);
             }
         }
@@ -609,11 +607,6 @@ fn validate_and_return_hex(segment: &str) -> Result<String, DataProcessingError>
     Ok(segment.to_string())
 }
 
-fn encode_hex_for_log(info: &ExtensionInfo) -> String {
-    let json_str = serde_json::to_string(info).unwrap_or_default();
-    hex::encode(json_str.as_bytes())
-}
-
 // Helper function to parse extension info from path segments
 fn parse_extension_info_from_path(
     path_str: &str,
@@ -627,11 +620,11 @@ fn parse_extension_info_from_path(
     match (segments_iter.next(), segments_iter.next(), segments_iter.next()) {
         (Some(public_key), Some(name), Some(version)) => {
             println!("=== Extension Protocol Handler (path-based) ===");
-            println!("Full URI: {}", uri_ref);
+            println!("Full URI: {uri_ref}");
             println!("Parsed from path segments:");
-            println!("  PublicKey: {}", public_key);
-            println!("  Name: {}", name);
-            println!("  Version: {}", version);
+            println!("  PublicKey: {public_key}");
+            println!("  Name: {name}");
+            println!("  Version: {version}");
 
             let info = ExtensionInfo {
                 public_key: public_key.to_string(),
@@ -653,7 +646,7 @@ fn parse_extension_info_from_path(
             ) {
                 Ok(decoded) => {
                     println!("=== Extension Protocol Handler (legacy hex format) ===");
-                    println!("Full URI: {}", uri_ref);
+                    println!("Full URI: {uri_ref}");
                     println!("Decoded info:");
                     println!("  PublicKey: {}", decoded.public_key);
                     println!("  Name: {}", decoded.name);
@@ -670,8 +663,8 @@ fn parse_extension_info_from_path(
                     Ok((decoded, segments))
                 }
                 Err(e) => {
-                    eprintln!("Fehler beim Parsen (alle Fallbacks): {}", e);
-                    Err(format!("Ungültige Anfrage: {}", e).into())
+                    eprintln!("Fehler beim Parsen (alle Fallbacks): {e}");
+                    Err(format!("Ungültige Anfrage: {e}").into())
                 }
             }
         }

@@ -17,7 +17,7 @@ impl SqlPermissionValidator {
     fn is_own_table(extension_id: &str, table_name: &str) -> bool {
         // Tabellennamen sind im Format: {keyHash}_{extensionName}_{tableName}
         // extension_id ist der keyHash der Extension
-        table_name.starts_with(&format!("{}_", extension_id))
+        table_name.starts_with(&format!("{extension_id}_"))
     }
 
     /// Validiert ein SQL-Statement gegen die Permissions einer Extension
@@ -45,7 +45,7 @@ impl SqlPermissionValidator {
                 Self::validate_schema_statement(app_state, extension_id, &statement).await
             }
             _ => Err(ExtensionError::ValidationError {
-                reason: format!("Statement type not allowed: {}", sql),
+                reason: format!("Statement type not allowed: {sql}"),
             }),
         }
     }

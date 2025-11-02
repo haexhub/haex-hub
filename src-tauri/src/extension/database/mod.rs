@@ -13,10 +13,8 @@ use crate::AppState;
 use rusqlite::params_from_iter;
 use rusqlite::types::Value as SqlValue;
 use rusqlite::Transaction;
-use serde_json::json;
 use serde_json::Value as JsonValue;
 use sqlparser::ast::{Statement, TableFactor, TableObject};
-use std::collections::HashSet;
 use tauri::State;
 
 /// Führt Statements mit korrekter Parameter-Bindung aus
@@ -185,7 +183,7 @@ pub async fn extension_sql_execute(
         if let Statement::CreateTable(ref create_table_details) = statement {
             // Extract table name and remove quotes (both " and `)
             let raw_name = create_table_details.name.to_string();
-            println!("DEBUG: Raw table name from AST: {:?}", raw_name);
+            println!("DEBUG: Raw table name from AST: {raw_name:?}");
             println!("DEBUG: Raw table name chars: {:?}", raw_name.chars().collect::<Vec<_>>());
 
             let table_name_str = raw_name
@@ -193,17 +191,15 @@ pub async fn extension_sql_execute(
                 .trim_matches('`')
                 .to_string();
 
-            println!("DEBUG: Cleaned table name: {:?}", table_name_str);
+            println!("DEBUG: Cleaned table name: {table_name_str:?}");
             println!("DEBUG: Cleaned table name chars: {:?}", table_name_str.chars().collect::<Vec<_>>());
 
             println!(
-                "Table '{}' created by extension, setting up CRDT triggers...",
-                table_name_str
+                "Table '{table_name_str}' created by extension, setting up CRDT triggers..."
             );
             trigger::setup_triggers_for_table(&tx, &table_name_str, false)?;
             println!(
-                "Triggers for table '{}' successfully created.",
-                table_name_str
+                "Triggers for table '{table_name_str}' successfully created."
             );
         }
 

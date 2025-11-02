@@ -3,7 +3,7 @@
 use crate::crdt::hlc::HlcService;
 use crate::crdt::transformer::CrdtTransformer;
 use crate::crdt::trigger;
-use crate::database::core::{convert_value_ref_to_json, parse_sql_statements, ValueConverter};
+use crate::database::core::{convert_value_ref_to_json, parse_sql_statements};
 use crate::database::error::DatabaseError;
 use rusqlite::{params_from_iter, types::Value as SqliteValue, ToSql, Transaction};
 use serde_json::Value as JsonValue;
@@ -52,14 +52,14 @@ impl SqlExecutor {
         }
 
         let sql_str = statement.to_string();
-        eprintln!("DEBUG: Transformed execute SQL: {}", sql_str);
+        eprintln!("DEBUG: Transformed execute SQL: {sql_str}");
 
         // Führe Statement aus
         tx.execute(&sql_str, params)
             .map_err(|e| DatabaseError::ExecutionError {
                 sql: sql_str.clone(),
                 table: None,
-                reason: format!("Execute failed: {}", e),
+                reason: format!("Execute failed: {e}"),
             })?;
 
         // Trigger-Logik für CREATE TABLE
@@ -70,7 +70,7 @@ impl SqlExecutor {
                 .trim_matches('"')
                 .trim_matches('`')
                 .to_string();
-            eprintln!("DEBUG: Setting up triggers for table: {}", table_name_str);
+            eprintln!("DEBUG: Setting up triggers for table: {table_name_str}");
             trigger::setup_triggers_for_table(tx, &table_name_str, false)?;
         }
 
@@ -115,7 +115,7 @@ impl SqlExecutor {
         }
 
         let sql_str = statement.to_string();
-        eprintln!("DEBUG: Transformed SQL (with RETURNING): {}", sql_str);
+        eprintln!("DEBUG: Transformed SQL (with RETURNING): {sql_str}");
 
         // Prepare und query ausführen
         let mut stmt = tx
@@ -170,7 +170,7 @@ impl SqlExecutor {
                 .trim_matches('"')
                 .trim_matches('`')
                 .to_string();
-            eprintln!("DEBUG: Setting up triggers for table (RETURNING): {}", table_name_str);
+            eprintln!("DEBUG: Setting up triggers for table (RETURNING): {table_name_str}");
             trigger::setup_triggers_for_table(tx, &table_name_str, false)?;
         }
 
@@ -186,7 +186,7 @@ impl SqlExecutor {
     ) -> Result<HashSet<String>, DatabaseError> {
         let sql_params: Vec<SqliteValue> = params
             .iter()
-            .map(|v| crate::database::core::ValueConverter::json_to_rusqlite_value(v))
+            .map(crate::database::core::ValueConverter::json_to_rusqlite_value)
             .collect::<Result<Vec<_>, _>>()?;
         let param_refs: Vec<&dyn ToSql> = sql_params.iter().map(|p| p as &dyn ToSql).collect();
         Self::execute_internal_typed(tx, hlc_service, sql, &param_refs)
@@ -201,7 +201,7 @@ impl SqlExecutor {
     ) -> Result<(HashSet<String>, Vec<Vec<JsonValue>>), DatabaseError> {
         let sql_params: Vec<SqliteValue> = params
             .iter()
-            .map(|v| crate::database::core::ValueConverter::json_to_rusqlite_value(v))
+            .map(crate::database::core::ValueConverter::json_to_rusqlite_value)
             .collect::<Result<Vec<_>, _>>()?;
         let param_refs: Vec<&dyn ToSql> = sql_params.iter().map(|p| p as &dyn ToSql).collect();
         Self::query_internal_typed(tx, hlc_service, sql, &param_refs)
@@ -252,12 +252,12 @@ impl SqlExecutor {
         let stmt_to_execute = ast_vec.pop().unwrap();
         let transformed_sql = stmt_to_execute.to_string();
 
-        eprintln!("DEBUG: SELECT (no transformation): {}", transformed_sql);
+        eprintln!("DEBUG: SELECT (no transformation): {transformed_sql}");
 
         // Convert JSON params to SQLite values
         let sql_params: Vec<SqliteValue> = params
             .iter()
-            .map(|v| crate::database::core::ValueConverter::json_to_rusqlite_value(v))
+            .map(crate::database::core::ValueConverter::json_to_rusqlite_value)
             .collect::<Result<Vec<_>, _>>()?;
 
         let mut prepared_stmt = conn.prepare(&transformed_sql)?;

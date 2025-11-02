@@ -47,7 +47,7 @@ pub fn open_and_init_db(path: &str, key: &str, create: bool) -> Result<Connectio
         },
     )
     .map_err(|e| DatabaseError::DatabaseError {
-        reason: format!("Failed to register {} function: {}", UUID_FUNCTION_NAME, e),
+        reason: format!("Failed to register {UUID_FUNCTION_NAME} function: {e}"),
     })?;
 
     let journal_mode: String = conn
@@ -61,8 +61,7 @@ pub fn open_and_init_db(path: &str, key: &str, create: bool) -> Result<Connectio
         println!("WAL mode successfully enabled.");
     } else {
         eprintln!(
-            "Failed to enable WAL mode, journal_mode is '{}'.",
-            journal_mode
+            "Failed to enable WAL mode, journal_mode is '{journal_mode}'."
         );
     }
 
@@ -97,7 +96,7 @@ pub fn parse_sql_statements(sql: &str) -> Result<Vec<Statement>, DatabaseError> 
         .join(" ");
 
     Parser::parse_sql(&dialect, &normalized_sql).map_err(|e| DatabaseError::ParseError {
-        reason: format!("Failed to parse SQL: {}", e),
+        reason: format!("Failed to parse SQL: {e}"),
         sql: sql.to_string(),
     })
 }
@@ -138,7 +137,7 @@ impl ValueConverter {
                 serde_json::to_string(json_val)
                     .map(SqlValue::Text)
                     .map_err(|e| DatabaseError::SerializationError {
-                        reason: format!("Failed to serialize JSON param: {}", e),
+                        reason: format!("Failed to serialize JSON param: {e}"),
                     })
             }
         }
@@ -258,7 +257,7 @@ pub fn select_with_crdt(
     params: Vec<JsonValue>,
     connection: &DbConnection,
 ) -> Result<Vec<Vec<JsonValue>>, DatabaseError> {
-    with_connection(&connection, |conn| {
+    with_connection(connection, |conn| {
         SqlExecutor::query_select(conn, &sql, &params)
     })
 }

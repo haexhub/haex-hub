@@ -133,7 +133,7 @@ fn validate_path_pattern(pattern: &str) -> Result<(), ExtensionError> {
     // Check for path traversal attempts
     if pattern.contains("../") || pattern.contains("..\\") {
         return Err(ExtensionError::SecurityViolation {
-            reason: format!("Path traversal detected in pattern: {}", pattern),
+            reason: format!("Path traversal detected in pattern: {pattern}"),
         });
     }
 
@@ -177,7 +177,7 @@ pub fn resolve_path_pattern(
         "$TEMP" => "Temp",
         _ => {
             return Err(ExtensionError::ValidationError {
-                reason: format!("Unknown base directory variable: {}", base_var),
+                reason: format!("Unknown base directory variable: {base_var}"),
             });
         }
     };

@@ -28,8 +28,7 @@ impl PermissionManager {
                 })?;
 
             let sql = format!(
-                "INSERT INTO {} (id, extension_id, resource_type, action, target, constraints, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                TABLE_EXTENSION_PERMISSIONS
+                "INSERT INTO {TABLE_EXTENSION_PERMISSIONS} (id, extension_id, resource_type, action, target, constraints, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
             );
 
             for perm in permissions {
@@ -76,8 +75,7 @@ impl PermissionManager {
             let db_perm: HaexExtensionPermissions = permission.into();
             
             let sql = format!(
-                "UPDATE {} SET resource_type = ?, action = ?, target = ?, constraints = ?, status = ? WHERE id = ?",
-                TABLE_EXTENSION_PERMISSIONS
+                "UPDATE {TABLE_EXTENSION_PERMISSIONS} SET resource_type = ?, action = ?, target = ?, constraints = ?, status = ? WHERE id = ?"
             );
 
             let params = params![
@@ -111,7 +109,7 @@ impl PermissionManager {
                     reason: "Failed to lock HLC service".to_string(),
                 })?;
 
-            let sql = format!("UPDATE {} SET status = ? WHERE id = ?", TABLE_EXTENSION_PERMISSIONS);
+            let sql = format!("UPDATE {TABLE_EXTENSION_PERMISSIONS} SET status = ? WHERE id = ?");
             let params = params![new_status.as_str(), permission_id];
             SqlExecutor::execute_internal_typed(&tx, &hlc_service, &sql, params)?;
             tx.commit().map_err(DatabaseError::from)
@@ -133,7 +131,7 @@ impl PermissionManager {
                 })?;
             
             // Echtes DELETE - wird vom CrdtTransformer zu UPDATE umgewandelt
-            let sql = format!("DELETE FROM {} WHERE id = ?", TABLE_EXTENSION_PERMISSIONS);
+            let sql = format!("DELETE FROM {TABLE_EXTENSION_PERMISSIONS} WHERE id = ?");
             SqlExecutor::execute_internal_typed(&tx, &hlc_service, &sql, params![permission_id])?;
             tx.commit().map_err(DatabaseError::from)
         }).map_err(ExtensionError::from)
@@ -152,7 +150,7 @@ impl PermissionManager {
                     reason: "Failed to lock HLC service".to_string(),
                 })?;
 
-             let sql = format!("DELETE FROM {} WHERE extension_id = ?", TABLE_EXTENSION_PERMISSIONS);
+             let sql = format!("DELETE FROM {TABLE_EXTENSION_PERMISSIONS} WHERE extension_id = ?");
             SqlExecutor::execute_internal_typed(&tx, &hlc_service, &sql, params![extension_id])?;
             tx.commit().map_err(DatabaseError::from)
         }).map_err(ExtensionError::from)
@@ -164,7 +162,7 @@ impl PermissionManager {
         hlc_service: &crate::crdt::hlc::HlcService,
         extension_id: &str,
     ) -> Result<(), DatabaseError> {
-        let sql = format!("DELETE FROM {} WHERE extension_id = ?", TABLE_EXTENSION_PERMISSIONS);
+        let sql = format!("DELETE FROM {TABLE_EXTENSION_PERMISSIONS} WHERE extension_id = ?");
         SqlExecutor::execute_internal_typed(tx, hlc_service, &sql, params![extension_id])?;
         Ok(())
     }
@@ -174,7 +172,7 @@ impl PermissionManager {
         extension_id: &str,
     ) -> Result<Vec<ExtensionPermission>, ExtensionError> {
         with_connection(&app_state.db, |conn| {
-             let sql = format!("SELECT * FROM {} WHERE extension_id = ?", TABLE_EXTENSION_PERMISSIONS);
+             let sql = format!("SELECT * FROM {TABLE_EXTENSION_PERMISSIONS} WHERE extension_id = ?");
             let mut stmt = conn.prepare(&sql).map_err(DatabaseError::from)?;
             
             let perms_iter = stmt.query_map(params![extension_id], |row| {
@@ -209,7 +207,7 @@ impl PermissionManager {
             .extension_manager
             .get_extension(extension_id)
             .ok_or_else(|| ExtensionError::ValidationError {
-                reason: format!("Extension with ID {} not found", extension_id),
+                reason: format!("Extension with ID {extension_id} not found"),
             })?;
 
         // Build expected table prefix: {publicKey}__{extensionName}__
@@ -238,8 +236,8 @@ impl PermissionManager {
         if !has_permission {
             return Err(ExtensionError::permission_denied(
                 extension_id,
-                &format!("{:?}", action),
-                &format!("database table '{}'", table_name),
+                &format!("{action:?}"),
+                &format!("database table '{table_name}'"),
             ));
         }
 
@@ -415,7 +413,7 @@ impl PermissionManager {
             "db" => Ok(ResourceType::Db),
             "shell" => Ok(ResourceType::Shell),
             _ => Err(DatabaseError::SerializationError {
-                reason: format!("Unknown resource type: {}", s),
+                reason: format!("Unknown resource type: {s}"),
             }),
         }
     }
@@ -423,8 +421,7 @@ impl PermissionManager {
     
     
     fn matches_path_pattern(pattern: &str, path: &str) -> bool {
-        if pattern.ends_with("/*") {
-            let prefix = &pattern[..pattern.len() - 2];
+        if let Some(prefix) = pattern.strip_suffix("/*") {
             return path.starts_with(prefix);
         }
 

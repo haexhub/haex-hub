@@ -21,7 +21,6 @@ use std::{fs, sync::Arc};
 use tauri::{path::BaseDirectory, AppHandle, Manager, State};
 use tauri_plugin_fs::FsExt;
 #[cfg(not(target_os = "android"))]
-use trash;
 use ts_rs::TS;
 
 pub struct DbConnection(pub Arc<Mutex<Option<Connection>>>);
@@ -93,7 +92,7 @@ fn get_vault_path(app_handle: &AppHandle, vault_name: &str) -> Result<String, Da
     let vault_file_name = if vault_name.ends_with(VAULT_EXTENSION) {
         vault_name.to_string()
     } else {
-        format!("{}{VAULT_EXTENSION}", vault_name)
+        format!("{vault_name}{VAULT_EXTENSION}")
     };
 
     let vault_directory = get_vaults_directory(app_handle)?;
@@ -101,13 +100,12 @@ fn get_vault_path(app_handle: &AppHandle, vault_name: &str) -> Result<String, Da
     let vault_path = app_handle
         .path()
         .resolve(
-            format!("{vault_directory}/{}", vault_file_name),
+            format!("{vault_directory}/{vault_file_name}"),
             BaseDirectory::AppLocalData,
         )
         .map_err(|e| DatabaseError::PathResolutionError {
             reason: format!(
-                "Failed to resolve vault path for '{}': {}",
-                vault_file_name, e
+                "Failed to resolve vault path for '{vault_file_name}': {e}"
             ),
         })?;
 
@@ -115,7 +113,7 @@ fn get_vault_path(app_handle: &AppHandle, vault_name: &str) -> Result<String, Da
     if let Some(parent) = vault_path.parent() {
         fs::create_dir_all(parent).map_err(|e| DatabaseError::IoError {
             path: parent.display().to_string(),
-            reason: format!("Failed to create vaults directory: {}", e),
+            reason: format!("Failed to create vaults directory: {e}"),
         })?;
     }
 
@@ -174,18 +172,18 @@ pub fn list_vaults(app_handle: AppHandle) -> Result<Vec<VaultInfo>, DatabaseErro
             if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
                 if filename.ends_with(VAULT_EXTENSION) {
                     // Entferne .db Endung für die Rückgabe
-                    println!("Vault gefunden {}", filename.to_string());
+                    println!("Vault gefunden {filename}");
 
                     let metadata = fs::metadata(&path).map_err(|e| DatabaseError::IoError {
                         path: path.to_string_lossy().to_string(),
-                        reason: format!("Metadaten konnten nicht gelesen werden: {}", e),
+                        reason: format!("Metadaten konnten nicht gelesen werden: {e}"),
                     })?;
 
                     let last_access_timestamp = metadata
                         .accessed()
                         .map_err(|e| DatabaseError::IoError {
                             path: path.to_string_lossy().to_string(),
-                            reason: format!("Zugriffszeit konnte nicht gelesen werden: {}", e),
+                            reason: format!("Zugriffszeit konnte nicht gelesen werden: {e}"),
                         })?
                         .duration_since(UNIX_EPOCH)
                         .unwrap_or_default() // Fallback für den seltenen Fall einer Zeit vor 1970
@@ -233,8 +231,8 @@ pub fn move_vault_to_trash(
     #[cfg(not(target_os = "android"))]
     {
         let vault_path = get_vault_path(&app_handle, &vault_name)?;
-        let vault_shm_path = format!("{}-shm", vault_path);
-        let vault_wal_path = format!("{}-wal", vault_path);
+        let vault_shm_path = format!("{vault_path}-shm");
+        let vault_wal_path = format!("{vault_path}-wal");
 
         if !Path::new(&vault_path).exists() {
             return Err(DatabaseError::IoError {
@@ -252,14 +250,12 @@ pub fn move_vault_to_trash(
             let _ = trash::delete(&vault_wal_path);
 
             Ok(format!(
-                "Vault '{}' successfully moved to trash",
-                vault_name
+                "Vault '{vault_name}' successfully moved to trash"
             ))
         } else {
             // Fallback: Permanent deletion if trash fails
             println!(
-                "Trash not available, falling back to permanent deletion for vault '{}'",
-                vault_name
+                "Trash not available, falling back to permanent deletion for vault '{vault_name}'"
             );
             delete_vault(app_handle, vault_name)
         }
@@ -270,8 +266,8 @@ pub fn move_vault_to_trash(
 #[tauri::command]
 pub fn delete_vault(app_handle: AppHandle, vault_name: String) -> Result<String, DatabaseError> {
     let vault_path = get_vault_path(&app_handle, &vault_name)?;
-    let vault_shm_path = format!("{}-shm", vault_path);
-    let vault_wal_path = format!("{}-wal", vault_path);
+    let vault_shm_path = format!("{vault_path}-shm");
+    let vault_wal_path = format!("{vault_path}-wal");
 
     if !Path::new(&vault_path).exists() {
         return Err(DatabaseError::IoError {
@@ -283,23 +279,23 @@ pub fn delete_vault(app_handle: AppHandle, vault_name: String) -> Result<String,
     if Path::new(&vault_shm_path).exists() {
         fs::remove_file(&vault_shm_path).map_err(|e| DatabaseError::IoError {
             path: vault_shm_path.clone(),
-            reason: format!("Failed to delete vault: {}", e),
+            reason: format!("Failed to delete vault: {e}"),
         })?;
     }
 
     if Path::new(&vault_wal_path).exists() {
         fs::remove_file(&vault_wal_path).map_err(|e| DatabaseError::IoError {
             path: vault_wal_path.clone(),
-            reason: format!("Failed to delete vault: {}", e),
+            reason: format!("Failed to delete vault: {e}"),
         })?;
     }
 
     fs::remove_file(&vault_path).map_err(|e| DatabaseError::IoError {
         path: vault_path.clone(),
-        reason: format!("Failed to delete vault: {}", e),
+        reason: format!("Failed to delete vault: {e}"),
     })?;
 
-    Ok(format!("Vault '{}' successfully deleted", vault_name))
+    Ok(format!("Vault '{vault_name}' successfully deleted"))
 }
 
 #[tauri::command]
@@ -309,16 +305,16 @@ pub fn create_encrypted_database(
     key: String,
     state: State<'_, AppState>,
 ) -> Result<String, DatabaseError> {
-    println!("Creating encrypted vault with name: {}", vault_name);
+    println!("Creating encrypted vault with name: {vault_name}");
 
     let vault_path = get_vault_path(&app_handle, &vault_name)?;
-    println!("Resolved vault path: {}", vault_path);
+    println!("Resolved vault path: {vault_path}");
 
     // Prüfen, ob bereits eine Vault mit diesem Namen existiert
     if Path::new(&vault_path).exists() {
         return Err(DatabaseError::IoError {
             path: vault_path,
-            reason: format!("A vault with the name '{}' already exists", vault_name),
+            reason: format!("A vault with the name '{vault_name}' already exists"),
         });
     }
     /* let resource_path = app_handle
@@ -330,7 +326,7 @@ pub fn create_encrypted_database(
         .path()
         .resolve("database/vault.db", BaseDirectory::Resource)
         .map_err(|e| DatabaseError::PathResolutionError {
-            reason: format!("Failed to resolve template database: {}", e),
+            reason: format!("Failed to resolve template database: {e}"),
         })?;
 
     let template_content =
@@ -339,20 +335,20 @@ pub fn create_encrypted_database(
             .read(&template_path)
             .map_err(|e| DatabaseError::IoError {
                 path: template_path.display().to_string(),
-                reason: format!("Failed to read template database from resources: {}", e),
+                reason: format!("Failed to read template database from resources: {e}"),
             })?;
 
     let temp_path = app_handle
         .path()
         .resolve("temp_vault.db", BaseDirectory::AppLocalData)
         .map_err(|e| DatabaseError::PathResolutionError {
-            reason: format!("Failed to resolve temp database: {}", e),
+            reason: format!("Failed to resolve temp database: {e}"),
         })?;
 
     let temp_path_clone = temp_path.to_owned();
     fs::write(temp_path, template_content).map_err(|e| DatabaseError::IoError {
         path: vault_path.to_string(),
-        reason: format!("Failed to write temporary template database: {}", e),
+        reason: format!("Failed to write temporary template database: {e}"),
     })?;
     /* if !template_path.exists() {
         return Err(DatabaseError::IoError {
@@ -365,8 +361,7 @@ pub fn create_encrypted_database(
     let conn = Connection::open(&temp_path_clone).map_err(|e| DatabaseError::ConnectionFailed {
         path: temp_path_clone.display().to_string(),
         reason: format!(
-            "Fehler beim Öffnen der unverschlüsselten Quelldatenbank: {}",
-            e
+            "Fehler beim Öffnen der unverschlüsselten Quelldatenbank: {e}"
         ),
     })?;
 
@@ -394,7 +389,7 @@ pub fn create_encrypted_database(
         let _ = fs::remove_file(&vault_path);
         let _ = fs::remove_file(&temp_path_clone);
         return Err(DatabaseError::QueryError {
-            reason: format!("Fehler während sqlcipher_export: {}", e),
+            reason: format!("Fehler während sqlcipher_export: {e}"),
         });
     }
 
@@ -419,11 +414,11 @@ pub fn create_encrypted_database(
         Ok(version)
     }) {
         Ok(version) => {
-            println!("SQLCipher ist aktiv! Version: {}", version);
+            println!("SQLCipher ist aktiv! Version: {version}");
         }
         Err(e) => {
             eprintln!("FEHLER: SQLCipher scheint NICHT aktiv zu sein!");
-            eprintln!("Der Befehl 'PRAGMA cipher_version;' schlug fehl: {}", e);
+            eprintln!("Der Befehl 'PRAGMA cipher_version;' schlug fehl: {e}");
             eprintln!("Die Datenbank wurde wahrscheinlich NICHT verschlüsselt.");
         }
     }
@@ -431,7 +426,7 @@ pub fn create_encrypted_database(
     conn.close()
         .map_err(|(_, e)| DatabaseError::ConnectionFailed {
             path: template_path.display().to_string(),
-            reason: format!("Fehler beim Schließen der Quelldatenbank: {}", e),
+            reason: format!("Fehler beim Schließen der Quelldatenbank: {e}"),
         })?;
 
     let _ = fs::remove_file(&temp_path_clone);
@@ -448,19 +443,19 @@ pub fn open_encrypted_database(
     key: String,
     state: State<'_, AppState>,
 ) -> Result<String, DatabaseError> {
-    println!("Opening encrypted database vault_path: {}", vault_path);
-    println!("Resolved vault path: {}", vault_path);
+    println!("Opening encrypted database vault_path: {vault_path}");
+    println!("Resolved vault path: {vault_path}");
 
     if !Path::new(&vault_path).exists() {
         return Err(DatabaseError::IoError {
             path: vault_path.to_string(),
-            reason: format!("Vault '{}' does not exist", vault_path),
+            reason: format!("Vault '{vault_path}' does not exist"),
         });
     }
 
     initialize_session(&app_handle, &vault_path, &key, &state)?;
 
-    Ok(format!("Vault '{}' opened successfully", vault_path))
+    Ok(format!("Vault '{vault_path}' opened successfully"))
 }
 
 /// Opens the DB, initializes the HLC service, and stores both in the AppState.
@@ -512,8 +507,7 @@ fn initialize_session(
         eprintln!("INFO: Setting 'triggers_initialized' flag via CRDT...");
 
         let insert_sql = format!(
-            "INSERT INTO {} (id, key, type, value) VALUES (?, ?, ?, ?)",
-            TABLE_SETTINGS
+            "INSERT INTO {TABLE_SETTINGS} (id, key, type, value) VALUES (?, ?, ?, ?)"
         );
 
         // execute_with_crdt erwartet Vec<JsonValue>, kein params!-Makro

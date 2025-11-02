@@ -20,11 +20,11 @@ struct TableDefinition {
 
 pub fn generate_table_names() {
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR ist nicht gesetzt.");
-    println!("Generiere Tabellennamen nach {}", out_dir);
+    println!("Generiere Tabellennamen nach {out_dir}");
     let schema_path = Path::new("../src/database/tableNames.json");
     let dest_path = Path::new(&out_dir).join("tableNames.rs");
 
-    let file = File::open(&schema_path).expect("Konnte tableNames.json nicht öffnen");
+    let file = File::open(schema_path).expect("Konnte tableNames.json nicht öffnen");
     let reader = BufReader::new(file);
     let schema: Schema =
         serde_json::from_reader(reader).expect("Konnte tableNames.json nicht parsen");
@@ -108,8 +108,7 @@ fn generate_table_constants(table: &TableDefinition, const_prefix: &str) -> Stri
     for (col_key, col_value) in &table.columns {
         let col_const_name = format!("COL_{}_{}", const_prefix, to_screaming_snake_case(col_key));
         code.push_str(&format!(
-            "pub const {}: &str = \"{}\";\n",
-            col_const_name, col_value
+            "pub const {col_const_name}: &str = \"{col_value}\";\n"
         ));
     }
 

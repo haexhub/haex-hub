@@ -26,7 +26,7 @@ pub fn run() {
             let state = app_handle.state::<AppState>();
 
             // Rufe den Handler mit allen benötigten Parametern auf
-            match extension::core::extension_protocol_handler(state, &app_handle, &request) {
+            match extension::core::extension_protocol_handler(state, app_handle, &request) {
                 Ok(response) => response,
                 Err(e) => {
                     eprintln!(
@@ -38,11 +38,10 @@ pub fn run() {
                         .status(500)
                         .header("Content-Type", "text/plain")
                         .body(Vec::from(format!(
-                            "Interner Serverfehler im Protokollhandler: {}",
-                            e
+                            "Interner Serverfehler im Protokollhandler: {e}"
                         )))
                         .unwrap_or_else(|build_err| {
-                            eprintln!("Konnte Fehler-Response nicht erstellen: {}", build_err);
+                            eprintln!("Konnte Fehler-Response nicht erstellen: {build_err}");
                             tauri::http::Response::builder()
                                 .status(500)
                                 .body(Vec::new())

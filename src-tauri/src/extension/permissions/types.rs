@@ -267,7 +267,7 @@ impl ResourceType {
             "db" => Ok(ResourceType::Db),
             "shell" => Ok(ResourceType::Shell),
             _ => Err(ExtensionError::ValidationError {
-                reason: format!("Unknown resource type: {}", s),
+                reason: format!("Unknown resource type: {s}"),
             }),
         }
     }
@@ -301,7 +301,7 @@ impl Action {
             ResourceType::Fs => Ok(Action::Filesystem(FsAction::from_str(s)?)),
             ResourceType::Http => {
                 let action: HttpAction =
-                    serde_json::from_str(&format!("\"{}\"", s)).map_err(|_| {
+                    serde_json::from_str(&format!("\"{s}\"")).map_err(|_| {
                         ExtensionError::InvalidActionString {
                             input: s.to_string(),
                             resource_type: "http".to_string(),
@@ -329,7 +329,7 @@ impl PermissionStatus {
             "granted" => Ok(PermissionStatus::Granted),
             "denied" => Ok(PermissionStatus::Denied),
             _ => Err(ExtensionError::ValidationError {
-                reason: format!("Unknown permission status: {}", s),
+                reason: format!("Unknown permission status: {s}"),
             }),
         }
     }

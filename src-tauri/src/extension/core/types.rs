@@ -70,8 +70,7 @@ pub fn copy_directory(
     use std::path::PathBuf;
 
     println!(
-        "Kopiere Verzeichnis von '{}' nach '{}'",
-        source, destination
+        "Kopiere Verzeichnis von '{source}' nach '{destination}'"
     );
 
     let source_path = PathBuf::from(&source);
@@ -81,7 +80,7 @@ pub fn copy_directory(
         return Err(ExtensionError::Filesystem {
             source: std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Source directory '{}' not found", source),
+                format!("Source directory '{source}' not found"),
             ),
         });
     }
@@ -93,7 +92,7 @@ pub fn copy_directory(
 
     fs_extra::dir::copy(&source_path, &destination_path, &options).map_err(|e| {
         ExtensionError::Filesystem {
-            source: std::io::Error::new(std::io::ErrorKind::Other, e.to_string()),
+            source: std::io::Error::other(e.to_string()),
         }
     })?;
     Ok(())
