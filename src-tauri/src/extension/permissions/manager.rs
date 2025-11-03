@@ -196,7 +196,8 @@ impl PermissionManager {
         table_name: &str,
     ) -> Result<(), ExtensionError> {
         // Remove quotes from table name if present (from SDK's getTableName())
-        let clean_table_name = table_name.trim_matches('"');
+        // Support both double quotes and backticks (Drizzle uses backticks by default)
+        let clean_table_name = table_name.trim_matches('"').trim_matches('`');
 
         // Auto-allow: Extensions have full access to their own tables
         // Table format: {publicKey}__{extensionName}__{tableName}

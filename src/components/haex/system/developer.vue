@@ -122,6 +122,7 @@ const browseExtensionPathAsync = async () => {
   }
 }
 
+const windowManagerStore = useWindowManagerStore()
 // Load a dev extension
 const loadDevExtensionAsync = async () => {
   if (!extensionPath.value) return
@@ -140,8 +141,23 @@ const loadDevExtensionAsync = async () => {
     // Reload list
     await loadDevExtensionListAsync()
 
+    // Get the newly loaded extension info from devExtensions
+    const newlyLoadedExtension = devExtensions.value.find((ext) =>
+      extensionPath.value.includes(ext.name),
+    )
+
     // Reload all extensions in the main extension store so they appear in the launcher
     await loadExtensionsAsync()
+
+    // Open the newly loaded extension
+    if (newlyLoadedExtension) {
+      await windowManagerStore.openWindowAsync({
+        sourceId: newlyLoadedExtension.id,
+        type: 'extension',
+        icon: newlyLoadedExtension.icon || 'i-heroicons-puzzle-piece-solid',
+        title: newlyLoadedExtension.name,
+      })
+    }
 
     // Clear input
     extensionPath.value = ''
