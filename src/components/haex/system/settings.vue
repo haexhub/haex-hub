@@ -47,7 +47,7 @@
         />
       </div>
 
-      <div class="h-full"/>
+      <div class="h-full" />
     </div>
   </div>
 </template>
@@ -55,8 +55,14 @@
 <script setup lang="ts">
 import type { Locale } from 'vue-i18n'
 import { open } from '@tauri-apps/plugin-dialog'
-import { readFile, writeFile, mkdir, exists, remove } from '@tauri-apps/plugin-fs'
-import { appLocalDataDir, join } from '@tauri-apps/api/path'
+import {
+  readFile,
+  writeFile,
+  mkdir,
+  exists,
+  remove,
+} from '@tauri-apps/plugin-fs'
+import { appLocalDataDir } from '@tauri-apps/api/path'
 
 const { t, setLocale } = useI18n()
 
@@ -120,38 +126,115 @@ const selectBackgroundImage = async () => {
   try {
     const selected = await open({
       multiple: false,
-      filters: [{
-        name: 'Images',
-        extensions: ['png', 'jpg', 'jpeg', 'webp']
-      }]
+      filters: [
+        {
+          name: 'Images',
+          extensions: ['png', 'jpg', 'jpeg', 'webp'],
+        },
+      ],
     })
 
-    if (selected && typeof selected === 'string') {
-      const fileData = await readFile(selected)
+    if (!selected || typeof selected !== 'string') {
+      return
+    }
 
-      // Create files directory if it doesn't exist
-      const appDataPath = await appLocalDataDir()
-      const filesDir = await join(appDataPath, 'files')
+    // Read the selected file (works with Android photo picker URIs)
+    let fileData: Uint8Array
+    try {
+      fileData = await readFile(selected)
+    } catch (readError) {
+      add({
+        description: `Fehler beim Lesen: ${readError instanceof Error ? readError.message : String(readError)}`,
+        color: 'error',
+      })
+      return
+    }
 
-      if (!await exists(filesDir)) {
-        await mkdir(filesDir, { recursive: true })
+    // Detect file type from file signature
+    let ext = 'jpg' // default
+    if (fileData.length > 4) {
+      // PNG signature: 89 50 4E 47
+      if (
+        fileData[0] === 0x89 &&
+        fileData[1] === 0x50 &&
+        fileData[2] === 0x4e &&
+        fileData[3] === 0x47
+      ) {
+        ext = 'png'
       }
+      // JPEG signature: FF D8 FF
+      else if (
+        fileData[0] === 0xff &&
+        fileData[1] === 0xd8 &&
+        fileData[2] === 0xff
+      ) {
+        ext = 'jpg'
+      }
+      // WebP signature: RIFF xxxx WEBP
+      else if (
+        fileData[0] === 0x52 &&
+        fileData[1] === 0x49 &&
+        fileData[2] === 0x46 &&
+        fileData[3] === 0x46
+      ) {
+        ext = 'webp'
+      }
+    }
 
-      // Generate unique filename for the background image
-      const ext = selected.split('.').pop()?.toLowerCase() || 'png'
-      const fileName = `workspace-${currentWorkspace.value.id}-background.${ext}`
-      const targetPath = await join(filesDir, fileName)
+    // Get app local data directory
+    const appDataPath = await appLocalDataDir()
 
-      // Copy file to app data directory
+    // Construct target path manually to avoid path joining issues
+    const fileName = `workspace-${currentWorkspace.value.id}-background.${ext}`
+    const targetPath = `${appDataPath}/files/${fileName}`
+
+    // Create parent directory if it doesn't exist
+    const parentDir = `${appDataPath}/files`
+    try {
+      if (!(await exists(parentDir))) {
+        await mkdir(parentDir, { recursive: true })
+      }
+    } catch (mkdirError) {
+      add({
+        description: `Fehler beim Erstellen des Ordners: ${mkdirError instanceof Error ? mkdirError.message : String(mkdirError)}`,
+        color: 'error',
+      })
+      return
+    }
+
+    // Write file to app data directory
+    try {
       await writeFile(targetPath, fileData)
+    } catch (writeError) {
+      add({
+        description: `Fehler beim Schreiben: ${writeError instanceof Error ? writeError.message : String(writeError)}`,
+        color: 'error',
+      })
+      return
+    }
 
-      // Store the absolute file path in database
-      await updateWorkspaceBackgroundAsync(currentWorkspace.value.id, targetPath)
-      add({ description: t('workspaceBackground.update.success'), color: 'success' })
+    // Store the absolute file path in database
+    try {
+      await updateWorkspaceBackgroundAsync(
+        currentWorkspace.value.id,
+        targetPath,
+      )
+      add({
+        description: t('workspaceBackground.update.success'),
+        color: 'success',
+      })
+    } catch (dbError) {
+      add({
+        description: `Fehler beim DB-Update: ${dbError instanceof Error ? dbError.message : String(dbError)}`,
+        color: 'error',
+      })
     }
   } catch (error) {
     console.error('Error selecting background:', error)
-    add({ description: t('workspaceBackground.update.error'), color: 'error' })
+    add({
+      description: `${t('workspaceBackground.update.error')}: ${error instanceof Error ? error.message : String(error)}`,
+      color: 'error',
+    })
   }
 }
 
@@ -173,7 +256,10 @@ const removeBackgroundImage = async () => {
     }
 
     await updateWorkspaceBackgroundAsync(currentWorkspace.value.id, null)
-    add({ description: t('workspaceBackground.remove.success'), color: 'success' })
+    add({
+      description: t('workspaceBackground.remove.success'),
+      color: 'success',
+    })
   } catch (error) {
     console.error('Error removing background:', error)
     add({ description: t('workspaceBackground.remove.error'), color: 'error' })

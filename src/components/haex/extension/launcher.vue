@@ -43,7 +43,6 @@
               draggable="true"
               @click="openItem(item)"
               @dragstart="handleDragStart($event, item)"
-              @dragend="handleDragEnd"
             />
           </UContextMenu>
 

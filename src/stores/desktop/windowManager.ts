@@ -300,6 +300,7 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
     const window = windows.value.find((w) => w.id === windowId)
     if (window) {
       window.zIndex = nextZIndex.value++
+      window.isMinimized = false
       activeWindowId.value = windowId
     }
   }
