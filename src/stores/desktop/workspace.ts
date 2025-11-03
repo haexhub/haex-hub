@@ -4,6 +4,7 @@ import {
   type SelectHaexWorkspaces,
 } from '~/database/schemas'
 import type { Swiper } from 'swiper/types'
+import { convertFileSrc } from '@tauri-apps/api/core'
 
 export type IWorkspace = SelectHaexWorkspaces
 
@@ -203,12 +204,86 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
     isOverviewMode.value = false
   }
 
+  const updateWorkspaceBackgroundAsync = async (
+    workspaceId: string,
+    base64Image: string | null,
+  ) => {
+    if (!currentVault.value?.drizzle) {
+      throw new Error('Kein Vault geöffnet')
+    }
+
+    try {
+      const result = await currentVault.value.drizzle
+        .update(haexWorkspaces)
+        .set({ background: base64Image })
+        .where(eq(haexWorkspaces.id, workspaceId))
+        .returning()
+
+      if (result.length > 0 && result[0]) {
+        const index = workspaces.value.findIndex((ws) => ws.id === workspaceId)
+        if (index !== -1) {
+          workspaces.value[index] = result[0]
+        }
+      }
+    } catch (error) {
+      console.error('Fehler beim Aktualisieren des Workspace-Hintergrunds:', error)
+      throw error
+    }
+  }
+
+  const getWorkspaceBackgroundStyle = (workspace: IWorkspace) => {
+    if (!workspace.background) return {}
+
+    // The background field contains the absolute file path
+    // Convert it to an asset URL
+    const assetUrl = convertFileSrc(workspace.background)
+
+    return {
+      backgroundImage: `url(${assetUrl})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+    }
+  }
+
+  const getWorkspaceContextMenuItems = (workspaceId: string) => {
+    const windowManager = useWindowManagerStore()
+
+    return [[
+      {
+        label: 'Hintergrund ändern',
+        icon: 'i-mdi-image',
+        onSelect: async () => {
+          // Store the workspace ID for settings to use
+          currentWorkspaceIndex.value = workspaces.value.findIndex(
+            (ws) => ws.id === workspaceId,
+          )
+          // Get settings window info
+          const settingsWindow = windowManager.getAllSystemWindows()
+            .find((win) => win.id === 'settings')
+
+          if (settingsWindow) {
+            await windowManager.openWindowAsync({
+              type: 'system',
+              sourceId: settingsWindow.id,
+              title: settingsWindow.name,
+              icon: settingsWindow.icon || undefined,
+              workspaceId,
+            })
+          }
+        },
+      },
+    ]]
+  }
+
   return {
     addWorkspaceAsync,
     allowSwipe,
     closeWorkspaceAsync,
     currentWorkspace,
     currentWorkspaceIndex,
+    getWorkspaceBackgroundStyle,
+    getWorkspaceContextMenuItems,
     isOverviewMode,
     slideToWorkspace,
     loadWorkspacesAsync,
@@ -218,6 +293,7 @@ export const useWorkspaceStore = defineStore('workspaceStore', () => {
     switchToNext,
     switchToPrevious,
     switchToWorkspace,
+    updateWorkspaceBackgroundAsync,
     workspaces,
   }
 })

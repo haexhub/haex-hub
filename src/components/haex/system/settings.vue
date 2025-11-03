@@ -33,6 +33,20 @@
         />
       </div>
 
+      <div class="p-2">{{ t('workspaceBackground.label') }}</div>
+      <div class="flex gap-2">
+        <UiButton
+          :label="t('workspaceBackground.choose')"
+          @click="selectBackgroundImage"
+        />
+        <UiButton
+          v-if="currentWorkspace?.background"
+          :label="t('workspaceBackground.remove.label')"
+          color="error"
+          @click="removeBackgroundImage"
+        />
+      </div>
+
       <div class="h-full"/>
     </div>
   </div>
@@ -40,6 +54,9 @@
 
 <script setup lang="ts">
 import type { Locale } from 'vue-i18n'
+import { open } from '@tauri-apps/plugin-dialog'
+import { readFile, writeFile, mkdir, exists, remove } from '@tauri-apps/plugin-fs'
+import { appLocalDataDir, join } from '@tauri-apps/api/path'
 
 const { t, setLocale } = useI18n()
 
@@ -77,6 +94,10 @@ const { requestNotificationPermissionAsync } = useNotificationStore()
 const { deviceName } = storeToRefs(useDeviceStore())
 const { updateDeviceNameAsync, readDeviceNameAsync } = useDeviceStore()
 
+const workspaceStore = useWorkspaceStore()
+const { currentWorkspace } = storeToRefs(workspaceStore)
+const { updateWorkspaceBackgroundAsync } = workspaceStore
+
 onMounted(async () => {
   await readDeviceNameAsync()
 })
@@ -90,6 +111,72 @@ const onUpdateDeviceNameAsync = async () => {
   } catch (error) {
     console.log(error)
     add({ description: t('deviceName.update.error'), color: 'error' })
+  }
+}
+
+const selectBackgroundImage = async () => {
+  if (!currentWorkspace.value) return
+
+  try {
+    const selected = await open({
+      multiple: false,
+      filters: [{
+        name: 'Images',
+        extensions: ['png', 'jpg', 'jpeg', 'webp']
+      }]
+    })
+
+    if (selected && typeof selected === 'string') {
+      const fileData = await readFile(selected)
+
+      // Create files directory if it doesn't exist
+      const appDataPath = await appLocalDataDir()
+      const filesDir = await join(appDataPath, 'files')
+
+      if (!await exists(filesDir)) {
+        await mkdir(filesDir, { recursive: true })
+      }
+
+      // Generate unique filename for the background image
+      const ext = selected.split('.').pop()?.toLowerCase() || 'png'
+      const fileName = `workspace-${currentWorkspace.value.id}-background.${ext}`
+      const targetPath = await join(filesDir, fileName)
+
+      // Copy file to app data directory
+      await writeFile(targetPath, fileData)
+
+      // Store the absolute file path in database
+      await updateWorkspaceBackgroundAsync(currentWorkspace.value.id, targetPath)
+      add({ description: t('workspaceBackground.update.success'), color: 'success' })
+    }
+  } catch (error) {
+    console.error('Error selecting background:', error)
+    add({ description: t('workspaceBackground.update.error'), color: 'error' })
+  }
+}
+
+const removeBackgroundImage = async () => {
+  if (!currentWorkspace.value) return
+
+  try {
+    // Delete the background file if it exists
+    if (currentWorkspace.value.background) {
+      try {
+        // The background field contains the absolute file path
+        if (await exists(currentWorkspace.value.background)) {
+          await remove(currentWorkspace.value.background)
+        }
+      } catch (err) {
+        console.warn('Could not delete background file:', err)
+        // Continue anyway to clear the database entry
+      }
+    }
+
+    await updateWorkspaceBackgroundAsync(currentWorkspace.value.id, null)
+    add({ description: t('workspaceBackground.remove.success'), color: 'success' })
+  } catch (error) {
+    console.error('Error removing background:', error)
+    add({ description: t('workspaceBackground.remove.error'), color: 'error' })
   }
 }
 </script>
@@ -112,6 +199,16 @@ de:
     update:
       success: Gerätename wurde erfolgreich aktualisiert
       error: Gerätename konnte nich aktualisiert werden
+  workspaceBackground:
+    label: Workspace-Hintergrund
+    choose: Bild auswählen
+    update:
+      success: Hintergrund erfolgreich aktualisiert
+      error: Fehler beim Aktualisieren des Hintergrunds
+    remove:
+      label: Hintergrund entfernen
+      success: Hintergrund erfolgreich entfernt
+      error: Fehler beim Entfernen des Hintergrunds
 en:
   language: Language
   design: Design
@@ -129,4 +226,14 @@ en:
     update:
       success: Device name has been successfully updated
       error: Device name could not be updated
+  workspaceBackground:
+    label: Workspace Background
+    choose: Choose Image
+    update:
+      success: Background successfully updated
+      error: Error updating background
+    remove:
+      label: Remove Background
+      success: Background successfully removed
+      error: Error removing background
 </i18n>

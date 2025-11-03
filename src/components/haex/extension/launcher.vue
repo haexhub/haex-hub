@@ -4,6 +4,9 @@
     direction="right"
     :title="t('launcher.title')"
     :description="t('launcher.description')"
+    :overlay="false"
+    :modal="false"
+    :handle-only="true"
     :ui="{
       content: 'w-dvw max-w-md sm:max-w-fit',
     }"
@@ -30,7 +33,7 @@
               size="lg"
               variant="ghost"
               :ui="{
-                base: 'size-24 flex flex-wrap text-sm items-center justify-center overflow-visible cursor-grab active:cursor-grabbing',
+                base: 'size-24 flex flex-wrap text-sm items-center justify-center overflow-visible cursor-grab',
                 leadingIcon: 'size-10',
                 label: 'w-full',
               }"
@@ -240,10 +243,6 @@ const handleDragStart = (event: DragEvent, item: LauncherItem) => {
   if (dragImage) {
     event.dataTransfer.setDragImage(dragImage, 20, 20)
   }
-}
-
-const handleDragEnd = () => {
-  // Cleanup if needed
 }
 </script>
 

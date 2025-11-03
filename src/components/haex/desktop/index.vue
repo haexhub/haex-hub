@@ -23,191 +23,198 @@
         :key="workspace.id"
         class="w-full h-full"
       >
-        <div
-          class="w-full h-full relative"
-          @click.self.stop="handleDesktopClick"
-          @mousedown.left.self="handleAreaSelectStart"
-          @dragover.prevent="handleDragOver"
-          @drop.prevent="handleDrop($event, workspace.id)"
-        >
-          <!-- Grid Pattern Background -->
+        <UContextMenu :items="getWorkspaceContextMenuItems(workspace.id)">
           <div
-            class="absolute inset-0 pointer-events-none opacity-30"
-            :style="{
-              backgroundImage:
-                'linear-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.1) 1px, transparent 1px)',
-              backgroundSize: '32px 32px',
-            }"
-          />
-
-          <!-- Snap Dropzones (only visible when window drag near edge) -->
-
-          <div
-            class="absolute left-0 top-0 bottom-0 border-blue-500 pointer-events-none backdrop-blur-sm z-50 transition-all duration-500 ease-in-out"
-            :class="showLeftSnapZone ? 'w-1/2 bg-blue-500/20 border-2' : 'w-0'"
-          />
-
-          <div
-            class="absolute right-0 top-0 bottom-0 border-blue-500 pointer-events-none backdrop-blur-sm z-50 transition-all duration-500 ease-in-out"
-            :class="showRightSnapZone ? 'w-1/2 bg-blue-500/20 border-2' : 'w-0'"
-          />
-
-          <!-- Area Selection Box -->
-          <div
-            v-if="isAreaSelecting"
-            class="absolute bg-blue-500/20 border-2 border-blue-500 pointer-events-none z-30"
-            :style="selectionBoxStyle"
-          />
-
-          <!-- Icons for this workspace -->
-          <HaexDesktopIcon
-            v-for="item in getWorkspaceIcons(workspace.id)"
-            :id="item.id"
-            :key="item.id"
-            :item-type="item.itemType"
-            :reference-id="item.referenceId"
-            :initial-x="item.positionX"
-            :initial-y="item.positionY"
-            :label="item.label"
-            :icon="item.icon"
-            class="no-swipe"
-            @position-changed="handlePositionChanged"
-            @drag-start="handleDragStart"
-            @drag-end="handleDragEnd"
-          />
-
-          <!-- Windows for this workspace -->
-          <template
-            v-for="window in getWorkspaceWindows(workspace.id)"
-            :key="window.id"
+            class="w-full h-full relative"
+            :style="getWorkspaceBackgroundStyle(workspace)"
+            @click.self.stop="handleDesktopClick"
+            @mousedown.left.self="handleAreaSelectStart"
+            @dragover.prevent="handleDragOver"
+            @drop.prevent="handleDrop($event, workspace.id)"
           >
-            <!-- Overview Mode: Teleport to window preview -->
-            <Teleport
-              v-if="
-                windowManager.showWindowOverview &&
-                overviewWindowState.has(window.id)
-              "
-              :to="`#window-preview-${window.id}`"
-            >
-              <div
-                class="absolute origin-top-left"
-                :style="{
-                  transform: `scale(${overviewWindowState.get(window.id)!.scale})`,
-                  width: `${overviewWindowState.get(window.id)!.width}px`,
-                  height: `${overviewWindowState.get(window.id)!.height}px`,
-                }"
-              >
-                <HaexWindow
-                  v-show="
-                    windowManager.showWindowOverview || !window.isMinimized
-                  "
-                  :id="window.id"
-                  v-model:x="overviewWindowState.get(window.id)!.x"
-                  v-model:y="overviewWindowState.get(window.id)!.y"
-                  v-model:width="overviewWindowState.get(window.id)!.width"
-                  v-model:height="overviewWindowState.get(window.id)!.height"
-                  :title="window.title"
-                  :icon="window.icon"
-                  :is-active="windowManager.isWindowActive(window.id)"
-                  :source-x="window.sourceX"
-                  :source-y="window.sourceY"
-                  :source-width="window.sourceWidth"
-                  :source-height="window.sourceHeight"
-                  :is-opening="window.isOpening"
-                  :is-closing="window.isClosing"
-                  :warning-level="
-                    window.type === 'extension' &&
-                    availableExtensions.find(
-                      (ext) => ext.id === window.sourceId,
-                    )?.devServerUrl
-                      ? 'warning'
-                      : undefined
-                  "
-                  class="no-swipe"
-                  @close="windowManager.closeWindow(window.id)"
-                  @minimize="windowManager.minimizeWindow(window.id)"
-                  @activate="windowManager.activateWindow(window.id)"
-                  @position-changed="
-                    (x, y) =>
-                      windowManager.updateWindowPosition(window.id, x, y)
-                  "
-                  @size-changed="
-                    (width, height) =>
-                      windowManager.updateWindowSize(window.id, width, height)
-                  "
-                  @drag-start="handleWindowDragStart(window.id)"
-                  @drag-end="handleWindowDragEnd"
-                >
-                  <!-- System Window: Render Vue Component -->
-                  <component
-                    :is="getSystemWindowComponent(window.sourceId)"
-                    v-if="window.type === 'system'"
-                  />
+            <!-- Grid Pattern Background -->
+            <div
+              class="absolute inset-0 pointer-events-none opacity-30"
+              :style="{
+                backgroundImage:
+                  'linear-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.1) 1px, transparent 1px)',
+                backgroundSize: '32px 32px',
+              }"
+            />
 
-                  <!-- Extension Window: Render iFrame -->
-                  <HaexDesktopExtensionFrame
-                    v-else
-                    :extension-id="window.sourceId"
-                    :window-id="window.id"
-                  />
-                </HaexWindow>
-              </div>
-            </Teleport>
+            <!-- Snap Dropzones (only visible when window drag near edge) -->
 
-            <!-- Desktop Mode: Render directly in workspace -->
-            <HaexWindow
-              v-else
-              v-show="windowManager.showWindowOverview || !window.isMinimized"
-              :id="window.id"
-              v-model:x="window.x"
-              v-model:y="window.y"
-              v-model:width="window.width"
-              v-model:height="window.height"
-              :title="window.title"
-              :icon="window.icon"
-              :is-active="windowManager.isWindowActive(window.id)"
-              :source-x="window.sourceX"
-              :source-y="window.sourceY"
-              :source-width="window.sourceWidth"
-              :source-height="window.sourceHeight"
-              :is-opening="window.isOpening"
-              :is-closing="window.isClosing"
-              :warning-level="
-                window.type === 'extension' &&
-                availableExtensions.find((ext) => ext.id === window.sourceId)
-                  ?.devServerUrl
-                  ? 'warning'
-                  : undefined
+            <div
+              class="absolute left-0 top-0 bottom-0 border-blue-500 pointer-events-none backdrop-blur-sm z-50 transition-all duration-500 ease-in-out"
+              :class="
+                showLeftSnapZone ? 'w-1/2 bg-blue-500/20 border-2' : 'w-0'
               "
+            />
+
+            <div
+              class="absolute right-0 top-0 bottom-0 border-blue-500 pointer-events-none backdrop-blur-sm z-50 transition-all duration-500 ease-in-out"
+              :class="
+                showRightSnapZone ? 'w-1/2 bg-blue-500/20 border-2' : 'w-0'
+              "
+            />
+
+            <!-- Area Selection Box -->
+            <div
+              v-if="isAreaSelecting"
+              class="absolute bg-blue-500/20 border-2 border-blue-500 pointer-events-none z-30"
+              :style="selectionBoxStyle"
+            />
+
+            <!-- Icons for this workspace -->
+            <HaexDesktopIcon
+              v-for="item in getWorkspaceIcons(workspace.id)"
+              :id="item.id"
+              :key="item.id"
+              :item-type="item.itemType"
+              :reference-id="item.referenceId"
+              :initial-x="item.positionX"
+              :initial-y="item.positionY"
+              :label="item.label"
+              :icon="item.icon"
               class="no-swipe"
-              @close="windowManager.closeWindow(window.id)"
-              @minimize="windowManager.minimizeWindow(window.id)"
-              @activate="windowManager.activateWindow(window.id)"
-              @position-changed="
-                (x, y) => windowManager.updateWindowPosition(window.id, x, y)
-              "
-              @size-changed="
-                (width, height) =>
-                  windowManager.updateWindowSize(window.id, width, height)
-              "
-              @drag-start="handleWindowDragStart(window.id)"
-              @drag-end="handleWindowDragEnd"
-            >
-              <!-- System Window: Render Vue Component -->
-              <component
-                :is="getSystemWindowComponent(window.sourceId)"
-                v-if="window.type === 'system'"
-              />
+              @position-changed="handlePositionChanged"
+              @drag-start="handleDragStart"
+              @drag-end="handleDragEnd"
+            />
 
-              <!-- Extension Window: Render iFrame -->
-              <HaexDesktopExtensionFrame
+            <!-- Windows for this workspace -->
+            <template
+              v-for="window in getWorkspaceWindows(workspace.id)"
+              :key="window.id"
+            >
+              <!-- Overview Mode: Teleport to window preview -->
+              <Teleport
+                v-if="
+                  windowManager.showWindowOverview &&
+                  overviewWindowState.has(window.id)
+                "
+                :to="`#window-preview-${window.id}`"
+              >
+                <div
+                  class="absolute origin-top-left"
+                  :style="{
+                    transform: `scale(${overviewWindowState.get(window.id)!.scale})`,
+                    width: `${overviewWindowState.get(window.id)!.width}px`,
+                    height: `${overviewWindowState.get(window.id)!.height}px`,
+                  }"
+                >
+                  <HaexWindow
+                    v-show="
+                      windowManager.showWindowOverview || !window.isMinimized
+                    "
+                    :id="window.id"
+                    v-model:x="overviewWindowState.get(window.id)!.x"
+                    v-model:y="overviewWindowState.get(window.id)!.y"
+                    v-model:width="overviewWindowState.get(window.id)!.width"
+                    v-model:height="overviewWindowState.get(window.id)!.height"
+                    :title="window.title"
+                    :icon="window.icon"
+                    :is-active="windowManager.isWindowActive(window.id)"
+                    :source-x="window.sourceX"
+                    :source-y="window.sourceY"
+                    :source-width="window.sourceWidth"
+                    :source-height="window.sourceHeight"
+                    :is-opening="window.isOpening"
+                    :is-closing="window.isClosing"
+                    :warning-level="
+                      window.type === 'extension' &&
+                      availableExtensions.find(
+                        (ext) => ext.id === window.sourceId,
+                      )?.devServerUrl
+                        ? 'warning'
+                        : undefined
+                    "
+                    class="no-swipe"
+                    @close="windowManager.closeWindow(window.id)"
+                    @minimize="windowManager.minimizeWindow(window.id)"
+                    @activate="windowManager.activateWindow(window.id)"
+                    @position-changed="
+                      (x, y) =>
+                        windowManager.updateWindowPosition(window.id, x, y)
+                    "
+                    @size-changed="
+                      (width, height) =>
+                        windowManager.updateWindowSize(window.id, width, height)
+                    "
+                    @drag-start="handleWindowDragStart(window.id)"
+                    @drag-end="handleWindowDragEnd"
+                  >
+                    <!-- System Window: Render Vue Component -->
+                    <component
+                      :is="getSystemWindowComponent(window.sourceId)"
+                      v-if="window.type === 'system'"
+                    />
+
+                    <!-- Extension Window: Render iFrame -->
+                    <HaexDesktopExtensionFrame
+                      v-else
+                      :extension-id="window.sourceId"
+                      :window-id="window.id"
+                    />
+                  </HaexWindow>
+                </div>
+              </Teleport>
+
+              <!-- Desktop Mode: Render directly in workspace -->
+              <HaexWindow
                 v-else
-                :extension-id="window.sourceId"
-                :window-id="window.id"
-              />
-            </HaexWindow>
-          </template>
-        </div>
+                v-show="windowManager.showWindowOverview || !window.isMinimized"
+                :id="window.id"
+                v-model:x="window.x"
+                v-model:y="window.y"
+                v-model:width="window.width"
+                v-model:height="window.height"
+                :title="window.title"
+                :icon="window.icon"
+                :is-active="windowManager.isWindowActive(window.id)"
+                :source-x="window.sourceX"
+                :source-y="window.sourceY"
+                :source-width="window.sourceWidth"
+                :source-height="window.sourceHeight"
+                :is-opening="window.isOpening"
+                :is-closing="window.isClosing"
+                :warning-level="
+                  window.type === 'extension' &&
+                  availableExtensions.find((ext) => ext.id === window.sourceId)
+                    ?.devServerUrl
+                    ? 'warning'
+                    : undefined
+                "
+                class="no-swipe"
+                @close="windowManager.closeWindow(window.id)"
+                @minimize="windowManager.minimizeWindow(window.id)"
+                @activate="windowManager.activateWindow(window.id)"
+                @position-changed="
+                  (x, y) => windowManager.updateWindowPosition(window.id, x, y)
+                "
+                @size-changed="
+                  (width, height) =>
+                    windowManager.updateWindowSize(window.id, width, height)
+                "
+                @drag-start="handleWindowDragStart(window.id)"
+                @drag-end="handleWindowDragEnd"
+              >
+                <!-- System Window: Render Vue Component -->
+                <component
+                  :is="getSystemWindowComponent(window.sourceId)"
+                  v-if="window.type === 'system'"
+                />
+
+                <!-- Extension Window: Render iFrame -->
+                <HaexDesktopExtensionFrame
+                  v-else
+                  :extension-id="window.sourceId"
+                  :window-id="window.id"
+                />
+              </HaexWindow>
+            </template>
+          </div>
+        </UContextMenu>
       </SwiperSlide>
     </Swiper>
 
@@ -239,6 +246,8 @@ const {
   allowSwipe,
   isOverviewMode,
 } = storeToRefs(workspaceStore)
+const { getWorkspaceBackgroundStyle, getWorkspaceContextMenuItems } =
+  workspaceStore
 
 const { x: mouseX } = useMouse()
 

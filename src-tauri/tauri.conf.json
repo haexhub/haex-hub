@@ -64,7 +64,7 @@
       },
       "assetProtocol": {
         "enable": true,
-        "scope": ["$APPDATA", "$RESOURCE"]
+        "scope": ["$APPDATA", "$RESOURCE", "$APPLOCALDATA/**"]
       }
     }
   },

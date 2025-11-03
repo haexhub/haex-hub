@@ -8,7 +8,7 @@ import {
   type AnySQLiteColumn,
   type SQLiteColumnBuilderBase,
 } from 'drizzle-orm/sqlite-core'
-import tableNames from '~/database/tableNames.json'
+import tableNames from '@/database/tableNames.json'
 
 const crdtColumnNames = {
   haexTimestamp: 'haex_timestamp',
@@ -137,6 +137,7 @@ export const haexWorkspaces = sqliteTable(
     position: integer(tableNames.haex.workspaces.columns.position)
       .notNull()
       .default(0),
+    background: text(),
   }),
   (table) => [unique().on(table.position)],
 )
