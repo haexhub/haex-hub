@@ -156,26 +156,40 @@ pub async fn extension_sql_execute(
         })?;
 
         // Generate HLC timestamp
-        let hlc_timestamp = hlc_service
-            .new_timestamp_and_persist(&tx)
-            .map_err(|e| DatabaseError::HlcError {
-                reason: e.to_string(),
-            })?;
+        let hlc_timestamp =
+            hlc_service
+                .new_timestamp_and_persist(&tx)
+                .map_err(|e| DatabaseError::HlcError {
+                    reason: e.to_string(),
+                })?;
 
         // Transform statement
         transformer.transform_execute_statement(&mut statement, &hlc_timestamp)?;
 
         // Convert parameters to references
         let sql_values = ValueConverter::convert_params(&params)?;
-        let param_refs: Vec<&dyn rusqlite::ToSql> = sql_values.iter().map(|v| v as &dyn rusqlite::ToSql).collect();
+        let param_refs: Vec<&dyn rusqlite::ToSql> = sql_values
+            .iter()
+            .map(|v| v as &dyn rusqlite::ToSql)
+            .collect();
 
         let result = if has_returning {
             // Use query_internal for statements with RETURNING
-            let (_, rows) = SqlExecutor::query_internal_typed(&tx, &hlc_service, &statement.to_string(), &param_refs)?;
+            let (_, rows) = SqlExecutor::query_internal_typed(
+                &tx,
+                &hlc_service,
+                &statement.to_string(),
+                &param_refs,
+            )?;
             rows
         } else {
             // Use execute_internal for statements without RETURNING
-            SqlExecutor::execute_internal_typed(&tx, &hlc_service, &statement.to_string(), &param_refs)?;
+            SqlExecutor::execute_internal_typed(
+                &tx,
+                &hlc_service,
+                &statement.to_string(),
+                &param_refs,
+            )?;
             vec![]
         };
 
@@ -184,23 +198,22 @@ pub async fn extension_sql_execute(
             // Extract table name and remove quotes (both " and `)
             let raw_name = create_table_details.name.to_string();
             println!("DEBUG: Raw table name from AST: {raw_name:?}");
-            println!("DEBUG: Raw table name chars: {:?}", raw_name.chars().collect::<Vec<_>>());
+            println!(
+                "DEBUG: Raw table name chars: {:?}",
+                raw_name.chars().collect::<Vec<_>>()
+            );
 
-            let table_name_str = raw_name
-                .trim_matches('"')
-                .trim_matches('`')
-                .to_string();
+            let table_name_str = raw_name.trim_matches('"').trim_matches('`').to_string();
 
             println!("DEBUG: Cleaned table name: {table_name_str:?}");
-            println!("DEBUG: Cleaned table name chars: {:?}", table_name_str.chars().collect::<Vec<_>>());
+            println!(
+                "DEBUG: Cleaned table name chars: {:?}",
+                table_name_str.chars().collect::<Vec<_>>()
+            );
 
-            println!(
-                "Table '{table_name_str}' created by extension, setting up CRDT triggers..."
-            );
+            println!("Table '{table_name_str}' created by extension, setting up CRDT triggers...");
             trigger::setup_triggers_for_table(&tx, &table_name_str, false)?;
-            println!(
-                "Triggers for table '{table_name_str}' successfully created."
-            );
+            println!("Triggers for table '{table_name_str}' successfully created.");
         }
 
         // Commit transaction
@@ -298,7 +311,6 @@ pub async fn extension_sql_select(
     .map_err(ExtensionError::from)
 }
 
-
 /// Validiert Parameter gegen SQL-Platzhalter
 fn validate_params(sql: &str, params: &[JsonValue]) -> Result<(), DatabaseError> {
     let total_placeholders = count_sql_placeholders(sql);
@@ -334,21 +346,5 @@ mod tests {
             2
         );
         assert_eq!(count_sql_placeholders("SELECT * FROM users"), 0);
-    }
-
-    /* #[test]
-    fn test_truncate_sql() {
-        let sql = "SELECT * FROM very_long_table_name";
-        assert_eq!(truncate_sql(sql, 10), "SELECT * F...");
-        assert_eq!(truncate_sql(sql, 50), sql);
-    } */
-
-    #[test]
-    fn test_validate_params() {
-        let params = vec![json!(1), json!("test")];
-
-        assert!(validate_params("SELECT * FROM users WHERE id = ? AND name = ?", &params).is_ok());
-        assert!(validate_params("SELECT * FROM users WHERE id = ?", &params).is_err());
-        assert!(validate_params("SELECT * FROM users", &params).is_err());
     }
 }

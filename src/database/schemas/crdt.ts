@@ -1,5 +1,5 @@
 import { integer, sqliteTable, text, index } from 'drizzle-orm/sqlite-core'
-import tableNames from '~/database/tableNames.json'
+import tableNames from '@/database/tableNames.json'
 
 export const haexCrdtLogs = sqliteTable(
   tableNames.haex.crdt.logs.name,

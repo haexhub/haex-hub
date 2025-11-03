@@ -96,8 +96,7 @@
             @click="handleAddWorkspace"
             icon="i-heroicons-plus"
             :label="t('workspaces.add')"
-          >
-          </UButton>
+          />
         </div>
       </template>
     </UDrawer>
