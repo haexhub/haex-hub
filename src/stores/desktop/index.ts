@@ -298,6 +298,28 @@ export const useDesktopStore = defineStore('desktopStore', () => {
       openDesktopItem(itemType, referenceId)
     }
 
+    // Build second menu group based on item type
+    const secondGroup = [
+      {
+        label: $i18n.t('desktop.contextMenu.removeFromDesktop'),
+        icon: 'i-heroicons-x-mark',
+        onSelect: async () => {
+          await removeDesktopItemAsync(id)
+        },
+      },
+    ]
+
+    // Only show uninstall option for extensions
+    if (itemType === 'extension') {
+      secondGroup.push({
+        label: $i18n.t('desktop.contextMenu.uninstall'),
+        icon: 'i-heroicons-trash',
+        onSelect: async () => {
+          onUninstall()
+        },
+      })
+    }
+
     return [
       [
         {
@@ -306,20 +328,7 @@ export const useDesktopStore = defineStore('desktopStore', () => {
           onSelect: handleOpen,
         },
       ],
-      [
-        {
-          label: $i18n.t('desktop.contextMenu.removeFromDesktop'),
-          icon: 'i-heroicons-x-mark',
-          onSelect: async () => {
-            await removeDesktopItemAsync(id)
-          },
-        },
-        {
-          label: $i18n.t('desktop.contextMenu.uninstall'),
-          icon: 'i-heroicons-trash',
-          onSelect: onUninstall,
-        },
-      ],
+      secondGroup,
     ]
   }
 

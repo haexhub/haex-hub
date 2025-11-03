@@ -1,5 +1,5 @@
 <template>
-  <div class="p-4 mx-auto space-y-6 bg-default/90 backdrop-blur-2xl">
+  <div class="p-4 mx-auto space-y-6 bg-default">
     <div class="space-y-2">
       <h1 class="text-2xl font-bold">{{ t('title') }}</h1>
       <p class="text-sm opacity-70">{{ t('description') }}</p>

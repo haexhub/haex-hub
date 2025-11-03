@@ -90,10 +90,13 @@ defineOptions({
 
 const extensionStore = useExtensionsStore()
 const windowManagerStore = useWindowManagerStore()
+const uiStore = useUiStore()
 
 const { t } = useI18n()
 
 const open = ref(false)
+
+const { isSmallScreen } = storeToRefs(uiStore)
 
 // Uninstall dialog state
 const showUninstallDialog = ref(false)
@@ -241,6 +244,11 @@ const handleDragStart = (event: DragEvent, item: LauncherItem) => {
   const dragImage = event.target as HTMLElement
   if (dragImage) {
     event.dataTransfer.setDragImage(dragImage, 20, 20)
+  }
+
+  // Close drawer on small screens to reveal workspace for drop
+  if (isSmallScreen.value) {
+    open.value = false
   }
 }
 </script>

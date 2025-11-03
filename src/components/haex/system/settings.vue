@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full bg-default">
+  <div class="w-full h-full bg-default overflow-scroll">
     <div class="grid grid-cols-2 p-2">
       <div class="p-2">{{ t('language') }}</div>
       <div><UiDropdownLocale @select="onSelectLocaleAsync" /></div>

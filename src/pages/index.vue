@@ -25,7 +25,7 @@
 
         <div
           v-show="lastVaults.length"
-          class="max-w-md w-full sm:px-5"
+          class="w-56"
         >
           <div class="font-thin text-sm pb-1 w-full">
             {{ t('lastUsed') }}

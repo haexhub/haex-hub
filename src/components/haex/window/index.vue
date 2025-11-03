@@ -16,6 +16,7 @@
           : 'border border-gray-200 dark:border-gray-700',
     ]"
     @mousedown="handleActivate"
+    @contextmenu.stop.prevent
   >
     <!-- Window Titlebar -->
     <div
@@ -50,6 +51,7 @@
         />
 
         <HaexWindowButton
+          v-if="!isSmallScreen"
           :is-maximized
           variant="maximize"
           @click.stop="handleMaximize"
@@ -74,7 +76,7 @@
 
     <!-- Resize Handles -->
     <HaexWindowResizeHandles
-      :disabled="isMaximized"
+      :disabled="isMaximized || isSmallScreen"
       @resize-start="handleResizeStart"
     />
   </div>
@@ -114,12 +116,16 @@ const height = defineModel<number>('height', { default: 600 })
 const windowEl = useTemplateRef('windowEl')
 const titlebarEl = useTemplateRef('titlebarEl')
 
+const uiStore = useUiStore()
+const { isSmallScreen } = storeToRefs(uiStore)
+
 // Inject viewport size from parent desktop
 const viewportSize = inject<{
   width: Ref<number>
   height: Ref<number>
 }>('viewportSize')
-const isMaximized = ref(false) // Don't start maximized
+// Start maximized on small screens
+const isMaximized = ref(isSmallScreen.value)
 
 // Store initial position/size for restore
 const preMaximizeState = ref({
@@ -151,7 +157,8 @@ const isResizingOrDragging = computed(
 // Setup drag with useDrag composable (supports mouse + touch)
 useDrag(
   ({ movement: [mx, my], first, last }) => {
-    if (isMaximized.value) return
+    // Disable dragging on small screens (always fullscreen)
+    if (isMaximized.value || isSmallScreen.value) return
 
     if (first) {
       // Drag started - save initial position

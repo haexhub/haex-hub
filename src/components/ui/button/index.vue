@@ -7,6 +7,7 @@
           ...buttonProps,
           ...$attrs,
         }"
+        size="lg"
         @click="$emit('click', $event)"
       >
         <template
