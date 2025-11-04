@@ -25,12 +25,13 @@
       >
         <UContextMenu :items="getWorkspaceContextMenuItems(workspace.id)">
           <div
-            class="w-full h-full relative"
+            class="w-full h-full relative select-none"
             :style="getWorkspaceBackgroundStyle(workspace)"
             @click.self.stop="handleDesktopClick"
             @mousedown.left.self="handleAreaSelectStart"
             @dragover.prevent="handleDragOver"
             @drop.prevent="handleDrop($event, workspace.id)"
+            @selectstart.prevent
           >
             <!-- Drop Target Zone (visible during drag) -->
             <div
@@ -732,6 +733,21 @@ watch(isOverviewMode, (newValue) => {
 watch(currentWorkspace, async () => {
   if (currentWorkspace.value) {
     await desktopStore.loadDesktopItemsAsync()
+  }
+})
+
+// Reset drag state when mouse leaves the document (fixes stuck dropzone)
+useEventListener(document, 'mouseleave', () => {
+  if (isDragging.value) {
+    isDragging.value = false
+    currentDraggedItem.id = ''
+    currentDraggedItem.itemType = ''
+    currentDraggedItem.referenceId = ''
+    currentDraggedItem.width = 0
+    currentDraggedItem.height = 0
+    currentDraggedItem.x = 0
+    currentDraggedItem.y = 0
+    allowSwipe.value = true
   }
 })
 

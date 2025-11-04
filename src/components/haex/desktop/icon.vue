@@ -18,6 +18,7 @@
         @pointerdown.left="handlePointerDown"
         @pointermove="handlePointerMove"
         @pointerup="handlePointerUp"
+        @dragstart.prevent
         @click.left="handleClick"
         @dblclick="handleDoubleClick"
       >
@@ -175,6 +176,9 @@ const style = computed(() => ({
 
 const handlePointerDown = (e: PointerEvent) => {
   if (!draggableEl.value || !draggableEl.value.parentElement) return
+
+  // Prevent any text selection during drag
+  e.preventDefault()
 
   isDragging.value = true
   emit('dragStart', props.id, props.itemType, props.referenceId, iconWidth.value, iconHeight.value, x.value, y.value)

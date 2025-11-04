@@ -27,24 +27,26 @@ export const useDesktopStore = defineStore('desktopStore', () => {
   const deviceStore = useDeviceStore()
   const settingsStore = useVaultSettingsStore()
 
-  $i18n.setLocaleMessage('de', {
-    desktop: de,
-  })
+  $i18n.setLocaleMessage('de', { desktop: de })
   $i18n.setLocaleMessage('en', { desktop: en })
 
   const desktopItems = ref<IDesktopItem[]>([])
   const selectedItemIds = ref<Set<string>>(new Set())
 
   // Desktop Grid Settings (stored in DB per device)
-  const iconSizePreset = ref<DesktopIconSizePreset>(DesktopIconSizePreset.medium)
+  const iconSizePreset = ref<DesktopIconSizePreset>(
+    DesktopIconSizePreset.medium,
+  )
 
   // Get device internal ID from DB
   const getDeviceInternalIdAsync = async () => {
     if (!deviceStore.deviceId || !currentVault.value?.drizzle) return undefined
 
-    const device = await currentVault.value.drizzle.query.haexDevices.findFirst({
-      where: eq(haexDevices.deviceId, deviceStore.deviceId),
-    })
+    const device = await currentVault.value.drizzle.query.haexDevices.findFirst(
+      {
+        where: eq(haexDevices.deviceId, deviceStore.deviceId),
+      },
+    )
 
     return device?.id ? device.id : undefined
   }
@@ -54,7 +56,8 @@ export const useDesktopStore = defineStore('desktopStore', () => {
     const deviceInternalId = await getDeviceInternalIdAsync()
     if (!deviceInternalId) return
 
-    const preset = await settingsStore.syncDesktopIconSizeAsync(deviceInternalId)
+    const preset =
+      await settingsStore.syncDesktopIconSizeAsync(deviceInternalId)
     iconSizePreset.value = preset
   }
 
@@ -71,22 +74,26 @@ export const useDesktopStore = defineStore('desktopStore', () => {
     return iconSizePresetValues[iconSizePreset.value]
   })
 
+  const iconPadding = 30
+
   // Calculate grid cell size based on icon size
   const gridCellSize = computed(() => {
     // Add padding around icon (30px extra for spacing)
-    return effectiveIconSize.value + 30
+    return effectiveIconSize.value + iconPadding
   })
-
-  // Grid offsets for start position (negative = move grid up)
-  const gridOffsetY = -30 // Start grid 30px higher
 
   // Snap position to grid (centers icon in cell)
   // iconWidth and iconHeight are optional - if provided, they're used for centering
-  const snapToGrid = (x: number, y: number, iconWidth?: number, iconHeight?: number) => {
+  const snapToGrid = (
+    x: number,
+    y: number,
+    iconWidth?: number,
+    iconHeight?: number,
+  ) => {
     const cellSize = gridCellSize.value
 
     // Adjust y for grid offset
-    const adjustedY = Math.max(0, y - gridOffsetY)
+    const adjustedY = Math.max(0, y + iconPadding)
 
     // Calculate which grid cell the position falls into
     const col = Math.floor(x / cellSize)
@@ -107,8 +114,8 @@ export const useDesktopStore = defineStore('desktopStore', () => {
     const paddingY = (totalHeight - actualIconHeight) / 2
 
     return {
-      x: col * cellSize + paddingX,
-      y: row * cellSize + paddingY + gridOffsetY,
+      x: col * cellSize + paddingX - iconPadding,
+      y: row * cellSize + paddingY - iconPadding,
     }
   }
 
@@ -129,9 +136,12 @@ export const useDesktopStore = defineStore('desktopStore', () => {
         .from(haexDesktopItems)
         .where(eq(haexDesktopItems.workspaceId, currentWorkspace.value.id))
 
-      desktopItems.value = items.map(item => ({
+      desktopItems.value = items.map((item) => ({
         ...item,
-        referenceId: item.itemType === 'extension' ? item.extensionId! : item.systemWindowId!,
+        referenceId:
+          item.itemType === 'extension'
+            ? item.extensionId!
+            : item.systemWindowId!,
       }))
     } catch (error) {
       console.error('Fehler beim Laden der Desktop-Items:', error)
@@ -160,7 +170,10 @@ export const useDesktopStore = defineStore('desktopStore', () => {
         workspaceId: targetWorkspaceId,
         itemType: itemType,
         extensionId: itemType === 'extension' ? referenceId : null,
-        systemWindowId: itemType === 'system' || itemType === 'file' || itemType === 'folder' ? referenceId : null,
+        systemWindowId:
+          itemType === 'system' || itemType === 'file' || itemType === 'folder'
+            ? referenceId
+            : null,
         positionX: positionX,
         positionY: positionY,
       }
@@ -173,7 +186,10 @@ export const useDesktopStore = defineStore('desktopStore', () => {
       if (result.length > 0 && result[0]) {
         const itemWithRef = {
           ...result[0],
-          referenceId: itemType === 'extension' ? result[0].extensionId! : result[0].systemWindowId!,
+          referenceId:
+            itemType === 'extension'
+              ? result[0].extensionId!
+              : result[0].systemWindowId!,
         }
         desktopItems.value.push(itemWithRef)
         return itemWithRef
@@ -184,7 +200,7 @@ export const useDesktopStore = defineStore('desktopStore', () => {
         itemType,
         referenceId,
         workspaceId: targetWorkspaceId,
-        position: { x: positionX, y: positionY }
+        position: { x: positionX, y: positionY },
       })
 
       // Log full error details
@@ -221,7 +237,10 @@ export const useDesktopStore = defineStore('desktopStore', () => {
           const item = result[0]
           desktopItems.value[index] = {
             ...item,
-            referenceId: item.itemType === 'extension' ? item.extensionId! : item.systemWindowId!,
+            referenceId:
+              item.itemType === 'extension'
+                ? item.extensionId!
+                : item.systemWindowId!,
           }
         }
       }
@@ -254,16 +273,14 @@ export const useDesktopStore = defineStore('desktopStore', () => {
     itemType: DesktopItemType,
     referenceId: string,
   ) => {
-    return desktopItems.value.find(
-      (item) => {
-        if (item.itemType !== itemType) return false
-        if (itemType === 'extension') {
-          return item.extensionId === referenceId
-        } else {
-          return item.systemWindowId === referenceId
-        }
-      },
-    )
+    return desktopItems.value.find((item) => {
+      if (item.itemType !== itemType) return false
+      if (itemType === 'extension') {
+        return item.extensionId === referenceId
+      } else {
+        return item.systemWindowId === referenceId
+      }
+    })
   }
 
   const openDesktopItem = (
@@ -274,9 +291,9 @@ export const useDesktopStore = defineStore('desktopStore', () => {
     const windowManager = useWindowManagerStore()
 
     if (itemType === 'system') {
-      const systemWindow = windowManager.getAllSystemWindows().find(
-        (win) => win.id === referenceId,
-      )
+      const systemWindow = windowManager
+        .getAllSystemWindows()
+        .find((win) => win.id === referenceId)
 
       if (systemWindow) {
         windowManager.openWindowAsync({
