@@ -301,7 +301,7 @@ const { x: mouseX, y: mouseY } = useMouse()
 const dropTargetZone = computed(() => {
   if (!isDragging.value) return null
 
-  // Use the actual icon position during drag, not the mouse position
+  // Use the actual icon position during drag
   const iconX = currentDraggedItem.x
   const iconY = currentDraggedItem.y
 
@@ -313,11 +313,14 @@ const dropTargetZone = computed(() => {
     currentDraggedItem.height || undefined,
   )
 
+  // Show dropzone at snapped position with grid cell size
+  const cellSize = desktopStore.gridCellSize
+
   return {
     x: snapped.x,
     y: snapped.y,
-    width: currentDraggedItem.width || desktopStore.gridCellSize,
-    height: currentDraggedItem.height || desktopStore.gridCellSize,
+    width: currentDraggedItem.width || cellSize,
+    height: currentDraggedItem.height || cellSize,
   }
 })
 

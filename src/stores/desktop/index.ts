@@ -24,8 +24,6 @@ export const useDesktopStore = defineStore('desktopStore', () => {
   const workspaceStore = useWorkspaceStore()
   const { currentWorkspace } = storeToRefs(workspaceStore)
   const { $i18n } = useNuxtApp()
-  const uiStore = useUiStore()
-  const { isSmallScreen } = storeToRefs(uiStore)
   const deviceStore = useDeviceStore()
   const settingsStore = useVaultSettingsStore()
 
@@ -69,33 +67,30 @@ export const useDesktopStore = defineStore('desktopStore', () => {
     iconSizePreset.value = preset
   }
 
-  // Reactive grid settings based on screen size
-  const effectiveGridColumns = computed(() => {
-    return isSmallScreen.value ? 4 : 8
-  })
-
-  const effectiveGridRows = computed(() => {
-    return isSmallScreen.value ? 5 : 6
-  })
-
   const effectiveIconSize = computed(() => {
     return iconSizePresetValues[iconSizePreset.value]
   })
 
   // Calculate grid cell size based on icon size
   const gridCellSize = computed(() => {
-    // Add padding around icon (20px extra for spacing)
-    return effectiveIconSize.value + 20
+    // Add padding around icon (30px extra for spacing)
+    return effectiveIconSize.value + 30
   })
+
+  // Grid offsets for start position (negative = move grid up)
+  const gridOffsetY = -30 // Start grid 30px higher
 
   // Snap position to grid (centers icon in cell)
   // iconWidth and iconHeight are optional - if provided, they're used for centering
   const snapToGrid = (x: number, y: number, iconWidth?: number, iconHeight?: number) => {
     const cellSize = gridCellSize.value
 
+    // Adjust y for grid offset
+    const adjustedY = Math.max(0, y - gridOffsetY)
+
     // Calculate which grid cell the position falls into
     const col = Math.floor(x / cellSize)
-    const row = Math.floor(y / cellSize)
+    const row = Math.floor(adjustedY / cellSize)
 
     // Use provided dimensions or fall back to cell size
     const actualIconWidth = iconWidth || cellSize
@@ -113,7 +108,7 @@ export const useDesktopStore = defineStore('desktopStore', () => {
 
     return {
       x: col * cellSize + paddingX,
-      y: row * cellSize + paddingY,
+      y: row * cellSize + paddingY + gridOffsetY,
     }
   }
 
@@ -439,8 +434,6 @@ export const useDesktopStore = defineStore('desktopStore', () => {
     iconSizePreset,
     syncDesktopIconSizeAsync,
     updateDesktopIconSizeAsync,
-    effectiveGridColumns,
-    effectiveGridRows,
     effectiveIconSize,
     gridCellSize,
     snapToGrid,
