@@ -1,9 +1,13 @@
 import { eq } from 'drizzle-orm'
-import { haexDesktopItems } from '~/database/schemas'
+import { haexDesktopItems, haexDevices } from '~/database/schemas'
 import type {
   InsertHaexDesktopItems,
   SelectHaexDesktopItems,
 } from '~/database/schemas'
+import {
+  DesktopIconSizePreset,
+  iconSizePresetValues,
+} from '~/stores/vault/settings'
 import de from './de.json'
 import en from './en.json'
 
@@ -20,6 +24,10 @@ export const useDesktopStore = defineStore('desktopStore', () => {
   const workspaceStore = useWorkspaceStore()
   const { currentWorkspace } = storeToRefs(workspaceStore)
   const { $i18n } = useNuxtApp()
+  const uiStore = useUiStore()
+  const { isSmallScreen } = storeToRefs(uiStore)
+  const deviceStore = useDeviceStore()
+  const settingsStore = useVaultSettingsStore()
 
   $i18n.setLocaleMessage('de', {
     desktop: de,
@@ -28,6 +36,86 @@ export const useDesktopStore = defineStore('desktopStore', () => {
 
   const desktopItems = ref<IDesktopItem[]>([])
   const selectedItemIds = ref<Set<string>>(new Set())
+
+  // Desktop Grid Settings (stored in DB per device)
+  const iconSizePreset = ref<DesktopIconSizePreset>(DesktopIconSizePreset.medium)
+
+  // Get device internal ID from DB
+  const getDeviceInternalIdAsync = async () => {
+    if (!deviceStore.deviceId || !currentVault.value?.drizzle) return undefined
+
+    const device = await currentVault.value.drizzle.query.haexDevices.findFirst({
+      where: eq(haexDevices.deviceId, deviceStore.deviceId),
+    })
+
+    return device?.id ? device.id : undefined
+  }
+
+  // Sync icon size from DB
+  const syncDesktopIconSizeAsync = async () => {
+    const deviceInternalId = await getDeviceInternalIdAsync()
+    if (!deviceInternalId) return
+
+    const preset = await settingsStore.syncDesktopIconSizeAsync(deviceInternalId)
+    iconSizePreset.value = preset
+  }
+
+  // Update icon size in DB
+  const updateDesktopIconSizeAsync = async (preset: DesktopIconSizePreset) => {
+    const deviceInternalId = await getDeviceInternalIdAsync()
+    if (!deviceInternalId) return
+
+    await settingsStore.updateDesktopIconSizeAsync(deviceInternalId, preset)
+    iconSizePreset.value = preset
+  }
+
+  // Reactive grid settings based on screen size
+  const effectiveGridColumns = computed(() => {
+    return isSmallScreen.value ? 4 : 8
+  })
+
+  const effectiveGridRows = computed(() => {
+    return isSmallScreen.value ? 5 : 6
+  })
+
+  const effectiveIconSize = computed(() => {
+    return iconSizePresetValues[iconSizePreset.value]
+  })
+
+  // Calculate grid cell size based on icon size
+  const gridCellSize = computed(() => {
+    // Add padding around icon (20px extra for spacing)
+    return effectiveIconSize.value + 20
+  })
+
+  // Snap position to grid (centers icon in cell)
+  // iconWidth and iconHeight are optional - if provided, they're used for centering
+  const snapToGrid = (x: number, y: number, iconWidth?: number, iconHeight?: number) => {
+    const cellSize = gridCellSize.value
+
+    // Calculate which grid cell the position falls into
+    const col = Math.floor(x / cellSize)
+    const row = Math.floor(y / cellSize)
+
+    // Use provided dimensions or fall back to cell size
+    const actualIconWidth = iconWidth || cellSize
+    const actualIconHeight = iconHeight || cellSize
+
+    // Center the icon in the cell(s) it occupies
+    const cellsWide = Math.max(1, Math.ceil(actualIconWidth / cellSize))
+    const cellsHigh = Math.max(1, Math.ceil(actualIconHeight / cellSize))
+
+    const totalWidth = cellsWide * cellSize
+    const totalHeight = cellsHigh * cellSize
+
+    const paddingX = (totalWidth - actualIconWidth) / 2
+    const paddingY = (totalHeight - actualIconHeight) / 2
+
+    return {
+      x: col * cellSize + paddingX,
+      y: row * cellSize + paddingY,
+    }
+  }
 
   const loadDesktopItemsAsync = async () => {
     if (!currentVault.value?.drizzle) {
@@ -347,5 +435,14 @@ export const useDesktopStore = defineStore('desktopStore', () => {
     toggleSelection,
     clearSelection,
     isItemSelected,
+    // Grid settings
+    iconSizePreset,
+    syncDesktopIconSizeAsync,
+    updateDesktopIconSizeAsync,
+    effectiveGridColumns,
+    effectiveGridRows,
+    effectiveIconSize,
+    gridCellSize,
+    snapToGrid,
   }
 })

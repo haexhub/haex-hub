@@ -45,7 +45,9 @@ export const useDeviceStore = defineStore('vaultDeviceStore', () => {
 
   const isKnownDeviceAsync = async () => {
     const { readDeviceNameAsync } = useVaultSettingsStore()
-    return !!(await readDeviceNameAsync(deviceId.value))
+    const device = await readDeviceNameAsync(deviceId.value)
+    console.log('device', device)
+    return !!device
   }
 
   const readDeviceNameAsync = async (id?: string) => {
@@ -54,7 +56,8 @@ export const useDeviceStore = defineStore('vaultDeviceStore', () => {
 
     if (!_id) return
 
-    deviceName.value = (await readDeviceNameAsync(_id))?.value ?? ''
+    const device = await readDeviceNameAsync(_id)
+    deviceName.value = device?.name ?? ''
 
     return deviceName.value
   }

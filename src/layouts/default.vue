@@ -59,47 +59,7 @@
     </main>
 
     <!-- Workspace Drawer -->
-    <UDrawer
-      v-model:open="isOverviewMode"
-      direction="left"
-      :dismissible="false"
-      :overlay="false"
-      :modal="false"
-      title="Workspaces"
-      description="Workspaces"
-    >
-      <template #content>
-        <div class="p-6 h-full overflow-y-auto">
-          <UButton
-            block
-            trailing-icon="mdi-close"
-            class="text-2xl font-bold ext-gray-900 dark:text-white mb-4"
-            @click="isOverviewMode = false"
-          >
-            Workspaces
-          </UButton>
-
-          <!-- Workspace Cards -->
-          <div class="flex flex-col gap-3">
-            <HaexWorkspaceCard
-              v-for="workspace in workspaces"
-              :key="workspace.id"
-              :workspace
-            />
-          </div>
-
-          <!-- Add New Workspace Button -->
-          <UButton
-            block
-            variant="outline"
-            class="mt-6"
-            @click="handleAddWorkspace"
-            icon="i-heroicons-plus"
-            :label="t('workspaces.add')"
-          />
-        </div>
-      </template>
-    </UDrawer>
+    <HaexWorkspaceDrawer />
   </div>
 </template>
 
@@ -116,15 +76,7 @@ const { showWindowOverview, openWindowsCount } = storeToRefs(
   useWindowManagerStore(),
 )
 
-const workspaceStore = useWorkspaceStore()
-const { workspaces, isOverviewMode } = storeToRefs(workspaceStore)
-
-const handleAddWorkspace = async () => {
-  const workspace = await workspaceStore.addWorkspaceAsync()
-  nextTick(() => {
-    workspaceStore.slideToWorkspace(workspace?.id)
-  })
-}
+const { isOverviewMode } = storeToRefs(useWorkspaceStore())
 
 // Measure header height and store it in UI store
 const headerEl = useTemplateRef('headerEl')
@@ -140,15 +92,11 @@ watch(height, (newHeight) => {
 de:
   search:
     label: Suche
-
   workspaces:
     label: Workspaces
-    add: Workspace hinzufügen
 en:
   search:
     label: Search
-
   workspaces:
     label: Workspaces
-    add: Add Workspace
 </i18n>

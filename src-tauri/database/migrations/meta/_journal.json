@@ -15,6 +15,13 @@
       "when": 1762122405562,
       "tag": "0001_furry_brother_voodoo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1762263814375,
+      "tag": "0002_loose_quasimodo",
+      "breakpoints": true
     }
   ]
 }

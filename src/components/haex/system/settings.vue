@@ -47,6 +47,21 @@
         />
       </div>
 
+      <!-- Desktop Grid Settings -->
+      <div
+        class="col-span-2 mt-4 border-t border-gray-200 dark:border-gray-700 pt-4"
+      >
+        <h3 class="text-lg font-semibold mb-4">{{ t('desktopGrid.title') }}</h3>
+      </div>
+
+      <div class="p-2">{{ t('desktopGrid.iconSize.label') }}</div>
+      <div>
+        <USelect
+          v-model="iconSizePreset"
+          :items="iconSizePresetOptions"
+        />
+      </div>
+
       <div class="h-full" />
     </div>
   </div>
@@ -63,6 +78,7 @@ import {
   remove,
 } from '@tauri-apps/plugin-fs'
 import { appLocalDataDir } from '@tauri-apps/api/path'
+import { DesktopIconSizePreset } from '~/stores/vault/settings'
 
 const { t, setLocale } = useI18n()
 
@@ -104,8 +120,40 @@ const workspaceStore = useWorkspaceStore()
 const { currentWorkspace } = storeToRefs(workspaceStore)
 const { updateWorkspaceBackgroundAsync } = workspaceStore
 
+const desktopStore = useDesktopStore()
+const { iconSizePreset } = storeToRefs(desktopStore)
+const { syncDesktopIconSizeAsync, updateDesktopIconSizeAsync } = desktopStore
+
+// Icon size preset options
+const iconSizePresetOptions = [
+  {
+    label: t('desktopGrid.iconSize.presets.small'),
+    value: DesktopIconSizePreset.small,
+  },
+  {
+    label: t('desktopGrid.iconSize.presets.medium'),
+    value: DesktopIconSizePreset.medium,
+  },
+  {
+    label: t('desktopGrid.iconSize.presets.large'),
+    value: DesktopIconSizePreset.large,
+  },
+  {
+    label: t('desktopGrid.iconSize.presets.extraLarge'),
+    value: DesktopIconSizePreset.extraLarge,
+  },
+]
+
+// Watch for icon size preset changes and update DB
+watch(iconSizePreset, async (newPreset) => {
+  if (newPreset) {
+    await updateDesktopIconSizeAsync(newPreset)
+  }
+})
+
 onMounted(async () => {
   await readDeviceNameAsync()
+  await syncDesktopIconSizeAsync()
 })
 
 const onUpdateDeviceNameAsync = async () => {
@@ -295,6 +343,22 @@ de:
       label: Hintergrund entfernen
       success: Hintergrund erfolgreich entfernt
       error: Fehler beim Entfernen des Hintergrunds
+  desktopGrid:
+    title: Desktop-Raster
+    columns:
+      label: Spalten
+      unit: Spalten
+    rows:
+      label: Zeilen
+      unit: Zeilen
+    iconSize:
+      label: Icon-Größe
+      presets:
+        small: Klein
+        medium: Mittel
+        large: Groß
+        extraLarge: Sehr groß
+      unit: px
 en:
   language: Language
   design: Design
@@ -322,4 +386,20 @@ en:
       label: Remove Background
       success: Background successfully removed
       error: Error removing background
+  desktopGrid:
+    title: Desktop Grid
+    columns:
+      label: Columns
+      unit: columns
+    rows:
+      label: Rows
+      unit: rows
+    iconSize:
+      label: Icon Size
+      presets:
+        small: Small
+        medium: Medium
+        large: Large
+        extraLarge: Extra Large
+      unit: px
 </i18n>

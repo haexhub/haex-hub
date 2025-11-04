@@ -24,29 +24,25 @@
         <div class="flex flex-col items-center gap-2 p-3 group">
           <div
             :class="[
-              'w-20 h-20 flex items-center justify-center rounded-2xl transition-all duration-200 ease-out',
+              'flex items-center justify-center rounded-2xl transition-all duration-200 ease-out',
               'backdrop-blur-sm border',
               isSelected
                 ? 'bg-white/95 dark:bg-gray-800/95 border-blue-500 dark:border-blue-400 shadow-lg scale-105'
                 : 'bg-white/80 dark:bg-gray-800/80 border-gray-200/50 dark:border-gray-700/50 hover:bg-white/90 dark:hover:bg-gray-800/90 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md hover:scale-105',
             ]"
+            :style="{ width: `${containerSize}px`, height: `${containerSize}px` }"
           >
-            <img
-              v-if="icon"
-              :src="icon"
-              :alt="label"
-              class="w-14 h-14 object-contain transition-transform duration-200"
-              :class="{ 'scale-110': isSelected }"
-            />
-            <UIcon
-              v-else
-              name="i-heroicons-puzzle-piece-solid"
+            <HaexIcon
+              :name="icon || 'i-heroicons-puzzle-piece-solid'"
               :class="[
-                'w-14 h-14 transition-all duration-200',
-                isSelected
-                  ? 'text-blue-500 dark:text-blue-400 scale-110'
-                  : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400',
+                'object-contain transition-all duration-200',
+                isSelected && 'scale-110',
+                !icon &&
+                  (isSelected
+                    ? 'text-blue-500 dark:text-blue-400'
+                    : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400'),
               ]"
+              :style="{ width: `${innerIconSize}px`, height: `${innerIconSize}px` }"
             />
           </div>
           <span
@@ -79,15 +75,19 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   positionChanged: [id: string, x: number, y: number]
-  dragStart: [id: string, itemType: string, referenceId: string]
+  dragStart: [id: string, itemType: string, referenceId: string, width: number, height: number, x: number, y: number]
+  dragging: [id: string, x: number, y: number]
   dragEnd: []
 }>()
 
 const desktopStore = useDesktopStore()
+const { effectiveIconSize } = storeToRefs(desktopStore)
 const showUninstallDialog = ref(false)
 const { t } = useI18n()
 
 const isSelected = computed(() => desktopStore.isItemSelected(props.id))
+const containerSize = computed(() => effectiveIconSize.value) // Container size
+const innerIconSize = computed(() => effectiveIconSize.value * 0.7) // Inner icon is 70% of container
 
 const handleClick = (e: MouseEvent) => {
   // Prevent selection during drag
@@ -131,9 +131,40 @@ const isDragging = ref(false)
 const offsetX = ref(0)
 const offsetY = ref(0)
 
-// Icon dimensions (approximate)
-const iconWidth = 120 // Matches design in template
-const iconHeight = 140
+// Track actual icon dimensions dynamically
+const { width: iconWidth, height: iconHeight } = useElementSize(draggableEl)
+
+// Re-center icon position when dimensions are measured
+watch([iconWidth, iconHeight], async ([width, height]) => {
+  if (width > 0 && height > 0) {
+    console.log('📐 Icon dimensions measured:', {
+      label: props.label,
+      width,
+      height,
+      currentPosition: { x: x.value, y: y.value },
+      gridCellSize: desktopStore.gridCellSize,
+    })
+
+    // Re-snap to grid with actual dimensions to ensure proper centering
+    const snapped = desktopStore.snapToGrid(x.value, y.value, width, height)
+
+    console.log('📍 Snapped position:', {
+      label: props.label,
+      oldPosition: { x: x.value, y: y.value },
+      newPosition: snapped,
+    })
+
+    const oldX = x.value
+    const oldY = y.value
+    x.value = snapped.x
+    y.value = snapped.y
+
+    // Save corrected position to database if it changed
+    if (oldX !== snapped.x || oldY !== snapped.y) {
+      emit('positionChanged', props.id, snapped.x, snapped.y)
+    }
+  }
+}, { once: true }) // Only run once when dimensions are first measured
 
 const style = computed(() => ({
   position: 'absolute' as const,
@@ -146,7 +177,7 @@ const handlePointerDown = (e: PointerEvent) => {
   if (!draggableEl.value || !draggableEl.value.parentElement) return
 
   isDragging.value = true
-  emit('dragStart', props.id, props.itemType, props.referenceId)
+  emit('dragStart', props.id, props.itemType, props.referenceId, iconWidth.value, iconHeight.value, x.value, y.value)
 
   // Get parent offset to convert from viewport coordinates to parent-relative coordinates
   const parentRect = draggableEl.value.parentElement.getBoundingClientRect()
@@ -165,8 +196,12 @@ const handlePointerMove = (e: PointerEvent) => {
   const newX = e.clientX - parentRect.left - offsetX.value
   const newY = e.clientY - parentRect.top - offsetY.value
 
+  // Clamp y position to minimum 0 (parent is already below header)
   x.value = newX
-  y.value = newY
+  y.value = Math.max(0, newY)
+
+  // Emit current position during drag
+  emit('dragging', props.id, x.value, y.value)
 }
 
 const handlePointerUp = (e: PointerEvent) => {
@@ -177,10 +212,15 @@ const handlePointerUp = (e: PointerEvent) => {
     draggableEl.value.releasePointerCapture(e.pointerId)
   }
 
+  // Snap to grid with icon dimensions
+  const snapped = desktopStore.snapToGrid(x.value, y.value, iconWidth.value, iconHeight.value)
+  x.value = snapped.x
+  y.value = snapped.y
+
   // Snap icon to viewport bounds if outside
   if (viewportSize) {
-    const maxX = Math.max(0, viewportSize.width.value - iconWidth)
-    const maxY = Math.max(0, viewportSize.height.value - iconHeight)
+    const maxX = Math.max(0, viewportSize.width.value - iconWidth.value)
+    const maxY = Math.max(0, viewportSize.height.value - iconHeight.value)
     x.value = Math.max(0, Math.min(maxX, x.value))
     y.value = Math.max(0, Math.min(maxY, y.value))
   }

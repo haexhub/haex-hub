@@ -53,6 +53,7 @@ const { addDeviceNameAsync } = useDeviceStore()
 const { deviceId } = storeToRefs(useDeviceStore())
 const { syncLocaleAsync, syncThemeAsync, syncVaultNameAsync } =
   useVaultSettingsStore()
+const { syncDesktopIconSizeAsync } = useDesktopStore()
 
 onMounted(async () => {
   try {
@@ -62,6 +63,7 @@ onMounted(async () => {
       syncLocaleAsync(),
       syncThemeAsync(),
       syncVaultNameAsync(),
+      syncDesktopIconSizeAsync(),
       loadExtensionsAsync(),
       readNotificationsAsync(),
     ])

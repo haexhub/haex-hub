@@ -26,10 +26,10 @@
     >
       <!-- Left: Icon -->
       <div class="flex items-center gap-2">
-        <img
+        <HaexIcon
           v-if="icon"
-          :src="icon"
-          :alt="title"
+          :name="icon"
+          :tooltip="title"
           class="w-5 h-5 object-contain shrink-0"
         />
       </div>

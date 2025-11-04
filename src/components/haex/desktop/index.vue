@@ -32,13 +32,15 @@
             @dragover.prevent="handleDragOver"
             @drop.prevent="handleDrop($event, workspace.id)"
           >
-            <!-- Grid Pattern Background -->
+            <!-- Drop Target Zone (visible during drag) -->
             <div
-              class="absolute inset-0 pointer-events-none opacity-30"
+              v-if="dropTargetZone"
+              class="absolute border-2 border-blue-500 bg-blue-500/10 rounded-lg pointer-events-none z-10 transition-all duration-75"
               :style="{
-                backgroundImage:
-                  'linear-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.1) 1px, transparent 1px)',
-                backgroundSize: '32px 32px',
+                left: `${dropTargetZone.x}px`,
+                top: `${dropTargetZone.y}px`,
+                width: `${dropTargetZone.width}px`,
+                height: `${dropTargetZone.height}px`,
               }"
             />
 
@@ -79,6 +81,7 @@
               class="no-swipe"
               @position-changed="handlePositionChanged"
               @drag-start="handleDragStart"
+              @dragging="handleDragging"
               @drag-end="handleDragEnd"
             />
 
@@ -249,8 +252,6 @@ const {
 const { getWorkspaceBackgroundStyle, getWorkspaceContextMenuItems } =
   workspaceStore
 
-const { x: mouseX } = useMouse()
-
 const desktopEl = useTemplateRef('desktopEl')
 
 // Track desktop viewport size reactively
@@ -284,9 +285,41 @@ const selectionBoxStyle = computed(() => {
 
 // Drag state for desktop icons
 const isDragging = ref(false)
-const currentDraggedItemId = ref<string>()
-const currentDraggedItemType = ref<string>()
-const currentDraggedReferenceId = ref<string>()
+const currentDraggedItem = reactive({
+  id: '',
+  itemType: '',
+  referenceId: '',
+  width: 0,
+  height: 0,
+  x: 0,
+  y: 0,
+})
+
+// Track mouse position for showing drop target
+const { x: mouseX, y: mouseY } = useMouse()
+
+const dropTargetZone = computed(() => {
+  if (!isDragging.value) return null
+
+  // Use the actual icon position during drag, not the mouse position
+  const iconX = currentDraggedItem.x
+  const iconY = currentDraggedItem.y
+
+  // Use snapToGrid to get the exact position where the icon will land
+  const snapped = desktopStore.snapToGrid(
+    iconX,
+    iconY,
+    currentDraggedItem.width || undefined,
+    currentDraggedItem.height || undefined,
+  )
+
+  return {
+    x: snapped.x,
+    y: snapped.y,
+    width: currentDraggedItem.width || desktopStore.gridCellSize,
+    height: currentDraggedItem.height || desktopStore.gridCellSize,
+  }
+})
 
 // Window drag state for snap zones
 const isWindowDragging = ref(false)
@@ -378,20 +411,43 @@ const handlePositionChanged = async (id: string, x: number, y: number) => {
   }
 }
 
-const handleDragStart = (id: string, itemType: string, referenceId: string) => {
+const handleDragStart = (
+  id: string,
+  itemType: string,
+  referenceId: string,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+) => {
   isDragging.value = true
-  currentDraggedItemId.value = id
-  currentDraggedItemType.value = itemType
-  currentDraggedReferenceId.value = referenceId
+  currentDraggedItem.id = id
+  currentDraggedItem.itemType = itemType
+  currentDraggedItem.referenceId = referenceId
+  currentDraggedItem.width = width
+  currentDraggedItem.height = height
+  currentDraggedItem.x = x
+  currentDraggedItem.y = y
   allowSwipe.value = false // Disable Swiper during icon drag
+}
+
+const handleDragging = (id: string, x: number, y: number) => {
+  if (currentDraggedItem.id === id) {
+    currentDraggedItem.x = x
+    currentDraggedItem.y = y
+  }
 }
 
 const handleDragEnd = async () => {
   // Cleanup drag state
   isDragging.value = false
-  currentDraggedItemId.value = undefined
-  currentDraggedItemType.value = undefined
-  currentDraggedReferenceId.value = undefined
+  currentDraggedItem.id = ''
+  currentDraggedItem.itemType = ''
+  currentDraggedItem.referenceId = ''
+  currentDraggedItem.width = 0
+  currentDraggedItem.height = 0
+  currentDraggedItem.x = 0
+  currentDraggedItem.y = 0
   allowSwipe.value = true // Re-enable Swiper after drag
 }
 
@@ -426,15 +482,18 @@ const handleDrop = async (event: DragEvent, workspaceId: string) => {
     const desktopRect = (
       event.currentTarget as HTMLElement
     ).getBoundingClientRect()
-    const x = Math.max(0, event.clientX - desktopRect.left - 32) // Center icon (64px / 2)
-    const y = Math.max(0, event.clientY - desktopRect.top - 32)
+    const rawX = Math.max(0, event.clientX - desktopRect.left - 32) // Center icon (64px / 2)
+    const rawY = Math.max(0, event.clientY - desktopRect.top - 32)
+
+    // Snap to grid
+    const snapped = desktopStore.snapToGrid(rawX, rawY)
 
     // Create desktop icon on the specific workspace
     await desktopStore.addDesktopItemAsync(
       item.type as DesktopItemType,
       item.id,
-      x,
-      y,
+      snapped.x,
+      snapped.y,
       workspaceId,
     )
   } catch (error) {

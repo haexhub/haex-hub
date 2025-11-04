@@ -24,17 +24,42 @@ export const withCrdtColumns = <
   haexTimestamp: text(crdtColumnNames.haexTimestamp),
 })
 
+export const haexDevices = sqliteTable(
+  tableNames.haex.devices.name,
+  withCrdtColumns({
+    id: text(tableNames.haex.devices.columns.id)
+      .$defaultFn(() => crypto.randomUUID())
+      .primaryKey(),
+    deviceId: text(tableNames.haex.devices.columns.deviceId)
+      .notNull()
+      .unique(),
+    name: text(tableNames.haex.devices.columns.name).notNull(),
+    createdAt: text(tableNames.haex.devices.columns.createdAt).default(
+      sql`(CURRENT_TIMESTAMP)`,
+    ),
+    updatedAt: integer(tableNames.haex.devices.columns.updatedAt, {
+      mode: 'timestamp',
+    }).$onUpdate(() => new Date()),
+  }),
+)
+export type InsertHaexDevices = typeof haexDevices.$inferInsert
+export type SelectHaexDevices = typeof haexDevices.$inferSelect
+
 export const haexSettings = sqliteTable(
   tableNames.haex.settings.name,
   withCrdtColumns({
-    id: text()
+    id: text(tableNames.haex.settings.columns.id)
       .$defaultFn(() => crypto.randomUUID())
       .primaryKey(),
-    key: text(),
-    type: text(),
-    value: text(),
+    deviceId: text(tableNames.haex.settings.columns.deviceId).references(
+      (): AnySQLiteColumn => haexDevices.id,
+      { onDelete: 'cascade' },
+    ),
+    key: text(tableNames.haex.settings.columns.key),
+    type: text(tableNames.haex.settings.columns.type),
+    value: text(tableNames.haex.settings.columns.value),
   }),
-  (table) => [unique().on(table.key, table.type, table.value)],
+  (table) => [unique().on(table.deviceId, table.key, table.type)],
 )
 export type InsertHaexSettings = typeof haexSettings.$inferInsert
 export type SelectHaexSettings = typeof haexSettings.$inferSelect

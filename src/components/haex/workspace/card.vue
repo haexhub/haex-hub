@@ -25,16 +25,69 @@
         />
       </div>
     </template>
+
+    <!-- Window Icons Preview -->
+    <div
+      v-if="workspaceWindows.length > 0"
+      class="flex flex-wrap gap-2 items-center"
+    >
+      <!-- Show first 8 window icons -->
+      <HaexIcon
+        v-for="window in visibleWindows"
+        :key="window.id"
+        :name="window.icon || 'i-heroicons-window'"
+        :tooltip="window.title"
+        class="size-6 opacity-70"
+      />
+
+      <!-- Show remaining count badge if more than 8 windows -->
+      <UBadge
+        v-if="remainingCount > 0"
+        color="neutral"
+        variant="subtle"
+        size="sm"
+      >
+        +{{ remainingCount }}
+      </UBadge>
+    </div>
+
+    <!-- Empty state when no windows -->
+    <div
+      v-else
+      class="text-sm text-gray-400 dark:text-gray-600 italic"
+    >
+      {{ t('noWindows') }}
+    </div>
   </UCard>
 </template>
 
 <script setup lang="ts">
 const props = defineProps<{ workspace: IWorkspace }>()
 
+const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
 const windowManager = useWindowManagerStore()
 
 const { currentWorkspace } = storeToRefs(workspaceStore)
+
+// Get all windows for this workspace
+const workspaceWindows = computed(() => {
+  return windowManager.windows.filter(
+    (window) => window.workspaceId === props.workspace.id,
+  )
+})
+
+// Limit to 8 visible icons
+const MAX_VISIBLE_ICONS = 8
+const visibleWindows = computed(() => {
+  return workspaceWindows.value.slice(0, MAX_VISIBLE_ICONS)
+})
+
+// Count remaining windows
+const remainingCount = computed(() => {
+  const remaining = workspaceWindows.value.length - MAX_VISIBLE_ICONS
+  return remaining > 0 ? remaining : 0
+})
 
 const cardEl = useTemplateRef('cardEl')
 const isDragOver = ref(false)
@@ -96,3 +149,10 @@ watch(
   },
 )
 </script>
+
+<i18n lang="yaml">
+de:
+  noWindows: Keine Fenster geöffnet
+en:
+  noWindows: No windows open
+</i18n>
