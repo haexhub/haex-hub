@@ -196,9 +196,12 @@ const handlePointerMove = (e: PointerEvent) => {
   const newX = e.clientX - parentRect.left - offsetX.value
   const newY = e.clientY - parentRect.top - offsetY.value
 
-  // Clamp y position to minimum 0 (parent is already below header)
-  x.value = newX
-  y.value = Math.max(0, newY)
+  // Clamp position to viewport bounds during drag
+  const maxX = viewportSize ? Math.max(0, viewportSize.width.value - iconWidth.value) : Number.MAX_SAFE_INTEGER
+  const maxY = viewportSize ? Math.max(0, viewportSize.height.value - iconHeight.value) : Number.MAX_SAFE_INTEGER
+
+  x.value = Math.max(0, Math.min(maxX, newX))
+  y.value = Math.max(0, Math.min(maxY, newY))
 
   // Emit current position during drag
   emit('dragging', props.id, x.value, y.value)
