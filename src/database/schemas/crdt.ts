@@ -48,3 +48,27 @@ export const haexCrdtConfigs = sqliteTable(tableNames.haex.crdt.configs.name, {
   key: text().primaryKey(),
   value: text(),
 })
+
+/**
+ * Sync Status Table (WITHOUT CRDT - local-only metadata)
+ * Tracks sync progress for each backend
+ */
+export const haexSyncStatus = sqliteTable(
+  'haex_sync_status',
+  {
+    id: text('id')
+      .$defaultFn(() => crypto.randomUUID())
+      .primaryKey(),
+    backendId: text('backend_id').notNull(),
+    // Last server sequence number received from pull
+    lastPullSequence: integer('last_pull_sequence'),
+    // Last HLC timestamp pushed to server
+    lastPushHlcTimestamp: text('last_push_hlc_timestamp'),
+    // Last successful sync timestamp
+    lastSyncAt: text('last_sync_at'),
+    // Sync error message if any
+    error: text('error'),
+  },
+)
+export type InsertHaexSyncStatus = typeof haexSyncStatus.$inferInsert
+export type SelectHaexSyncStatus = typeof haexSyncStatus.$inferSelect
