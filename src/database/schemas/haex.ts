@@ -205,3 +205,30 @@ export const haexDesktopItems = sqliteTable(
 )
 export type InsertHaexDesktopItems = typeof haexDesktopItems.$inferInsert
 export type SelectHaexDesktopItems = typeof haexDesktopItems.$inferSelect
+
+export const haexSyncBackends = sqliteTable(
+  tableNames.haex.sync_backends.name,
+  withCrdtColumns({
+    id: text(tableNames.haex.sync_backends.columns.id)
+      .$defaultFn(() => crypto.randomUUID())
+      .primaryKey(),
+    name: text(tableNames.haex.sync_backends.columns.name).notNull(),
+    serverUrl: text(tableNames.haex.sync_backends.columns.serverUrl).notNull(),
+    enabled: integer(tableNames.haex.sync_backends.columns.enabled, {
+      mode: 'boolean',
+    })
+      .default(true)
+      .notNull(),
+    priority: integer(tableNames.haex.sync_backends.columns.priority)
+      .default(0)
+      .notNull(),
+    createdAt: text(tableNames.haex.sync_backends.columns.createdAt).default(
+      sql`(CURRENT_TIMESTAMP)`,
+    ),
+    updatedAt: integer(tableNames.haex.sync_backends.columns.updatedAt, {
+      mode: 'timestamp',
+    }).$onUpdate(() => new Date()),
+  }),
+)
+export type InsertHaexSyncBackends = typeof haexSyncBackends.$inferInsert
+export type SelectHaexSyncBackends = typeof haexSyncBackends.$inferSelect

@@ -91,31 +91,34 @@ export const useDesktopStore = defineStore('desktopStore', () => {
     iconHeight?: number,
   ) => {
     const cellSize = gridCellSize.value
+    const halfCell = cellSize / 2
 
-    // Adjust y for grid offset
-    const adjustedY = Math.max(0, y + iconPadding)
+    // Use provided dimensions or fall back to the effective icon size (not cell size!)
+    const actualIconWidth = iconWidth || effectiveIconSize.value
+    const actualIconHeight = iconHeight || effectiveIconSize.value
 
     // Calculate which grid cell the position falls into
-    const col = Math.floor(x / cellSize)
-    const row = Math.floor(adjustedY / cellSize)
+    // Add half the icon size to x/y to get the center point for snapping
+    const centerX = x + actualIconWidth / 2
+    const centerY = y + actualIconHeight / 2
 
-    // Use provided dimensions or fall back to cell size
-    const actualIconWidth = iconWidth || cellSize
-    const actualIconHeight = iconHeight || cellSize
+    // Find nearest grid cell center
+    // Grid cells are centered at: halfCell, halfCell + cellSize, halfCell + 2*cellSize, ...
+    // Which is: halfCell + (n * cellSize) for n = 0, 1, 2, ...
+    const col = Math.round((centerX - halfCell) / cellSize)
+    const row = Math.round((centerY - halfCell) / cellSize)
 
-    // Center the icon in the cell(s) it occupies
-    const cellsWide = Math.max(1, Math.ceil(actualIconWidth / cellSize))
-    const cellsHigh = Math.max(1, Math.ceil(actualIconHeight / cellSize))
+    // Calculate the center of the target grid cell
+    const gridCenterX = halfCell + col * cellSize
+    const gridCenterY = halfCell + row * cellSize
 
-    const totalWidth = cellsWide * cellSize
-    const totalHeight = cellsHigh * cellSize
-
-    const paddingX = (totalWidth - actualIconWidth) / 2
-    const paddingY = (totalHeight - actualIconHeight) / 2
+    // Calculate the top-left position that centers the icon in the cell
+    const snappedX = gridCenterX - actualIconWidth / 2
+    const snappedY = gridCenterY - actualIconHeight / 2
 
     return {
-      x: col * cellSize + paddingX - iconPadding,
-      y: row * cellSize + paddingY - iconPadding,
+      x: snappedX,
+      y: snappedY,
     }
   }
 

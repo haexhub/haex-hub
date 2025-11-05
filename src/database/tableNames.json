@@ -102,6 +102,20 @@
         "haexTimestamp": "haex_timestamp"
       }
     },
+    "sync_backends": {
+      "name": "haex_sync_backends",
+      "columns": {
+        "id": "id",
+        "name": "name",
+        "serverUrl": "server_url",
+        "enabled": "enabled",
+        "priority": "priority",
+        "createdAt": "created_at",
+        "updatedAt": "updated_at",
+
+        "haexTimestamp": "haex_timestamp"
+      }
+    },
 
     "crdt": {
       "logs": {
