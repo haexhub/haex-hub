@@ -1,5 +1,5 @@
 <template>
-  <UDrawer
+  <UiDrawer
     v-model:open="open"
     direction="right"
     :title="t('launcher.title')"
@@ -7,9 +7,6 @@
     :overlay="false"
     :modal="false"
     :handle-only="true"
-    :ui="{
-      content: 'w-dvw max-w-md sm:max-w-fit',
-    }"
   >
     <UButton
       icon="material-symbols:apps"
@@ -66,7 +63,7 @@
         </div>
       </div>
     </template>
-  </UDrawer>
+  </UiDrawer>
 
   <!-- Uninstall Confirmation Dialog -->
   <UiDialogConfirm

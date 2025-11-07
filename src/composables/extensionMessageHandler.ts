@@ -1,37 +1,28 @@
 // composables/extensionMessageHandler.ts
-import { invoke } from '@tauri-apps/api/core'
 import type { IHaexHubExtension } from '~/types/haexhub'
 import {
   EXTENSION_PROTOCOL_NAME,
   EXTENSION_PROTOCOL_PREFIX,
 } from '~/config/constants'
-import type { Platform } from '@tauri-apps/plugin-os'
-
-interface ExtensionRequest {
-  id: string
-  method: string
-  params: Record<string, unknown>
-  timestamp: number
-}
+import {
+  handleDatabaseMethodAsync,
+  handleFilesystemMethodAsync,
+  handleHttpMethodAsync,
+  handlePermissionsMethodAsync,
+  handleContextMethodAsync,
+  handleStorageMethodAsync,
+  setContextGetters,
+  type ExtensionRequest,
+  type ExtensionInstance,
+} from './handlers'
 
 // Globaler Handler - nur einmal registriert
 let globalHandlerRegistered = false
-interface ExtensionInstance {
-  extension: IHaexHubExtension
-  windowId: string
-}
 const iframeRegistry = new Map<HTMLIFrameElement, ExtensionInstance>()
 // Map event.source (WindowProxy) to extension instance for sandbox-compatible matching
 const sourceRegistry = new Map<Window, ExtensionInstance>()
 // Reverse map: window ID to Window for broadcasting (supports multiple windows per extension)
 const windowIdToWindowMap = new Map<string, Window>()
-
-// Store context values that need to be accessed outside setup
-let contextGetters: {
-  getTheme: () => string
-  getLocale: () => string
-  getPlatform: () => Platform | undefined
-} | null = null
 
 const registerGlobalMessageHandler = () => {
   if (globalHandlerRegistered) return
@@ -227,13 +218,11 @@ export const useExtensionMessageHandler = (
   const { locale } = useI18n()
   const { platform } = useDeviceStore()
   // Store getters for use outside setup context
-  if (!contextGetters) {
-    contextGetters = {
-      getTheme: () => currentTheme.value?.value || 'system',
-      getLocale: () => locale.value,
-      getPlatform: () => platform,
-    }
-  }
+  setContextGetters({
+    getTheme: () => currentTheme.value?.value || 'system',
+    getLocale: () => locale.value,
+    getPlatform: () => platform,
+  })
 
   // Registriere globalen Handler beim ersten Aufruf
   registerGlobalMessageHandler()
@@ -275,12 +264,7 @@ export const registerExtensionIFrame = (
   // Stelle sicher, dass der globale Handler registriert ist
   registerGlobalMessageHandler()
 
-  // Warnung wenn Context Getters nicht initialisiert wurden
-  if (!contextGetters) {
-    console.warn(
-      'Context getters not initialized. Make sure useExtensionMessageHandler was called in setup context first.',
-    )
-  }
+  // Note: Context getters should be initialized via useExtensionMessageHandler first
 
   iframeRegistry.set(iframe, { extension, windowId })
 }
@@ -338,221 +322,21 @@ export const broadcastContextToAllExtensions = (context: {
     timestamp: Date.now(),
   }
 
-  console.log('[ExtensionHandler] Broadcasting context to all extensions:', context)
+  console.log(
+    '[ExtensionHandler] Broadcasting context to all extensions:',
+    context,
+  )
 
   // Send to all registered extension windows
   for (const [_, instance] of iframeRegistry.entries()) {
     const win = windowIdToWindowMap.get(instance.windowId)
     if (win) {
-      console.log('[ExtensionHandler] Sending context to:', instance.extension.name, instance.windowId)
+      console.log(
+        '[ExtensionHandler] Sending context to:',
+        instance.extension.name,
+        instance.windowId,
+      )
       win.postMessage(message, '*')
     }
-  }
-}
-
-// ==========================================
-// Database Methods
-// ==========================================
-
-async function handleDatabaseMethodAsync(
-  request: ExtensionRequest,
-  extension: IHaexHubExtension, // Direkter Typ
-) {
-  const params = request.params as {
-    query?: string
-    params?: unknown[]
-  }
-
-  switch (request.method) {
-    case 'haextension.db.query': {
-      try {
-        const rows = await invoke<unknown[]>('extension_sql_select', {
-          sql: params.query || '',
-          params: params.params || [],
-          publicKey: extension.publicKey,
-          name: extension.name,
-        })
-
-        return {
-          rows,
-          rowsAffected: 0,
-          lastInsertId: undefined,
-        }
-      } catch (error: any) {
-        // If error is about non-SELECT statements (INSERT/UPDATE/DELETE with RETURNING),
-        // automatically retry with execute
-        if (error?.message?.includes('Only SELECT statements are allowed')) {
-          const rows = await invoke<unknown[]>('extension_sql_execute', {
-            sql: params.query || '',
-            params: params.params || [],
-            publicKey: extension.publicKey,
-            name: extension.name,
-          })
-
-          return {
-            rows,
-            rowsAffected: rows.length,
-            lastInsertId: undefined,
-          }
-        }
-        throw error
-      }
-    }
-
-    case 'haextension.db.execute': {
-      const rows = await invoke<unknown[]>('extension_sql_execute', {
-        sql: params.query || '',
-        params: params.params || [],
-        publicKey: extension.publicKey,
-        name: extension.name,
-      })
-
-      return {
-        rows,
-        rowsAffected: 1,
-        lastInsertId: undefined,
-      }
-    }
-
-    case 'haextension.db.transaction': {
-      const statements =
-        (request.params as { statements?: string[] }).statements || []
-
-      for (const stmt of statements) {
-        await invoke('extension_sql_execute', {
-          sql: stmt,
-          params: [],
-          publicKey: extension.publicKey,
-          name: extension.name,
-        })
-      }
-
-      return { success: true }
-    }
-
-    default:
-      throw new Error(`Unknown database method: ${request.method}`)
-  }
-}
-// ==========================================
-// Filesystem Methods (TODO)
-// ==========================================
-
-async function handleFilesystemMethodAsync(
-  request: ExtensionRequest,
-  extension: IHaexHubExtension,
-) {
-  if (!request || !extension) return
-  // TODO: Implementiere Filesystem Commands im Backend
-  throw new Error('Filesystem methods not yet implemented')
-}
-
-// ==========================================
-// HTTP Methods (TODO)
-// ==========================================
-
-async function handleHttpMethodAsync(
-  request: ExtensionRequest,
-  extension: IHaexHubExtension,
-) {
-  if (!extension || !request) {
-    throw new Error('Extension not found')
-  }
-
-  // TODO: Implementiere HTTP Commands im Backend
-  throw new Error('HTTP methods not yet implemented')
-}
-
-// ==========================================
-// Permission Methods (TODO)
-// ==========================================
-
-async function handlePermissionsMethodAsync(
-  request: ExtensionRequest,
-  extension: IHaexHubExtension,
-) {
-  if (!extension || !request) {
-    throw new Error('Extension not found')
-  }
-
-  // TODO: Implementiere Permission Request UI
-  throw new Error('Permission methods not yet implemented')
-}
-
-// ==========================================
-// Context Methods
-// ==========================================
-
-async function handleContextMethodAsync(request: ExtensionRequest) {
-  switch (request.method) {
-    case 'haextension.context.get':
-      if (!contextGetters) {
-        throw new Error(
-          'Context not initialized. Make sure useExtensionMessageHandler is called in a component.',
-        )
-      }
-      return {
-        theme: contextGetters.getTheme(),
-        locale: contextGetters.getLocale(),
-        platform: contextGetters.getPlatform(),
-      }
-
-    default:
-      throw new Error(`Unknown context method: ${request.method}`)
-  }
-}
-
-// ==========================================
-// Storage Methods
-// ==========================================
-
-async function handleStorageMethodAsync(
-  request: ExtensionRequest,
-  instance: ExtensionInstance,
-) {
-  // Storage is now per-window, not per-extension
-  const storageKey = `ext_${instance.extension.id}_${instance.windowId}_`
-  console.log(
-    `[HaexHub Storage] ${request.method} for window ${instance.windowId}`,
-  )
-
-  switch (request.method) {
-    case 'haextension.storage.getItem': {
-      const key = request.params.key as string
-      return localStorage.getItem(storageKey + key)
-    }
-
-    case 'haextension.storage.setItem': {
-      const key = request.params.key as string
-      const value = request.params.value as string
-      localStorage.setItem(storageKey + key, value)
-      return null
-    }
-
-    case 'haextension.storage.removeItem': {
-      const key = request.params.key as string
-      localStorage.removeItem(storageKey + key)
-      return null
-    }
-
-    case 'haextension.storage.clear': {
-      // Remove only instance-specific keys
-      const keys = Object.keys(localStorage).filter((k) =>
-        k.startsWith(storageKey),
-      )
-      keys.forEach((k) => localStorage.removeItem(k))
-      return null
-    }
-
-    case 'haextension.storage.keys': {
-      // Return only instance-specific keys (without prefix)
-      const keys = Object.keys(localStorage)
-        .filter((k) => k.startsWith(storageKey))
-        .map((k) => k.substring(storageKey.length))
-      return keys
-    }
-
-    default:
-      throw new Error(`Unknown storage method: ${request.method}`)
   }
 }

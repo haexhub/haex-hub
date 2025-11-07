@@ -83,8 +83,6 @@ const filteredSlots = computed(() => {
     Object.entries(useSlots()).filter(([name]) => name !== 'trailing'),
   )
 })
-
-const { isSmallScreen } = storeToRefs(useUiStore())
 </script>
 
 <i18n lang="yaml">

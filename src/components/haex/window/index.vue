@@ -83,6 +83,7 @@
 </template>
 
 <script setup lang="ts">
+import { getAvailableContentHeight } from '~/utils/viewport'
 const props = defineProps<{
   id: string
   title: string
@@ -329,31 +330,11 @@ const handleMaximize = () => {
     const bounds = getViewportBounds()
 
     if (bounds && bounds.width > 0 && bounds.height > 0) {
-      // Get safe-area-insets from CSS variables for debug
-      const safeAreaTop = parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue(
-          '--safe-area-inset-top',
-        ) || '0',
-      )
-      const safeAreaBottom = parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue(
-          '--safe-area-inset-bottom',
-        ) || '0',
-      )
-
-      // Desktop container uses 'absolute inset-0' which stretches over full viewport
-      // bounds.height = full viewport height (includes header area + safe-areas)
-      // We need to calculate available space properly
-
-      // Get header height from UI store (measured reactively in layout)
-      const uiStore = useUiStore()
-      const headerHeight = uiStore.headerHeight
-
       x.value = 0
-      y.value = 0 // Start below header and status bar
+      y.value = 0
       width.value = bounds.width
-      // Height: viewport - header - both safe-areas
-      height.value = bounds.height - headerHeight - safeAreaTop - safeAreaBottom
+      // Use helper function to calculate correct height with safe areas
+      height.value = getAvailableContentHeight()
       isMaximized.value = true
     }
   }

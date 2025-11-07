@@ -1,5 +1,5 @@
 <template>
-  <UDrawer
+  <UiDrawer
     v-model:open="isOverviewMode"
     direction="left"
     :overlay="false"
@@ -8,7 +8,7 @@
     description="Workspaces"
   >
     <template #content>
-      <div class="py-8 pl-8 pr-4 h-full overflow-y-auto">
+      <div class="pl-8 pr-4 h-full overflow-y-auto">
         <!-- Workspace Cards -->
         <div class="flex flex-col gap-3">
           <HaexWorkspaceCard
@@ -29,7 +29,7 @@
         />
       </div>
     </template>
-  </UDrawer>
+  </UiDrawer>
 </template>
 
 <script setup lang="ts">

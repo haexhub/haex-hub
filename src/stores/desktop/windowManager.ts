@@ -1,4 +1,5 @@
 import { defineAsyncComponent, type Component } from 'vue'
+import { getFullscreenDimensions } from '~/utils/viewport'
 
 export interface IWindow {
   id: string
@@ -191,22 +192,42 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
       const viewportHeight = window.innerHeight - 60
 
       console.log('viewportHeight', window.innerHeight, viewportHeight)
-      const windowHeight = Math.min(height, viewportHeight)
 
-      // Adjust width proportionally if needed (optional)
-      const aspectRatio = width / height
-      const windowWidth = Math.min(
-        width,
-        viewportWidth,
-        windowHeight * aspectRatio,
-      )
+      // Check if we're on a small screen
+      const { isSmallScreen } = useUiStore()
 
-      // Calculate centered position with cascading offset (only count windows in current workspace)
-      const offset = currentWorkspaceWindows.value.length * 30
-      const centerX = Math.max(0, (viewportWidth - windowWidth) / 1 / 3)
-      const centerY = Math.max(0, (viewportHeight - windowHeight) / 1 / 3)
-      const x = Math.min(centerX + offset, viewportWidth - windowWidth)
-      const y = Math.min(centerY + offset, viewportHeight - windowHeight)
+      let windowWidth: number
+      let windowHeight: number
+      let x: number
+      let y: number
+
+      if (isSmallScreen) {
+        // On small screens, make window fullscreen starting at 0,0
+        // Use helper function to calculate correct dimensions with safe areas
+        const fullscreen = getFullscreenDimensions()
+        x = fullscreen.x
+        y = fullscreen.y
+        windowWidth = fullscreen.width
+        windowHeight = fullscreen.height
+      } else {
+        // On larger screens, use normal sizing and positioning
+        windowHeight = Math.min(height, viewportHeight)
+
+        // Adjust width proportionally if needed (optional)
+        const aspectRatio = width / height
+        windowWidth = Math.min(
+          width,
+          viewportWidth,
+          windowHeight * aspectRatio,
+        )
+
+        // Calculate centered position with cascading offset (only count windows in current workspace)
+        const offset = currentWorkspaceWindows.value.length * 30
+        const centerX = Math.max(0, (viewportWidth - windowWidth) / 1 / 3)
+        const centerY = Math.max(0, (viewportHeight - windowHeight) / 1 / 3)
+        x = Math.min(centerX + offset, viewportWidth - windowWidth)
+        y = Math.min(centerY + offset, viewportHeight - windowHeight)
+      }
 
       const newWindow: IWindow = {
         id: windowId,
