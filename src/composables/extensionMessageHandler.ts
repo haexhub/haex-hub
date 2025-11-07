@@ -365,17 +365,37 @@ async function handleDatabaseMethodAsync(
 
   switch (request.method) {
     case 'haextension.db.query': {
-      const rows = await invoke<unknown[]>('extension_sql_select', {
-        sql: params.query || '',
-        params: params.params || [],
-        publicKey: extension.publicKey,
-        name: extension.name,
-      })
+      try {
+        const rows = await invoke<unknown[]>('extension_sql_select', {
+          sql: params.query || '',
+          params: params.params || [],
+          publicKey: extension.publicKey,
+          name: extension.name,
+        })
 
-      return {
-        rows,
-        rowsAffected: 0,
-        lastInsertId: undefined,
+        return {
+          rows,
+          rowsAffected: 0,
+          lastInsertId: undefined,
+        }
+      } catch (error: any) {
+        // If error is about non-SELECT statements (INSERT/UPDATE/DELETE with RETURNING),
+        // automatically retry with execute
+        if (error?.message?.includes('Only SELECT statements are allowed')) {
+          const rows = await invoke<unknown[]>('extension_sql_execute', {
+            sql: params.query || '',
+            params: params.params || [],
+            publicKey: extension.publicKey,
+            name: extension.name,
+          })
+
+          return {
+            rows,
+            rowsAffected: rows.length,
+            lastInsertId: undefined,
+          }
+        }
+        throw error
       }
     }
 
