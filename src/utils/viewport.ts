@@ -13,7 +13,7 @@ export interface ViewportDimensions {
  */
 export function getViewportDimensions(): ViewportDimensions {
   const viewportWidth = window.innerWidth
-  const viewportHeight = window.innerHeight - 60 // Subtract tab bar height
+  const viewportHeight = window.innerHeight - 40 // Subtract header height
 
   // Get safe-area-insets from CSS variables
   const safeAreaTop = parseFloat(
@@ -45,11 +45,7 @@ export function getViewportDimensions(): ViewportDimensions {
  */
 export function getAvailableContentHeight(): number {
   const dimensions = getViewportDimensions()
-  return (
-    dimensions.height -
-    dimensions.safeAreaTop -
-    dimensions.safeAreaBottom
-  )
+  return dimensions.height - dimensions.safeAreaTop - dimensions.safeAreaBottom
 }
 
 /**

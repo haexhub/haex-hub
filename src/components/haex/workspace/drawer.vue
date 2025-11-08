@@ -8,7 +8,7 @@
     description="Workspaces"
   >
     <template #content>
-      <div class="pl-8 pr-4 h-full overflow-y-auto">
+      <div class="pl-8 pr-4 overflow-y-auto py-8">
         <!-- Workspace Cards -->
         <div class="flex flex-col gap-3">
           <HaexWorkspaceCard

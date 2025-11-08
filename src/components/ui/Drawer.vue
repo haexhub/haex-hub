@@ -3,7 +3,7 @@
     v-bind="$attrs"
     :ui="{
       content:
-        'pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] w-dvw max-w-md sm:max-w-fit',
+        'pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] ',
       ...(ui || {}),
     }"
   >
