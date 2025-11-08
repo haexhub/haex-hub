@@ -26,5 +26,7 @@ import type { DrawerProps } from '@nuxt/ui'
  * Wrapper around UDrawer that automatically applies safe area insets for mobile devices.
  * Passes through all props and slots to UDrawer.
  */
-defineProps</* @vue-ignore */ DrawerProps>()
+const props = defineProps</* @vue-ignore */ DrawerProps>()
+
+const { ui } = toRefs(props)
 </script>
