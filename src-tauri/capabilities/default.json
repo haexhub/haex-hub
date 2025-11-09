@@ -30,10 +30,15 @@
     "fs:allow-resource-write-recursive",
     "fs:allow-download-read-recursive",
     "fs:allow-download-write-recursive",
+    "fs:allow-temp-read-recursive",
+    "fs:allow-temp-write-recursive",
     "fs:default",
     {
       "identifier": "fs:scope",
-      "allow": [{ "path": "**" }]
+      "allow": [
+        { "path": "**" },
+        { "path": "$TEMP/**" }
+      ]
     },
     "http:allow-fetch-send",
     "http:allow-fetch",
@@ -44,6 +49,12 @@
     "notification:allow-is-permission-granted",
     "notification:default",
     "opener:allow-open-url",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        { "path": "$TEMP/**" }
+      ]
+    },
     "opener:default",
     "os:allow-hostname",
     "os:default",

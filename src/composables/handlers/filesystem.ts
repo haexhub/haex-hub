@@ -1,5 +1,7 @@
 import { save } from '@tauri-apps/plugin-dialog'
 import { writeFile } from '@tauri-apps/plugin-fs'
+import { openPath } from '@tauri-apps/plugin-opener'
+import { tempDir, join } from '@tauri-apps/api/path'
 import type { IHaexHubExtension } from '~/types/haexhub'
 import type { ExtensionRequest } from './types'
 
@@ -39,6 +41,39 @@ export async function handleFilesystemMethodAsync(
       return {
         path: filePath,
         success: true,
+      }
+    }
+
+    case 'haextension.fs.openFile': {
+      const params = request.params as {
+        data: number[]
+        fileName: string
+        mimeType?: string
+      }
+
+      try {
+        // Convert number array back to Uint8Array
+        const data = new Uint8Array(params.data)
+
+        // Get temp directory and create file path
+        const tempDirPath = await tempDir()
+        const tempFilePath = await join(tempDirPath, params.fileName)
+
+        // Write file to temp directory
+        await writeFile(tempFilePath, data)
+
+        // Open file with system's default viewer
+        await openPath(tempFilePath)
+
+        return {
+          success: true,
+        }
+      }
+      catch (error) {
+        console.error('[Filesystem] Error opening file:', error)
+        return {
+          success: false,
+        }
       }
     }
 
