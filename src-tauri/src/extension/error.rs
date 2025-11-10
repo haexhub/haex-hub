@@ -1,10 +1,12 @@
 // src-tauri/src/extension/error.rs
 use thiserror::Error;
+use ts_rs::TS;
 
 use crate::database::error::DatabaseError;
 
 /// Error codes for frontend handling
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, TS)]
+#[ts(export)]
 pub enum ExtensionErrorCode {
     SecurityViolation = 1000,
     NotFound = 1001,
@@ -23,6 +25,17 @@ pub enum ExtensionErrorCode {
     SignatureVerificationFailed = 4002,
     CalculateHash = 4003,
     Installation = 5000,
+}
+
+/// Serialized representation of ExtensionError for TypeScript
+#[derive(Debug, Clone, serde::Serialize, TS)]
+#[ts(export)]
+pub struct SerializedExtensionError {
+    pub code: u16,
+    #[serde(rename = "type")]
+    pub error_type: String,
+    pub message: String,
+    pub extension_id: Option<String>,
 }
 
 impl serde::Serialize for ExtensionErrorCode {

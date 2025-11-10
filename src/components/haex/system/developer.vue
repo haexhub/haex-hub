@@ -163,8 +163,9 @@ const loadDevExtensionAsync = async () => {
     extensionPath.value = ''
   } catch (error) {
     console.error('Failed to load dev extension:', error)
+    const { getErrorMessage } = useExtensionError()
     add({
-      description: t('add.errors.loadFailed') + error,
+      description: `${t('add.errors.loadFailed')}: ${getErrorMessage(error)}`,
       color: 'error',
     })
   } finally {
@@ -196,8 +197,9 @@ const reloadDevExtensionAsync = async (extension: ExtensionInfoResponse) => {
     })
   } catch (error) {
     console.error('Failed to reload dev extension:', error)
+    const { getErrorMessage } = useExtensionError()
     add({
-      description: t('list.errors.reloadFailed') + error,
+      description: `${t('list.errors.reloadFailed')}: ${getErrorMessage(error)}`,
       color: 'error',
     })
   }
@@ -223,8 +225,9 @@ const removeDevExtensionAsync = async (extension: ExtensionInfoResponse) => {
     await loadExtensionsAsync()
   } catch (error) {
     console.error('Failed to remove dev extension:', error)
+    const { getErrorMessage } = useExtensionError()
     add({
-      description: t('list.errors.removeFailed') + error,
+      description: `${t('list.errors.removeFailed')}: ${getErrorMessage(error)}`,
       color: 'error',
     })
   }
