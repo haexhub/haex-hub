@@ -44,6 +44,15 @@ export async function handleFilesystemMethodAsync(
       }
     }
 
+    case 'haextension.fs.showImage': {
+      // This method is now handled by the frontend using PhotoSwipe
+      // We keep it for backwards compatibility but it's a no-op
+      return {
+        success: true,
+        useFrontend: true,
+      }
+    }
+
     case 'haextension.fs.openFile': {
       const params = request.params as {
         data: number[]
