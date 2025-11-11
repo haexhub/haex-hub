@@ -13,6 +13,7 @@ pub mod database;
 pub mod error;
 pub mod filesystem;
 pub mod permissions;
+pub mod web;
 
 #[tauri::command]
 pub fn get_extension_info(

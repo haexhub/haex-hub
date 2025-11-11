@@ -16,6 +16,7 @@ pub enum ExtensionErrorCode {
     Filesystem = 2001,
     FilesystemWithPath = 2004,
     Http = 2002,
+    Web = 2005,
     Shell = 2003,
     Manifest = 3000,
     Validation = 3001,
@@ -83,6 +84,9 @@ pub enum ExtensionError {
     #[error("HTTP request failed: {reason}")]
     Http { reason: String },
 
+    #[error("Web request failed: {reason}")]
+    WebError { reason: String },
+
     #[error("Shell command failed: {reason}")]
     Shell {
         reason: String,
@@ -131,6 +135,7 @@ impl ExtensionError {
             ExtensionError::Filesystem { .. } => ExtensionErrorCode::Filesystem,
             ExtensionError::FilesystemWithPath { .. } => ExtensionErrorCode::FilesystemWithPath,
             ExtensionError::Http { .. } => ExtensionErrorCode::Http,
+            ExtensionError::WebError { .. } => ExtensionErrorCode::Web,
             ExtensionError::Shell { .. } => ExtensionErrorCode::Shell,
             ExtensionError::ManifestError { .. } => ExtensionErrorCode::Manifest,
             ExtensionError::ValidationError { .. } => ExtensionErrorCode::Validation,

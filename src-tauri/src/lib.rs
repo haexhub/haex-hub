@@ -78,6 +78,7 @@ pub fn run() {
             database::vault_exists,
             extension::database::extension_sql_execute,
             extension::database::extension_sql_select,
+            extension::web::extension_web_fetch,
             extension::get_all_dev_extensions,
             extension::get_all_extensions,
             extension::get_extension_info,

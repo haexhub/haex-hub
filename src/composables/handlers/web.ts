@@ -1,5 +1,6 @@
 import type { IHaexHubExtension } from '~/types/haexhub'
 import type { ExtensionRequest } from './types'
+import { invoke } from '@tauri-apps/api/core'
 
 export async function handleWebMethodAsync(
   request: ExtensionRequest,
@@ -9,84 +10,58 @@ export async function handleWebMethodAsync(
     throw new Error('Extension not found')
   }
 
-  // TODO: Add permission check for web requests
-  // This should verify that the extension has permission to make web requests
-  // before proceeding with the fetch operation
-
   const { method, params } = request
 
   if (method === 'haextension.web.fetch') {
-    return await handleWebFetchAsync(params)
+    return await handleWebFetchAsync(params, extension)
   }
 
   throw new Error(`Unknown web method: ${method}`)
 }
 
-async function handleWebFetchAsync(params: Record<string, unknown>) {
+async function handleWebFetchAsync(
+  params: Record<string, unknown>,
+  extension: IHaexHubExtension,
+) {
   const url = params.url as string
-  const method = (params.method as string) || 'GET'
-  const headers = (params.headers as Record<string, string>) || {}
+  const method = (params.method as string) || undefined
+  const headers = (params.headers as Record<string, string>) || undefined
   const body = params.body as string | undefined
-  const timeout = (params.timeout as number) || 30000
+  const timeout = (params.timeout as number) || undefined
 
   if (!url) {
     throw new Error('URL is required')
   }
 
   try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), timeout)
-
-    const fetchOptions: RequestInit = {
+    // Call Rust backend through Tauri IPC to avoid CORS restrictions
+    const response = await invoke<{
+      status: number
+      status_text: string
+      headers: Record<string, string>
+      body: string
+      url: string
+    }>('extension_web_fetch', {
+      url,
       method,
       headers,
-      signal: controller.signal,
-    }
-
-    // Convert base64 body back to binary if present
-    if (body) {
-      const binaryString = atob(body)
-      const bytes = new Uint8Array(binaryString.length)
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i)
-      }
-      fetchOptions.body = bytes
-    }
-
-    const response = await fetch(url, fetchOptions)
-    clearTimeout(timeoutId)
-
-    // Read response as ArrayBuffer
-    const responseBody = await response.arrayBuffer()
-
-    // Convert ArrayBuffer to base64
-    const bytes = new Uint8Array(responseBody)
-    let binary = ''
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i])
-    }
-    const base64Body = btoa(binary)
-
-    // Convert headers to plain object
-    const responseHeaders: Record<string, string> = {}
-    response.headers.forEach((value, key) => {
-      responseHeaders[key] = value
+      body,
+      timeout,
+      publicKey: extension.publicKey,
+      name: extension.name,
     })
 
     return {
       status: response.status,
-      statusText: response.statusText,
-      headers: responseHeaders,
-      body: base64Body,
+      statusText: response.status_text,
+      headers: response.headers,
+      body: response.body,
       url: response.url,
     }
   } catch (error) {
     if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        throw new Error(`Request timeout after ${timeout}ms`)
-      }
-      throw new Error(`Fetch failed: ${error.message}`)
+      throw new Error(`Web request failed: ${error.message}`)
     }
-    throw new Error('Fetch failed with unknown error')
+    throw new Error('Web request failed with unknown error')
   }
 }
