@@ -4,7 +4,7 @@ use crate::database::core::with_connection;
 use crate::database::error::DatabaseError;
 use crate::extension::database::executor::SqlExecutor;
 use crate::extension::error::ExtensionError;
-use crate::extension::permissions::types::{Action, ExtensionPermission, PermissionStatus, ResourceType};
+use crate::extension::permissions::types::{Action, ExtensionPermission, PermissionConstraints, PermissionStatus, ResourceType};
 use tauri::State;
 use crate::database::generated::HaexExtensionPermissions;
 use rusqlite::params;
@@ -245,6 +245,74 @@ impl PermissionManager {
         Ok(())
     }
 
+    /// Prüft Web-Berechtigungen für Requests
+    pub async fn check_web_permission(
+        app_state: &State<'_, AppState>,
+        extension_id: &str,
+        method: &str,
+        url: &str,
+    ) -> Result<(), ExtensionError> {
+        // Optimiert: Lade nur Web-Permissions aus der Datenbank
+        let permissions = with_connection(&app_state.db, |conn| {
+            let sql = format!(
+                "SELECT * FROM {TABLE_EXTENSION_PERMISSIONS} WHERE extension_id = ? AND resource_type = 'web'"
+            );
+            let mut stmt = conn.prepare(&sql).map_err(DatabaseError::from)?;
+
+            let perms_iter = stmt.query_map(params![extension_id], |row| {
+                crate::database::generated::HaexExtensionPermissions::from_row(row)
+            })?;
+
+            let permissions: Vec<ExtensionPermission> = perms_iter
+                .filter_map(Result::ok)
+                .map(Into::into)
+                .collect();
+
+            Ok(permissions)
+        })?;
+
+        let url_parsed = url::Url::parse(url).map_err(|e| ExtensionError::ValidationError {
+            reason: format!("Invalid URL: {}", e),
+        })?;
+
+        let domain = url_parsed.host_str().ok_or_else(|| ExtensionError::ValidationError {
+            reason: "URL does not contain a valid host".to_string(),
+        })?;
+
+        let has_permission = permissions
+            .iter()
+            .filter(|perm| perm.status == PermissionStatus::Granted)
+            .any(|perm| {
+                let domain_matches = perm.target == "*"
+                    || perm.target == domain
+                    || domain.ends_with(&format!(".{}", perm.target));
+
+                if !domain_matches {
+                    return false;
+                }
+
+                if let Some(PermissionConstraints::Web(constraints)) = &perm.constraints {
+                    if let Some(methods) = &constraints.methods {
+                        if !methods.iter().any(|m| m.eq_ignore_ascii_case(method)) {
+                            return false;
+                        }
+                    }
+                }
+
+                true
+            });
+
+        if !has_permission {
+            return Err(ExtensionError::permission_denied(
+                extension_id,
+                method,
+                &format!("web request to '{}'", url),
+            ));
+        }
+
+        Ok(())
+    }
+
 /*     /// Prüft Dateisystem-Berechtigungen
     pub async fn check_filesystem_permission(
         app_state: &State<'_, AppState>,
@@ -287,56 +355,6 @@ impl PermissionManager {
                 extension_id,
                 &format!("{:?}", action),
                 &format!("filesystem path '{}'", file_path_str),
-            ));
-        }
-
-        Ok(())
-    }
-
-    /// Prüft HTTP-Berechtigungen
-    pub async fn check_http_permission(
-        app_state: &State<'_, AppState>,
-        extension_id: &str,
-        method: &str,
-        url: &str,
-    ) -> Result<(), ExtensionError> {
-        let permissions = Self::get_permissions(app_state, extension_id).await?;
-
-        let url_parsed = Url::parse(url).map_err(|e| ExtensionError::ValidationError {
-            reason: format!("Invalid URL: {}", e),
-        })?;
-
-        let domain = url_parsed.host_str().unwrap_or("");
-
-        let has_permission = permissions
-            .iter()
-            .filter(|perm| perm.status == PermissionStatus::Granted)
-            .filter(|perm| perm.resource_type == ResourceType::Http)
-            .any(|perm| {
-                let domain_matches = perm.target == "*"
-                    || perm.target == domain
-                    || domain.ends_with(&format!(".{}", perm.target));
-
-                if !domain_matches {
-                    return false;
-                }
-
-                if let Some(PermissionConstraints::Http(constraints)) = &perm.constraints {
-                    if let Some(methods) = &constraints.methods {
-                        if !methods.iter().any(|m| m.eq_ignore_ascii_case(method)) {
-                            return false;
-                        }
-                    }
-                }
-
-                true
-            });
-
-        if !has_permission {
-            return Err(ExtensionError::permission_denied(
-                extension_id,
-                method,
-                &format!("HTTP request to '{}'", url),
             ));
         }
 
@@ -410,7 +428,7 @@ impl PermissionManager {
     pub fn parse_resource_type(s: &str) -> Result<ResourceType, DatabaseError> {
         match s {
             "fs" => Ok(ResourceType::Fs),
-            "http" => Ok(ResourceType::Http),
+            "web" => Ok(ResourceType::Web),
             "db" => Ok(ResourceType::Db),
             "shell" => Ok(ResourceType::Shell),
             _ => Err(DatabaseError::SerializationError {

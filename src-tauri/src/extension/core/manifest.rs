@@ -1,6 +1,6 @@
 use crate::extension::error::ExtensionError;
 use crate::extension::permissions::types::{
-    Action, DbAction, ExtensionPermission, FsAction, HttpAction, PermissionConstraints,
+    Action, DbAction, ExtensionPermission, FsAction, WebAction, PermissionConstraints,
     PermissionStatus, ResourceType, ShellAction,
 };
 use serde::{Deserialize, Serialize};
@@ -117,7 +117,7 @@ impl ExtensionPermissions {
         }
         if let Some(entries) = &self.http {
             for p in entries {
-                if let Some(perm) = Self::create_internal(extension_id, ResourceType::Http, p) {
+                if let Some(perm) = Self::create_internal(extension_id, ResourceType::Web, p) {
                     permissions.push(perm);
                 }
             }
@@ -146,7 +146,7 @@ impl ExtensionPermissions {
             ResourceType::Fs => FsAction::from_str(operation_str)
                 .ok()
                 .map(Action::Filesystem),
-            ResourceType::Http => HttpAction::from_str(operation_str).ok().map(Action::Http),
+            ResourceType::Web => WebAction::from_str(operation_str).ok().map(Action::Web),
             ResourceType::Shell => ShellAction::from_str(operation_str).ok().map(Action::Shell),
         };
 

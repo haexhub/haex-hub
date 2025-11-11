@@ -41,7 +41,7 @@ pub async fn extension_web_open(
     state: State<'_, AppState>,
 ) -> Result<(), ExtensionError> {
     // Get extension to validate it exists
-    let _extension = state
+    let extension = state
         .extension_manager
         .get_extension_by_public_key_and_name(&public_key, &name)?
         .ok_or_else(|| ExtensionError::NotFound {
@@ -61,6 +61,15 @@ pub async fn extension_web_open(
             reason: format!("Unsupported URL scheme: {}. Only http and https are allowed.", scheme),
         });
     }
+
+    // Check web permissions (open uses GET method for permission check)
+    crate::extension::permissions::manager::PermissionManager::check_web_permission(
+        &state,
+        &extension.id,
+        "GET",
+        &url,
+    )
+    .await?;
 
     // Open URL in default browser using tauri-plugin-opener
     tauri_plugin_opener::open_url(&url, None::<&str>).map_err(|e| ExtensionError::WebError {
@@ -82,7 +91,7 @@ pub async fn extension_web_fetch(
     state: State<'_, AppState>,
 ) -> Result<WebFetchResponse, ExtensionError> {
     // Get extension to validate it exists
-    let _extension = state
+    let extension = state
         .extension_manager
         .get_extension_by_public_key_and_name(&public_key, &name)?
         .ok_or_else(|| ExtensionError::NotFound {
@@ -90,13 +99,20 @@ pub async fn extension_web_fetch(
             name: name.clone(),
         })?;
 
-    // TODO: Add permission check for web requests once permission system is complete
-    // For now, extensions are allowed to make web requests
-    // Use _extension for permission validation when implemented
+    let method_str = method.as_deref().unwrap_or("GET");
+
+    // Check web permissions before making request
+    crate::extension::permissions::manager::PermissionManager::check_web_permission(
+        &state,
+        &extension.id,
+        method_str,
+        &url,
+    )
+    .await?;
 
     let request = WebFetchRequest {
         url,
-        method,
+        method: Some(method_str.to_string()),
         headers,
         body,
         timeout,

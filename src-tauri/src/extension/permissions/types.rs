@@ -86,11 +86,11 @@ impl FromStr for FsAction {
     }
 }
 
-/// Definiert Aktionen (HTTP-Methoden), die auf HTTP-Anfragen angewendet werden können.
+/// Definiert Aktionen (HTTP-Methoden), die auf Web-Anfragen angewendet werden können.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "UPPERCASE")]
 #[ts(export)]
-pub enum HttpAction {
+pub enum WebAction {
     Get,
     Post,
     Put,
@@ -100,20 +100,20 @@ pub enum HttpAction {
     All,
 }
 
-impl FromStr for HttpAction {
+impl FromStr for WebAction {
     type Err = ExtensionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_uppercase().as_str() {
-            "GET" => Ok(HttpAction::Get),
-            "POST" => Ok(HttpAction::Post),
-            "PUT" => Ok(HttpAction::Put),
-            "PATCH" => Ok(HttpAction::Patch),
-            "DELETE" => Ok(HttpAction::Delete),
-            "*" => Ok(HttpAction::All),
+            "GET" => Ok(WebAction::Get),
+            "POST" => Ok(WebAction::Post),
+            "PUT" => Ok(WebAction::Put),
+            "PATCH" => Ok(WebAction::Patch),
+            "DELETE" => Ok(WebAction::Delete),
+            "*" => Ok(WebAction::All),
             _ => Err(ExtensionError::InvalidActionString {
                 input: s.to_string(),
-                resource_type: "http".to_string(),
+                resource_type: "web".to_string(),
             }),
         }
     }
@@ -149,7 +149,7 @@ impl FromStr for ShellAction {
 pub enum Action {
     Database(DbAction),
     Filesystem(FsAction),
-    Http(HttpAction),
+    Web(WebAction),
     Shell(ShellAction),
 }
 
@@ -173,7 +173,7 @@ pub struct ExtensionPermission {
 #[ts(export)]
 pub enum ResourceType {
     Fs,
-    Http,
+    Web,
     Db,
     Shell,
 }
@@ -195,7 +195,7 @@ pub enum PermissionStatus {
 pub enum PermissionConstraints {
     Database(DbConstraints),
     Filesystem(FsConstraints),
-    Http(HttpConstraints),
+    Web(WebConstraints),
     Shell(ShellConstraints),
 }
 
@@ -223,7 +223,7 @@ pub struct FsConstraints {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, TS)]
 #[ts(export)]
-pub struct HttpConstraints {
+pub struct WebConstraints {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub methods: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -254,7 +254,7 @@ impl ResourceType {
     pub fn as_str(&self) -> &str {
         match self {
             ResourceType::Fs => "fs",
-            ResourceType::Http => "http",
+            ResourceType::Web => "web",
             ResourceType::Db => "db",
             ResourceType::Shell => "shell",
         }
@@ -263,7 +263,7 @@ impl ResourceType {
     pub fn from_str(s: &str) -> Result<Self, ExtensionError> {
         match s {
             "fs" => Ok(ResourceType::Fs),
-            "http" => Ok(ResourceType::Http),
+            "web" => Ok(ResourceType::Web),
             "db" => Ok(ResourceType::Db),
             "shell" => Ok(ResourceType::Shell),
             _ => Err(ExtensionError::ValidationError {
@@ -284,7 +284,7 @@ impl Action {
                 .unwrap_or_default()
                 .trim_matches('"')
                 .to_string(),
-            Action::Http(action) => serde_json::to_string(action)
+            Action::Web(action) => serde_json::to_string(action)
                 .unwrap_or_default()
                 .trim_matches('"')
                 .to_string(),
@@ -299,15 +299,15 @@ impl Action {
         match resource_type {
             ResourceType::Db => Ok(Action::Database(DbAction::from_str(s)?)),
             ResourceType::Fs => Ok(Action::Filesystem(FsAction::from_str(s)?)),
-            ResourceType::Http => {
-                let action: HttpAction =
+            ResourceType::Web => {
+                let action: WebAction =
                     serde_json::from_str(&format!("\"{s}\"")).map_err(|_| {
                         ExtensionError::InvalidActionString {
                             input: s.to_string(),
-                            resource_type: "http".to_string(),
+                            resource_type: "web".to_string(),
                         }
                     })?;
-                Ok(Action::Http(action))
+                Ok(Action::Web(action))
             }
             ResourceType::Shell => Ok(Action::Shell(ShellAction::from_str(s)?)),
         }
