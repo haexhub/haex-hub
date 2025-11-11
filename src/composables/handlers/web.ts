@@ -62,11 +62,23 @@ async function handleWebFetchAsync(
       body: response.body,
       url: response.url,
     }
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Web request error:', error)
+
+    // Check if it's a permission denied error
+    if (error?.code === 1002 || error?.message?.includes('Permission denied')) {
+      const toast = useToast()
+      toast.add({
+        title: 'Permission denied',
+        description: `Extension "${extension.name}" does not have permission to access ${url}`,
+        color: 'error',
+      })
+    }
+
     if (error instanceof Error) {
       throw new Error(`Web request failed: ${error.message}`)
     }
-    throw new Error('Web request failed with unknown error')
+    throw new Error(`Web request failed with unknown error: ${JSON.stringify(error)}`)
   }
 }
 

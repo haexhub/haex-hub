@@ -1,7 +1,14 @@
 mod crdt;
 mod database;
 mod extension;
-use crate::{crdt::hlc::HlcService, database::DbConnection, extension::core::ExtensionManager};
+use crate::{
+    crdt::hlc::HlcService,
+    database::DbConnection,
+    extension::{
+        core::ExtensionManager,
+        webview::ExtensionWebviewManager,
+    }
+};
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
@@ -9,10 +16,15 @@ pub mod table_names {
     include!(concat!(env!("OUT_DIR"), "/tableNames.rs"));
 }
 
+pub mod event_names {
+    include!(concat!(env!("OUT_DIR"), "/eventNames.rs"));
+}
+
 pub struct AppState {
     pub db: DbConnection,
     pub hlc: Mutex<HlcService>,
     pub extension_manager: ExtensionManager,
+    pub extension_webview_manager: ExtensionWebviewManager,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -54,6 +66,7 @@ pub fn run() {
             db: DbConnection(Arc::new(Mutex::new(None))),
             hlc: Mutex::new(HlcService::new()),
             extension_manager: ExtensionManager::new(),
+            extension_webview_manager: ExtensionWebviewManager::new(),
         })
         //.manage(ExtensionState::default())
         .plugin(tauri_plugin_dialog::init())
@@ -80,6 +93,9 @@ pub fn run() {
             extension::database::extension_sql_select,
             extension::web::extension_web_fetch,
             extension::web::extension_web_open,
+            extension::permissions::check::check_web_permission,
+            extension::permissions::check::check_database_permission,
+            extension::permissions::check::check_filesystem_permission,
             extension::get_all_dev_extensions,
             extension::get_all_extensions,
             extension::get_extension_info,
@@ -89,6 +105,11 @@ pub fn run() {
             extension::preview_extension,
             extension::remove_dev_extension,
             extension::remove_extension,
+            extension::open_extension_webview_window,
+            extension::close_extension_webview_window,
+            extension::focus_extension_webview_window,
+            extension::update_extension_webview_window_position,
+            extension::update_extension_webview_window_size,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
