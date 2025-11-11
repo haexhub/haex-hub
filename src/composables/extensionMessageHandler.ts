@@ -7,7 +7,7 @@ import {
 import {
   handleDatabaseMethodAsync,
   handleFilesystemMethodAsync,
-  handleHttpMethodAsync,
+  handleWebMethodAsync,
   handlePermissionsMethodAsync,
   handleContextMethodAsync,
   handleStorageMethodAsync,
@@ -165,8 +165,8 @@ const registerGlobalMessageHandler = () => {
         result = await handleDatabaseMethodAsync(request, instance.extension)
       } else if (request.method.startsWith('haextension.fs.')) {
         result = await handleFilesystemMethodAsync(request, instance.extension)
-      } else if (request.method.startsWith('haextension.http.')) {
-        result = await handleHttpMethodAsync(request, instance.extension)
+      } else if (request.method.startsWith('haextension.web.')) {
+        result = await handleWebMethodAsync(request, instance.extension)
       } else if (request.method.startsWith('haextension.permissions.')) {
         result = await handlePermissionsMethodAsync(request, instance.extension)
       } else {

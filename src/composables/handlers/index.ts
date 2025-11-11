@@ -1,7 +1,7 @@
 // Export all handler functions
 export { handleDatabaseMethodAsync } from './database'
 export { handleFilesystemMethodAsync } from './filesystem'
-export { handleHttpMethodAsync } from './http'
+export { handleWebMethodAsync } from './web'
 export { handlePermissionsMethodAsync } from './permissions'
 export { handleContextMethodAsync, setContextGetters } from './context'
 export { handleStorageMethodAsync } from './storage'
