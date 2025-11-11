@@ -79,6 +79,7 @@ pub fn run() {
             extension::database::extension_sql_execute,
             extension::database::extension_sql_select,
             extension::web::extension_web_fetch,
+            extension::web::extension_web_open,
             extension::get_all_dev_extensions,
             extension::get_all_extensions,
             extension::get_extension_info,

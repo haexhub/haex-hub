@@ -16,6 +16,10 @@ export async function handleWebMethodAsync(
     return await handleWebFetchAsync(params, extension)
   }
 
+  if (method === 'haextension.web.open') {
+    return await handleWebOpenAsync(params, extension)
+  }
+
   throw new Error(`Unknown web method: ${method}`)
 }
 
@@ -63,5 +67,30 @@ async function handleWebFetchAsync(
       throw new Error(`Web request failed: ${error.message}`)
     }
     throw new Error('Web request failed with unknown error')
+  }
+}
+
+async function handleWebOpenAsync(
+  params: Record<string, unknown>,
+  extension: IHaexHubExtension,
+) {
+  const url = params.url as string
+
+  if (!url) {
+    throw new Error('URL is required')
+  }
+
+  try {
+    // Call Rust backend to open URL in default browser
+    await invoke<void>('extension_web_open', {
+      url,
+      publicKey: extension.publicKey,
+      name: extension.name,
+    })
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to open URL: ${error.message}`)
+    }
+    throw new Error('Failed to open URL with unknown error')
   }
 }

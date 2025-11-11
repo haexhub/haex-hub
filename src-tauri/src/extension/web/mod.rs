@@ -34,6 +34,43 @@ pub struct WebFetchResponse {
 }
 
 #[tauri::command]
+pub async fn extension_web_open(
+    url: String,
+    public_key: String,
+    name: String,
+    state: State<'_, AppState>,
+) -> Result<(), ExtensionError> {
+    // Get extension to validate it exists
+    let _extension = state
+        .extension_manager
+        .get_extension_by_public_key_and_name(&public_key, &name)?
+        .ok_or_else(|| ExtensionError::NotFound {
+            public_key: public_key.clone(),
+            name: name.clone(),
+        })?;
+
+    // Validate URL format
+    let parsed_url = url::Url::parse(&url).map_err(|e| ExtensionError::WebError {
+        reason: format!("Invalid URL: {}", e),
+    })?;
+
+    // Only allow http and https URLs
+    let scheme = parsed_url.scheme();
+    if scheme != "http" && scheme != "https" {
+        return Err(ExtensionError::WebError {
+            reason: format!("Unsupported URL scheme: {}. Only http and https are allowed.", scheme),
+        });
+    }
+
+    // Open URL in default browser using tauri-plugin-opener
+    tauri_plugin_opener::open_url(&url, None::<&str>).map_err(|e| ExtensionError::WebError {
+        reason: format!("Failed to open URL in browser: {}", e),
+    })?;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn extension_web_fetch(
     url: String,
     method: Option<String>,
