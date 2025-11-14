@@ -305,14 +305,20 @@ impl ExtensionWebviewManager {
             reason: e.to_string(),
         })?;
 
+        eprintln!("[Manager] Emitting event '{}' to {} webview windows", event, windows.len());
+
         // Iterate over all window IDs
         for window_id in windows.keys() {
+            eprintln!("[Manager] Trying to emit to window: {}", window_id);
             #[cfg(not(any(target_os = "android", target_os = "ios")))]
             if let Some(window) = app_handle.get_webview_window(window_id) {
                 // Emit event to this specific webview window
-                if let Err(e) = window.emit(event, payload.clone()) {
-                    eprintln!("Failed to emit event {} to window {}: {}", event, window_id, e);
+                match window.emit(event, payload.clone()) {
+                    Ok(_) => eprintln!("[Manager] Successfully emitted event '{}' to window {}", event, window_id),
+                    Err(e) => eprintln!("[Manager] Failed to emit event {} to window {}: {}", event, window_id, e),
                 }
+            } else {
+                eprintln!("[Manager] Window not found: {}", window_id);
             }
         }
 
