@@ -2,7 +2,7 @@ use crate::database::core::with_connection;
 use crate::database::error::DatabaseError;
 use crate::extension::core::manifest::{EditablePermissions, ExtensionManifest, ExtensionPreview};
 use crate::extension::core::types::{copy_directory, Extension, ExtensionSource};
-use crate::extension::core::ExtensionPermissions;
+use crate::extension::core::{DisplayMode, ExtensionPermissions};
 use crate::extension::crypto::ExtensionCrypto;
 use crate::extension::database::executor::SqlExecutor;
 use crate::extension::error::ExtensionError;
@@ -136,12 +136,16 @@ impl ExtensionManager {
 
         // Fallback 1: Check haextension/favicon.ico
         let haextension_favicon = format!("{haextension_dir}/favicon.ico");
-        if let Some(clean_path) = Self::validate_path_in_directory(extension_dir, &haextension_favicon, true)? {
+        if let Some(clean_path) =
+            Self::validate_path_in_directory(extension_dir, &haextension_favicon, true)?
+        {
             return Ok(Some(clean_path.to_string_lossy().to_string()));
         }
 
         // Fallback 2: Check public/favicon.ico
-        if let Some(clean_path) = Self::validate_path_in_directory(extension_dir, "public/favicon.ico", true)? {
+        if let Some(clean_path) =
+            Self::validate_path_in_directory(extension_dir, "public/favicon.ico", true)?
+        {
             return Ok(Some(clean_path.to_string_lossy().to_string()));
         }
 
@@ -156,16 +160,20 @@ impl ExtensionManager {
         app_handle: &AppHandle,
     ) -> Result<ExtractedExtension, ExtensionError> {
         // Use app_cache_dir for better Android compatibility
-        let cache_dir = app_handle
-            .path()
-            .app_cache_dir()
-            .map_err(|e| ExtensionError::InstallationFailed {
-                reason: format!("Cannot get app cache dir: {e}"),
-            })?;
+        let cache_dir =
+            app_handle
+                .path()
+                .app_cache_dir()
+                .map_err(|e| ExtensionError::InstallationFailed {
+                    reason: format!("Cannot get app cache dir: {e}"),
+                })?;
 
         let temp_id = uuid::Uuid::new_v4();
         let temp = cache_dir.join(format!("{temp_prefix}_{temp_id}"));
-        let zip_file_path = cache_dir.join(format!("{}_{}_{}.haextension", temp_prefix, temp_id, "temp"));
+        let zip_file_path = cache_dir.join(format!(
+            "{}_{}_{}.haextension",
+            temp_prefix, temp_id, "temp"
+        ));
 
         // Write bytes to a temporary ZIP file first (important for Android file system)
         fs::write(&zip_file_path, &bytes).map_err(|e| {
@@ -181,11 +189,10 @@ impl ExtensionManager {
             ExtensionError::filesystem_with_path(zip_file_path.display().to_string(), e)
         })?;
 
-        let mut archive = ZipArchive::new(zip_file).map_err(|e| {
-            ExtensionError::InstallationFailed {
+        let mut archive =
+            ZipArchive::new(zip_file).map_err(|e| ExtensionError::InstallationFailed {
                 reason: format!("Invalid ZIP: {e}"),
-            }
-        })?;
+            })?;
 
         archive
             .extract(&temp)
@@ -199,15 +206,17 @@ impl ExtensionManager {
         // Read haextension_dir from config if it exists, otherwise use default
         let config_path = temp.join("haextension.config.json");
         let haextension_dir = if config_path.exists() {
-            let config_content = std::fs::read_to_string(&config_path)
-                .map_err(|e| ExtensionError::ManifestError {
+            let config_content = std::fs::read_to_string(&config_path).map_err(|e| {
+                ExtensionError::ManifestError {
                     reason: format!("Cannot read haextension.config.json: {e}"),
-                })?;
+                }
+            })?;
 
-            let config: serde_json::Value = serde_json::from_str(&config_content)
-                .map_err(|e| ExtensionError::ManifestError {
+            let config: serde_json::Value = serde_json::from_str(&config_content).map_err(|e| {
+                ExtensionError::ManifestError {
                     reason: format!("Invalid haextension.config.json: {e}"),
-                })?;
+                }
+            })?;
 
             let dir = config
                 .get("dev")
@@ -237,14 +246,19 @@ impl ExtensionManager {
         let mut manifest: ExtensionManifest = serde_json::from_str(&manifest_content)?;
 
         // Validate and resolve icon path with fallback logic
-        let validated_icon = Self::validate_and_resolve_icon_path(&actual_dir, &haextension_dir, manifest.icon.as_deref())?;
+        let validated_icon = Self::validate_and_resolve_icon_path(
+            &actual_dir,
+            &haextension_dir,
+            manifest.icon.as_deref(),
+        )?;
         manifest.icon = validated_icon;
 
-        let content_hash = ExtensionCrypto::hash_directory(&actual_dir, &manifest_path).map_err(|e| {
-            ExtensionError::SignatureVerificationFailed {
-                reason: e.to_string(),
-            }
-        })?;
+        let content_hash =
+            ExtensionCrypto::hash_directory(&actual_dir, &manifest_path).map_err(|e| {
+                ExtensionError::SignatureVerificationFailed {
+                    reason: e.to_string(),
+                }
+            })?;
 
         Ok(ExtractedExtension {
             temp_dir: actual_dir,
@@ -437,9 +451,7 @@ impl ExtensionManager {
             })?;
 
         eprintln!("DEBUG: Removing extension with ID: {}", extension.id);
-        eprintln!(
-            "DEBUG: Extension name: {extension_name}, version: {extension_version}"
-        );
+        eprintln!("DEBUG: Extension name: {extension_name}, version: {extension_version}");
 
         // Lösche Permissions und Extension-Eintrag in einer Transaktion
         with_connection(&state.db, |conn| {
@@ -516,7 +528,8 @@ impl ExtensionManager {
         app_handle: &AppHandle,
         file_bytes: Vec<u8>,
     ) -> Result<ExtensionPreview, ExtensionError> {
-        let extracted = Self::extract_and_validate_extension(file_bytes, "haexhub_preview", app_handle)?;
+        let extracted =
+            Self::extract_and_validate_extension(file_bytes, "haexhub_preview", app_handle)?;
 
         let is_valid_signature = ExtensionCrypto::verify_signature(
             &extracted.manifest.public_key,
@@ -541,7 +554,8 @@ impl ExtensionManager {
         custom_permissions: EditablePermissions,
         state: &State<'_, AppState>,
     ) -> Result<String, ExtensionError> {
-        let extracted = Self::extract_and_validate_extension(file_bytes, "haexhub_ext", &app_handle)?;
+        let extracted =
+            Self::extract_and_validate_extension(file_bytes, "haexhub_ext", &app_handle)?;
 
         // Signatur verifizieren (bei Installation wird ein Fehler geworfen, nicht nur geprüft)
         ExtensionCrypto::verify_signature(
@@ -612,28 +626,29 @@ impl ExtensionManager {
 
             // 1. Extension-Eintrag erstellen mit generierter UUID
             let insert_ext_sql = format!(
-                "INSERT INTO {TABLE_EXTENSIONS} (id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled, single_instance) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO {TABLE_EXTENSIONS} (id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled, single_instance, display_mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             );
 
             SqlExecutor::execute_internal_typed(
-                    &tx,
-                    &hlc_service,
-                    &insert_ext_sql,
-                    rusqlite::params![
-                        extension_id,
-                        extracted.manifest.name,
-                        extracted.manifest.version,
-                        extracted.manifest.author,
-                        extracted.manifest.entry,
-                        extracted.manifest.icon,
-                        extracted.manifest.public_key,
-                        extracted.manifest.signature,
-                        extracted.manifest.homepage,
-                        extracted.manifest.description,
-                        true, // enabled
-                        extracted.manifest.single_instance.unwrap_or(false),
-                    ],
-                )?;
+                &tx,
+                &hlc_service,
+                &insert_ext_sql,
+                rusqlite::params![
+                    extension_id,
+                    extracted.manifest.name,
+                    extracted.manifest.version,
+                    extracted.manifest.author,
+                    extracted.manifest.entry,
+                    extracted.manifest.icon,
+                    extracted.manifest.public_key,
+                    extracted.manifest.signature,
+                    extracted.manifest.homepage,
+                    extracted.manifest.description,
+                    true, // enabled
+                    extracted.manifest.single_instance.unwrap_or(false),
+                    extracted.manifest.display_mode.as_ref().map(|dm| format!("{:?}", dm).to_lowercase()).unwrap_or_else(|| "auto".to_string()),
+                ],
+            )?;
 
             // 2. Permissions speichern
             let insert_perm_sql = format!(
@@ -709,7 +724,7 @@ impl ExtensionManager {
         // Lade alle Daten aus der Datenbank
         let extensions = with_connection(&state.db, |conn| {
             let sql = format!(
-            "SELECT id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled, single_instance FROM {TABLE_EXTENSIONS}"
+            "SELECT id, name, version, author, entry, icon, public_key, signature, homepage, description, enabled, single_instance, display_mode FROM {TABLE_EXTENSIONS}"
         );
             eprintln!("DEBUG: SQL Query before transformation: {sql}");
 
@@ -750,6 +765,11 @@ impl ExtensionManager {
                     single_instance: row[11]
                         .as_bool()
                         .or_else(|| row[11].as_i64().map(|v| v != 0)),
+                    display_mode: row[12].as_str().and_then(|s| match s {
+                        "window" => Some(DisplayMode::Window),
+                        "iframe" => Some(DisplayMode::Iframe),
+                        "auto" | _ => Some(DisplayMode::Auto),
+                    }),
                 };
 
                 let enabled = row[10]
@@ -808,14 +828,12 @@ impl ExtensionManager {
                 match std::fs::read_to_string(&config_path) {
                     Ok(config_content) => {
                         match serde_json::from_str::<serde_json::Value>(&config_content) {
-                            Ok(config) => {
-                                config
-                                    .get("dev")
-                                    .and_then(|dev| dev.get("haextension_dir"))
-                                    .and_then(|dir| dir.as_str())
-                                    .unwrap_or("haextension")
-                                    .to_string()
-                            }
+                            Ok(config) => config
+                                .get("dev")
+                                .and_then(|dev| dev.get("haextension_dir"))
+                                .and_then(|dir| dir.as_str())
+                                .unwrap_or("haextension")
+                                .to_string(),
                             Err(_) => "haextension".to_string(),
                         }
                     }

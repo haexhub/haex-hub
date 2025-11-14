@@ -30,9 +30,7 @@ export const haexDevices = sqliteTable(
     id: text(tableNames.haex.devices.columns.id)
       .$defaultFn(() => crypto.randomUUID())
       .primaryKey(),
-    deviceId: text(tableNames.haex.devices.columns.deviceId)
-      .notNull()
-      .unique(),
+    deviceId: text(tableNames.haex.devices.columns.deviceId).notNull().unique(),
     name: text(tableNames.haex.devices.columns.name).notNull(),
     createdAt: text(tableNames.haex.devices.columns.createdAt).default(
       sql`(CURRENT_TIMESTAMP)`,
@@ -81,6 +79,7 @@ export const haexExtensions = sqliteTable(
     icon: text(),
     signature: text().notNull(),
     single_instance: integer({ mode: 'boolean' }).default(false),
+    display_mode: text().default('auto'),
   }),
   (table) => [
     // UNIQUE constraint: Pro Developer (public_key) kann nur eine Extension mit diesem Namen existieren
@@ -102,7 +101,7 @@ export const haexExtensionPermissions = sqliteTable(
         onDelete: 'cascade',
       }),
     resourceType: text('resource_type', {
-      enum: ['fs', 'http', 'db', 'shell'],
+      enum: ['fs', 'web', 'db', 'shell'],
     }),
     action: text({ enum: ['read', 'write'] }),
     target: text(),

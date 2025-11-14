@@ -1,5 +1,9 @@
 import { defineAsyncComponent, type Component } from 'vue'
 import { getFullscreenDimensions } from '~/utils/viewport'
+import { isDesktop } from '~/utils/platform'
+import { invoke } from '@tauri-apps/api/core'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { EXTENSION_WINDOW_CLOSED } from '~/constants/events'
 
 export interface IWindow {
   id: string
@@ -87,6 +91,18 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
       resizable: true,
       singleton: false,
     },
+    debugLogs: {
+      id: 'debugLogs',
+      name: 'Debug Logs',
+      icon: 'i-heroicons-bug-ant',
+      component: defineAsyncComponent(
+        () => import('@/components/haex/system/debug-logs.vue'),
+      ),
+      defaultWidth: 1000,
+      defaultHeight: 700,
+      resizable: true,
+      singleton: true,
+    },
   }
 
   const getSystemWindow = (id: string): SystemWindowDefinition | undefined => {
@@ -141,6 +157,73 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
     workspaceId?: string
   }) => {
     try {
+      // Desktop: Check extension's display_mode preference
+      if (type === 'extension') {
+        const extensionsStore = useExtensionsStore()
+        const extension = extensionsStore.availableExtensions.find(
+          (e) => e.id === sourceId,
+        )
+        const finalTitle = title ?? extension?.name ?? 'Extension'
+
+        // Determine if we should use native window based on display_mode and platform
+        const displayMode = extension?.displayMode ?? 'auto'
+        const shouldUseNativeWindow =
+          (displayMode === 'window') ||
+          (displayMode === 'auto' && isDesktop())
+
+        console.log('[windowManager] Extension display mode check:', {
+          extensionId: sourceId,
+          extensionName: extension?.name,
+          displayMode,
+          isDesktop: isDesktop(),
+          shouldUseNativeWindow,
+        })
+
+        // Desktop: Extensions can run in native WebviewWindows (separate processes)
+        if (isDesktop() && shouldUseNativeWindow) {
+          try {
+            console.log('[windowManager] Opening native window with sourceId:', sourceId)
+            console.log('[windowManager] Extension object:', extension)
+            // Backend generates and returns the window_id
+            const windowId = await invoke<string>('open_extension_webview_window', {
+              extensionId: sourceId,
+              title: finalTitle,
+              width,
+              height,
+              x: undefined, // Let OS handle positioning
+              y: undefined,
+            })
+
+            // Store minimal metadata for tracking (no UI management needed on desktop)
+            const newWindow: IWindow = {
+              id: windowId, // Use window_id from backend as ID
+              workspaceId: '', // Not used on desktop
+              type,
+              sourceId,
+              title: finalTitle,
+              icon,
+              x: 0,
+              y: 0,
+              width,
+              height,
+              isMinimized: false,
+              zIndex: 0,
+              isOpening: false,
+              isClosing: false,
+            }
+            windows.value.push(newWindow)
+
+            return windowId
+          } catch (error) {
+            console.error('Failed to open native extension window:', error)
+            throw error
+          }
+        }
+
+        // If display_mode is 'iframe' or we're not on desktop, fall through to iframe logic
+      }
+
+      // Mobile: Full UI-based window management (original logic)
       // Wenn kein workspaceId angegeben ist, nutze die current workspace
       const targetWorkspaceId =
         workspaceId || useWorkspaceStore().currentWorkspace?.id
@@ -274,10 +357,36 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
    * In Zukunft sollte aber vorher ein close event an die Erweiterungen via postMessage geschickt werden,
    * so dass die Erweiterungen darauf reagieren können, um eventuell ungespeicherte Daten zu sichern
    *****************************************************************************************************/
-  const closeWindow = (windowId: string) => {
+  const closeWindow = async (windowId: string) => {
     const window = windows.value.find((w) => w.id === windowId)
     if (!window) return
 
+    // Desktop: Close native WebviewWindow for extensions (only if it's actually a native window)
+    // Check if extension is using native window mode (not iframe)
+    if (isDesktop() && window.type === 'extension') {
+      const extensionsStore = useExtensionsStore()
+      const extension = extensionsStore.availableExtensions.find(
+        (e) => e.id === window.sourceId,
+      )
+      const displayMode = extension?.displayMode ?? 'auto'
+      const isNativeWindow =
+        (displayMode === 'window') ||
+        (displayMode === 'auto' && isDesktop())
+
+      // Only try to close native window if it's actually running as native window
+      if (isNativeWindow) {
+        try {
+          await invoke('close_extension_webview_window', { windowId })
+          // Backend will emit event, our listener will update frontend tracking
+        } catch (error) {
+          console.error('Failed to close native extension window:', error)
+        }
+        return
+      }
+      // If not a native window, fall through to iframe cleanup below
+    }
+
+    // Mobile: Animated close with iframe cleanup
     // Start closing animation
     window.isClosing = true
 
@@ -357,6 +466,34 @@ export const useWindowManagerStore = defineStore('windowManager', () => {
   const getMinimizedWindows = computed(() => {
     return currentWorkspaceWindows.value.filter((w) => w.isMinimized)
   })
+
+  // Desktop: Listen for native window close events from Tauri
+  // Backend is source of truth, frontend is read-only mirror for tracking
+  let _unlistenWindowClosed: UnlistenFn | null = null
+
+  const setupDesktopEventListenersAsync = async () => {
+    if (!isDesktop()) return
+
+    // Listen for native WebviewWindow close events from backend
+    _unlistenWindowClosed = await listen<string>(
+      EXTENSION_WINDOW_CLOSED,
+      (event) => {
+        const windowId = event.payload
+        console.log(`Native extension window closed: ${windowId}`)
+
+        // Remove from frontend tracking (read-only mirror of backend state)
+        const index = windows.value.findIndex((w) => w.id === windowId)
+        if (index !== -1) {
+          windows.value.splice(index, 1)
+        }
+      },
+    )
+  }
+
+  // Setup listeners on store creation (only on desktop)
+  if (isDesktop()) {
+    setupDesktopEventListenersAsync()
+  }
 
   return {
     activateWindow,

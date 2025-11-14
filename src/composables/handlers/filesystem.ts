@@ -2,6 +2,7 @@ import { save } from '@tauri-apps/plugin-dialog'
 import { writeFile } from '@tauri-apps/plugin-fs'
 import { openPath } from '@tauri-apps/plugin-opener'
 import { tempDir, join } from '@tauri-apps/api/path'
+import { HAEXTENSION_METHODS } from '@haexhub/sdk'
 import type { IHaexHubExtension } from '~/types/haexhub'
 import type { ExtensionRequest } from './types'
 
@@ -12,7 +13,7 @@ export async function handleFilesystemMethodAsync(
   if (!request || !extension) return
 
   switch (request.method) {
-    case 'haextension.fs.saveFile': {
+    case HAEXTENSION_METHODS.filesystem.saveFile: {
       const params = request.params as {
         data: number[]
         defaultPath?: string
@@ -44,7 +45,7 @@ export async function handleFilesystemMethodAsync(
       }
     }
 
-    case 'haextension.fs.showImage': {
+    case HAEXTENSION_METHODS.filesystem.showImage: {
       // This method is now handled by the frontend using PhotoSwipe
       // We keep it for backwards compatibility but it's a no-op
       return {
@@ -53,7 +54,7 @@ export async function handleFilesystemMethodAsync(
       }
     }
 
-    case 'haextension.fs.openFile': {
+    case HAEXTENSION_METHODS.filesystem.openFile: {
       const params = request.params as {
         data: number[]
         fileName: string

@@ -13,7 +13,8 @@ use ts_rs::TS;
 pub struct PermissionEntry {
     pub target: String,
 
-    /// Die auszuführende Aktion (z.B. "read", "read_write", "GET", "execute").
+    /// Die auszuführende Aktion (z.B. "read", "read_write", "execute").
+    /// Für Web-Permissions ist dies optional und wird ignoriert.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub operation: Option<String>,
 
@@ -53,8 +54,27 @@ pub type EditablePermissions = ExtensionPermissions;
 
 #[derive(Serialize, Deserialize, Clone, Debug, TS)]
 #[ts(export)]
+#[serde(rename_all = "lowercase")]
+pub enum DisplayMode {
+    /// Platform decides: Desktop = window, Mobile/Web = iframe (default)
+    Auto,
+    /// Always open in native window (if available, falls back to iframe)
+    Window,
+    /// Always open in iframe (embedded in main app)
+    Iframe,
+}
+
+impl Default for DisplayMode {
+    fn default() -> Self {
+        Self::Auto
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, TS)]
+#[ts(export)]
 pub struct ExtensionManifest {
     pub name: String,
+    #[serde(default = "default_version_value")]
     pub version: String,
     pub author: Option<String>,
     #[serde(default = "default_entry_value")]
@@ -67,10 +87,16 @@ pub struct ExtensionManifest {
     pub description: Option<String>,
     #[serde(default)]
     pub single_instance: Option<bool>,
+    #[serde(default)]
+    pub display_mode: Option<DisplayMode>,
 }
 
 fn default_entry_value() -> Option<String> {
     Some("index.html".to_string())
+}
+
+fn default_version_value() -> String {
+    "0.0.0-dev".to_string()
 }
 
 impl ExtensionManifest {
@@ -146,7 +172,14 @@ impl ExtensionPermissions {
             ResourceType::Fs => FsAction::from_str(operation_str)
                 .ok()
                 .map(Action::Filesystem),
-            ResourceType::Web => WebAction::from_str(operation_str).ok().map(Action::Web),
+            ResourceType::Web => {
+                // For web permissions, operation is optional - default to All
+                if operation_str.is_empty() {
+                    Some(Action::Web(WebAction::All))
+                } else {
+                    WebAction::from_str(operation_str).ok().map(Action::Web)
+                }
+            }
             ResourceType::Shell => ShellAction::from_str(operation_str).ok().map(Action::Shell),
         };
 
@@ -181,6 +214,7 @@ pub struct ExtensionInfoResponse {
     pub icon: Option<String>,
     pub entry: Option<String>,
     pub single_instance: Option<bool>,
+    pub display_mode: Option<DisplayMode>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dev_server_url: Option<String>,
 }
@@ -208,6 +242,7 @@ impl ExtensionInfoResponse {
             icon: extension.manifest.icon.clone(),
             entry: extension.manifest.entry.clone(),
             single_instance: extension.manifest.single_instance,
+            display_mode: extension.manifest.display_mode.clone(),
             dev_server_url,
         })
     }

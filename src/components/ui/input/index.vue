@@ -5,7 +5,6 @@
     :readonly="props.readOnly"
     :leading-icon="props.leadingIcon"
     :ui="{ base: 'peer' }"
-    size="lg"
     @change="(e) => $emit('change', e)"
     @blur="(e) => $emit('blur', e)"
     @keyup="(e: KeyboardEvent) => $emit('keyup', e)"

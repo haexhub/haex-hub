@@ -25,10 +25,10 @@ lazy_static::lazy_static! {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-struct ExtensionInfo {
-    public_key: String,
-    name: String,
-    version: String,
+pub struct ExtensionInfo {
+    pub public_key: String,
+    pub name: String,
+    pub version: String,
 }
 
 #[derive(Debug)]

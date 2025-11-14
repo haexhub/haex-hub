@@ -2,12 +2,14 @@ use crate::table_names::TABLE_EXTENSION_PERMISSIONS;
 use crate::AppState;
 use crate::database::core::with_connection;
 use crate::database::error::DatabaseError;
+use crate::extension::core::types::ExtensionSource;
 use crate::extension::database::executor::SqlExecutor;
 use crate::extension::error::ExtensionError;
 use crate::extension::permissions::types::{Action, ExtensionPermission, PermissionConstraints, PermissionStatus, ResourceType};
 use tauri::State;
 use crate::database::generated::HaexExtensionPermissions;
 use rusqlite::params;
+use std::path::Path;
 
 pub struct PermissionManager;
 
@@ -246,30 +248,55 @@ impl PermissionManager {
     }
 
     /// Prüft Web-Berechtigungen für Requests
+    /// Method/operation is not checked - only protocol, domain, port, and path
     pub async fn check_web_permission(
         app_state: &State<'_, AppState>,
         extension_id: &str,
-        method: &str,
         url: &str,
     ) -> Result<(), ExtensionError> {
-        // Optimiert: Lade nur Web-Permissions aus der Datenbank
-        let permissions = with_connection(&app_state.db, |conn| {
-            let sql = format!(
-                "SELECT * FROM {TABLE_EXTENSION_PERMISSIONS} WHERE extension_id = ? AND resource_type = 'web'"
-            );
-            let mut stmt = conn.prepare(&sql).map_err(DatabaseError::from)?;
+        // Load permissions - for dev extensions, get from manifest; for production, from database
+        let permissions = if let Some(extension) = app_state.extension_manager.get_extension(extension_id) {
+            match &extension.source {
+                ExtensionSource::Development { .. } => {
+                    // Dev extension - get web permissions from manifest
+                    extension.manifest.permissions
+                        .to_internal_permissions(extension_id)
+                        .into_iter()
+                        .filter(|p| p.resource_type == ResourceType::Web)
+                        .map(|mut p| {
+                            // Dev extensions have all permissions granted by default
+                            p.status = PermissionStatus::Granted;
+                            p
+                        })
+                        .collect()
+                }
+                ExtensionSource::Production { .. } => {
+                    // Production extension - load from database
+                    with_connection(&app_state.db, |conn| {
+                        let sql = format!(
+                            "SELECT * FROM {TABLE_EXTENSION_PERMISSIONS} WHERE extension_id = ? AND resource_type = 'web'"
+                        );
+                        let mut stmt = conn.prepare(&sql).map_err(DatabaseError::from)?;
 
-            let perms_iter = stmt.query_map(params![extension_id], |row| {
-                crate::database::generated::HaexExtensionPermissions::from_row(row)
-            })?;
+                        let perms_iter = stmt.query_map(params![extension_id], |row| {
+                            crate::database::generated::HaexExtensionPermissions::from_row(row)
+                        })?;
 
-            let permissions: Vec<ExtensionPermission> = perms_iter
-                .filter_map(Result::ok)
-                .map(Into::into)
-                .collect();
+                        let permissions: Vec<ExtensionPermission> = perms_iter
+                            .filter_map(Result::ok)
+                            .map(Into::into)
+                            .collect();
 
-            Ok(permissions)
-        })?;
+                        Ok(permissions)
+                    })?
+                }
+            }
+        } else {
+            // Extension not found - deny
+            return Err(ExtensionError::ValidationError {
+                reason: format!("Extension not found: {}", extension_id),
+            });
+        };
 
         let url_parsed = url::Url::parse(url).map_err(|e| ExtensionError::ValidationError {
             reason: format!("Invalid URL: {}", e),
@@ -283,37 +310,34 @@ impl PermissionManager {
             .iter()
             .filter(|perm| perm.status == PermissionStatus::Granted)
             .any(|perm| {
-                let domain_matches = perm.target == "*"
-                    || perm.target == domain
-                    || domain.ends_with(&format!(".{}", perm.target));
+                // Check if target matches the URL
+                let url_matches = if perm.target == "*" {
+                    // Wildcard matches everything
+                    true
+                } else if perm.target.contains("://") {
+                    // URL pattern matching (with protocol and optional path)
+                    Self::matches_url_pattern(&perm.target, url)
+                } else {
+                    // Domain-only matching (legacy behavior)
+                    perm.target == domain || domain.ends_with(&format!(".{}", perm.target))
+                };
 
-                if !domain_matches {
-                    return false;
-                }
-
-                if let Some(PermissionConstraints::Web(constraints)) = &perm.constraints {
-                    if let Some(methods) = &constraints.methods {
-                        if !methods.iter().any(|m| m.eq_ignore_ascii_case(method)) {
-                            return false;
-                        }
-                    }
-                }
-
-                true
+                // Return the URL match result (no method checking)
+                url_matches
             });
 
         if !has_permission {
             return Err(ExtensionError::permission_denied(
                 extension_id,
-                method,
-                &format!("web request to '{}'", url),
+                "web request",
+                url,
             ));
         }
 
         Ok(())
     }
 
-/*     /// Prüft Dateisystem-Berechtigungen
+    /// Prüft Dateisystem-Berechtigungen
     pub async fn check_filesystem_permission(
         app_state: &State<'_, AppState>,
         extension_id: &str,
@@ -423,7 +447,7 @@ impl PermissionManager {
 
         Ok(())
     }
- */
+
     // Helper-Methoden - müssen DatabaseError statt ExtensionError zurückgeben
     pub fn parse_resource_type(s: &str) -> Result<ResourceType, DatabaseError> {
         match s {
@@ -457,6 +481,114 @@ impl PermissionManager {
         }
 
         pattern == path || pattern == "*"
+    }
+
+    /// Matches a URL against a URL pattern
+    /// Supports:
+    /// - Path wildcards: "https://domain.com/*"
+    /// - Subdomain wildcards: "https://*.domain.com/*"
+    fn matches_url_pattern(pattern: &str, url: &str) -> bool {
+        // Parse the actual URL
+        let Ok(url_parsed) = url::Url::parse(url) else {
+            return false;
+        };
+
+        // Check if pattern contains subdomain wildcard
+        let has_subdomain_wildcard = pattern.contains("://*.") || pattern.starts_with("*.");
+
+        if has_subdomain_wildcard {
+            // Extract components for wildcard matching
+            // Pattern: "https://*.example.com/*"
+
+            // Get protocol from pattern
+            let protocol_end = pattern.find("://").unwrap_or(0);
+            let pattern_protocol = if protocol_end > 0 {
+                &pattern[..protocol_end]
+            } else {
+                ""
+            };
+
+            // Protocol must match if specified
+            if !pattern_protocol.is_empty() && pattern_protocol != url_parsed.scheme() {
+                return false;
+            }
+
+            // Extract the domain pattern (after *.  )
+            let domain_start = if pattern.contains("://*.") {
+                pattern.find("://*.").unwrap() + 5 // length of "://.*"
+            } else if pattern.starts_with("*.") {
+                2 // length of "*."
+            } else {
+                return false;
+            };
+
+            // Find where the domain pattern ends (at / or end of string)
+            let domain_pattern_end = pattern[domain_start..].find('/').map(|i| domain_start + i).unwrap_or(pattern.len());
+            let domain_pattern = &pattern[domain_start..domain_pattern_end];
+
+            // Check if the URL's host ends with the domain pattern
+            let Some(url_host) = url_parsed.host_str() else {
+                return false;
+            };
+
+            // Match: *.example.com should match subdomain.example.com but not example.com
+            // Also match: exact domain if no subdomain wildcard prefix
+            if !url_host.ends_with(domain_pattern) && url_host != domain_pattern {
+                return false;
+            }
+
+            // For subdomain wildcard, ensure there's actually a subdomain
+            if pattern.contains("*.") && url_host == domain_pattern {
+                return false; // *.example.com should NOT match example.com
+            }
+
+            // Check path wildcard if present
+            if pattern.contains("/*") {
+                // Any path is allowed
+                return true;
+            }
+
+            // Check exact path if no wildcard
+            let pattern_path_start = domain_pattern_end;
+            if pattern_path_start < pattern.len() {
+                let pattern_path = &pattern[pattern_path_start..];
+                return url_parsed.path() == pattern_path;
+            }
+
+            return true;
+        }
+
+        // No subdomain wildcard - parse as full URL
+        let Ok(pattern_url) = url::Url::parse(pattern) else {
+            return false;
+        };
+
+        // Protocol must match
+        if pattern_url.scheme() != url_parsed.scheme() {
+            return false;
+        }
+
+        // Host must match
+        if pattern_url.host_str() != url_parsed.host_str() {
+            return false;
+        }
+
+        // Port must match (if specified)
+        if pattern_url.port() != url_parsed.port() {
+            return false;
+        }
+
+        // Path matching with wildcard support
+        if pattern.contains("/*") {
+            // Extract the base path before the wildcard
+            if let Some(wildcard_pos) = pattern.find("/*") {
+                let pattern_before_wildcard = &pattern[..wildcard_pos];
+                return url.starts_with(pattern_before_wildcard);
+            }
+        }
+
+        // Exact path match (no wildcard)
+        pattern_url.path() == url_parsed.path()
     }
 
     

@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "extensions",
+  "description": "Minimal capability for extension webviews - extensions have NO direct system access",
+  "local": true,
+  "webviews": ["ext_*"],
+  "permissions": [
+    "core:default",
+    "core:webview:default",
+    "notification:default",
+    "notification:allow-is-permission-granted"
+  ],
+  "remote": {
+    "urls": ["http://localhost:*", "haex-extension://*"]
+  }
+}

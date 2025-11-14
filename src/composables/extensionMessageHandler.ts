@@ -1,5 +1,6 @@
 // composables/extensionMessageHandler.ts
 import type { IHaexHubExtension } from '~/types/haexhub'
+import { HAEXTENSION_METHODS, HAEXTENSION_EVENTS } from '@haexhub/sdk'
 import {
   EXTENSION_PROTOCOL_NAME,
   EXTENSION_PROTOCOL_PREFIX,
@@ -27,13 +28,36 @@ const windowIdToWindowMap = new Map<string, Window>()
 const registerGlobalMessageHandler = () => {
   if (globalHandlerRegistered) return
 
+  console.log('[ExtensionHandler] Registering global message handler')
+
   window.addEventListener('message', async (event: MessageEvent) => {
+    // Log ALL messages first for debugging
+    console.log('[ExtensionHandler] Raw message received:', {
+      origin: event.origin,
+      dataType: typeof event.data,
+      data: event.data,
+      hasSource: !!event.source,
+    })
+
     // Ignore console.forward messages - they're handled elsewhere
     if (event.data?.type === 'console.forward') {
       return
     }
 
+    // Handle debug messages for Android debugging
+    if (event.data?.type === 'haexhub:debug') {
+      console.log('[ExtensionHandler] DEBUG MESSAGE FROM EXTENSION:', event.data.data)
+      return
+    }
+
     const request = event.data as ExtensionRequest
+
+    console.log('[ExtensionHandler] Processing extension message:', {
+      origin: event.origin,
+      method: request?.method,
+      id: request?.id,
+      hasSource: !!event.source,
+    })
 
     // Find extension instance by decoding event.origin (works with sandboxed iframes)
     // Origin formats:
@@ -157,17 +181,36 @@ const registerGlobalMessageHandler = () => {
     try {
       let result: unknown
 
-      if (request.method.startsWith('haextension.context.')) {
+      // Check specific methods first, then use direct routing to handlers
+      if (request.method === HAEXTENSION_METHODS.context.get) {
         result = await handleContextMethodAsync(request)
-      } else if (request.method.startsWith('haextension.storage.')) {
+      } else if (
+        request.method === HAEXTENSION_METHODS.storage.getItem ||
+        request.method === HAEXTENSION_METHODS.storage.setItem ||
+        request.method === HAEXTENSION_METHODS.storage.removeItem ||
+        request.method === HAEXTENSION_METHODS.storage.clear ||
+        request.method === HAEXTENSION_METHODS.storage.keys
+      ) {
         result = await handleStorageMethodAsync(request, instance)
-      } else if (request.method.startsWith('haextension.db.')) {
+      } else if (
+        request.method === HAEXTENSION_METHODS.database.query ||
+        request.method === HAEXTENSION_METHODS.database.execute ||
+        request.method === HAEXTENSION_METHODS.database.transaction
+      ) {
         result = await handleDatabaseMethodAsync(request, instance.extension)
-      } else if (request.method.startsWith('haextension.fs.')) {
+      } else if (
+        request.method === HAEXTENSION_METHODS.filesystem.saveFile ||
+        request.method === HAEXTENSION_METHODS.filesystem.openFile ||
+        request.method === HAEXTENSION_METHODS.filesystem.showImage
+      ) {
         result = await handleFilesystemMethodAsync(request, instance.extension)
-      } else if (request.method.startsWith('haextension.web.')) {
+      } else if (
+        request.method === HAEXTENSION_METHODS.web.fetch ||
+        request.method === HAEXTENSION_METHODS.application.open
+      ) {
         result = await handleWebMethodAsync(request, instance.extension)
-      } else if (request.method.startsWith('haextension.permissions.')) {
+      } else if (request.method.startsWith('haextension:permissions:')) {
+        // Permissions noch nicht migriert
         result = await handlePermissionsMethodAsync(request, instance.extension)
       } else {
         throw new Error(`Unknown method: ${request.method}`)
@@ -317,7 +360,7 @@ export const broadcastContextToAllExtensions = (context: {
   platform?: string
 }) => {
   const message = {
-    type: 'haextension.context.changed',
+    type: HAEXTENSION_EVENTS.CONTEXT_CHANGED,
     data: { context },
     timestamp: Date.now(),
   }

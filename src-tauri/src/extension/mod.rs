@@ -15,6 +15,9 @@ pub mod filesystem;
 pub mod permissions;
 pub mod web;
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+pub mod webview;
+
 #[tauri::command]
 pub fn get_extension_info(
     public_key: String,
@@ -428,4 +431,86 @@ pub fn get_all_dev_extensions(
     }
 
     Ok(extensions)
+}
+
+// ============================================================================
+// WebviewWindow Commands (Desktop only)
+// ============================================================================
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+#[tauri::command]
+pub fn open_extension_webview_window(
+    app_handle: AppHandle,
+    state: State<'_, AppState>,
+    extension_id: String,
+    title: String,
+    width: f64,
+    height: f64,
+    x: Option<f64>,
+    y: Option<f64>,
+) -> Result<String, ExtensionError> {
+    eprintln!("[open_extension_webview_window] Received extension_id: {}", extension_id);
+    // Returns the window_id (generated UUID without dashes)
+    state.extension_webview_manager.open_extension_window(
+        &app_handle,
+        &state.extension_manager,
+        extension_id,
+        title,
+        width,
+        height,
+        x,
+        y,
+    )
+}
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+#[tauri::command]
+pub fn close_extension_webview_window(
+    app_handle: AppHandle,
+    state: State<'_, AppState>,
+    window_id: String,
+) -> Result<(), ExtensionError> {
+    state
+        .extension_webview_manager
+        .close_extension_window(&app_handle, &window_id)
+}
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+#[tauri::command]
+pub fn focus_extension_webview_window(
+    app_handle: AppHandle,
+    state: State<'_, AppState>,
+    window_id: String,
+) -> Result<(), ExtensionError> {
+    state
+        .extension_webview_manager
+        .focus_extension_window(&app_handle, &window_id)
+}
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+#[tauri::command]
+pub fn update_extension_webview_window_position(
+    app_handle: AppHandle,
+    state: State<'_, AppState>,
+    window_id: String,
+    x: f64,
+    y: f64,
+) -> Result<(), ExtensionError> {
+    state
+        .extension_webview_manager
+        .update_extension_window_position(&app_handle, &window_id, x, y)
+}
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+#[tauri::command]
+pub fn update_extension_webview_window_size(
+    app_handle: AppHandle,
+    state: State<'_, AppState>,
+    window_id: String,
+    width: f64,
+    height: f64,
+) -> Result<(), ExtensionError> {
+    state
+        .extension_webview_manager
+        .update_extension_window_size(&app_handle, &window_id, width, height)
 }

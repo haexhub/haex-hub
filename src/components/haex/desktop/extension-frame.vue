@@ -86,6 +86,21 @@ const extension = computed(() => {
 })
 
 const handleIframeLoad = () => {
+  console.log('[ExtensionFrame] Iframe loaded successfully for:', extension.value?.name)
+
+  // Try to inject a test script to see if JavaScript execution works
+  try {
+    if (iframeRef.value?.contentWindow) {
+      console.log('[ExtensionFrame] Iframe has contentWindow access')
+      // This will fail with sandboxed iframes without allow-same-origin
+      console.log('[ExtensionFrame] Iframe origin:', iframeRef.value.contentWindow.location.href)
+    } else {
+      console.warn('[ExtensionFrame] Iframe contentWindow is null/undefined')
+    }
+  } catch (e) {
+    console.warn('[ExtensionFrame] Cannot access iframe content (expected with sandbox):', e)
+  }
+
   // Delay the fade-in slightly to allow window animation to mostly complete
   setTimeout(() => {
     isLoading.value = false
@@ -102,13 +117,28 @@ const sandboxAttributes = computed(() => {
 
 // Generate extension URL
 const extensionUrl = computed(() => {
-  if (!extension.value) return ''
+  if (!extension.value) {
+    console.log('[ExtensionFrame] No extension found')
+    return ''
+  }
 
   const { publicKey, name, version, devServerUrl } = extension.value
   const assetPath = 'index.html'
 
+  console.log('[ExtensionFrame] Generating URL for extension:', {
+    name,
+    publicKey: publicKey?.substring(0, 10) + '...',
+    version,
+    devServerUrl,
+    platform,
+  })
+
   if (!publicKey || !name || !version) {
-    console.error('Missing required extension fields')
+    console.error('[ExtensionFrame] Missing required extension fields:', {
+      hasPublicKey: !!publicKey,
+      hasName: !!name,
+      hasVersion: !!version,
+    })
     return ''
   }
 
@@ -116,7 +146,9 @@ const extensionUrl = computed(() => {
   if (devServerUrl) {
     const cleanUrl = devServerUrl.replace(/\/$/, '')
     const cleanPath = assetPath.replace(/^\//, '')
-    return cleanPath ? `${cleanUrl}/${cleanPath}` : cleanUrl
+    const url = cleanPath ? `${cleanUrl}/${cleanPath}` : cleanUrl
+    console.log('[ExtensionFrame] Using dev server URL:', url)
+    return url
   }
 
   const extensionInfo = {
@@ -126,13 +158,18 @@ const extensionUrl = computed(() => {
   }
   const encodedInfo = btoa(JSON.stringify(extensionInfo))
 
+  let url = ''
   if (platform === 'android' || platform === 'windows') {
     // Android: Tauri uses http://{scheme}.localhost format
-    return `http://${EXTENSION_PROTOCOL_NAME}.localhost/${encodedInfo}/${assetPath}`
+    url = `http://${EXTENSION_PROTOCOL_NAME}.localhost/${encodedInfo}/${assetPath}`
+    console.log('[ExtensionFrame] Generated Android/Windows URL:', url)
   } else {
     // Desktop: Use custom protocol with base64 as host
-    return `${EXTENSION_PROTOCOL_PREFIX}${encodedInfo}/${assetPath}`
+    url = `${EXTENSION_PROTOCOL_PREFIX}${encodedInfo}/${assetPath}`
+    console.log('[ExtensionFrame] Generated Desktop URL:', url)
   }
+
+  return url
 })
 
 const retryLoad = () => {
@@ -150,19 +187,28 @@ onMounted(() => {
   // Wait for iframe to be ready
   if (iframeRef.value && extension.value) {
     console.log(
-      '[ExtensionFrame] Manually registering iframe on mount',
+      '[ExtensionFrame] Component MOUNTED',
       extension.value.name,
       'windowId:',
       props.windowId,
     )
     registerExtensionIFrame(iframeRef.value, extension.value, props.windowId)
+  } else {
+    console.warn('[ExtensionFrame] Component mounted but missing iframe or extension:', {
+      hasIframe: !!iframeRef.value,
+      hasExtension: !!extension.value,
+    })
   }
 })
 
 // Explicit cleanup before unmount
 onBeforeUnmount(() => {
+  console.log('[ExtensionFrame] Component UNMOUNTING', {
+    extensionId: props.extensionId,
+    windowId: props.windowId,
+    hasIframe: !!iframeRef.value,
+  })
   if (iframeRef.value) {
-    console.log('[ExtensionFrame] Unregistering iframe on unmount')
     unregisterExtensionIFrame(iframeRef.value)
   }
 })

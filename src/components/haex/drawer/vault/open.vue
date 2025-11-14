@@ -1,12 +1,11 @@
 <template>
-  <UiDialogConfirm
+  <UiDrawer
     v-model:open="open"
-    :confirm-label="t('open')"
-    :description="vault.path || path"
-    @confirm="onOpenDatabase"
+    :title="t('title')"
+    :description="path || t('description')"
   >
     <UiButton
-      :label="t('vault.open')"
+      :label="t('button.label')"
       :ui="{
         base: 'px-3 py-2',
       }"
@@ -16,37 +15,63 @@
       block
     />
 
-    <template #title>
-      <i18n-t
-        keypath="title"
-        tag="p"
-        class="flex gap-x-2 text-wrap"
-      >
-        <template #haexvault>
-          <UiTextGradient>HaexVault</UiTextGradient>
-        </template>
-      </i18n-t>
-    </template>
+    <template #content>
+      <div class="p-6 flex flex-col min-h-[50vh]">
+        <div class="flex-1 flex items-center justify-center px-4">
+          <div class="w-full max-w-md space-y-4">
+            <div
+              v-if="path"
+              class="text-sm text-gray-500 dark:text-gray-400"
+            >
+              <span class="font-medium">{{ t('path.label') }}:</span>
+              {{ path }}
+            </div>
 
-    <template #body>
-      <UForm
-        :state="vault"
-        class="flex flex-col gap-4 w-full h-full justify-center"
-      >
-        <UiInputPassword
-          v-model="vault.password"
-          class="w-full"
-          autofocus
-        />
+            <UForm
+              :state="vault"
+              class="w-full"
+            >
+              <UFormField
+                :label="t('password.label')"
+                name="password"
+              >
+                <UInput
+                  v-model="vault.password"
+                  type="password"
+                  icon="i-heroicons-key"
+                  :placeholder="t('password.placeholder')"
+                  autofocus
+                  size="xl"
+                  class="w-full"
+                  @keyup.enter="onOpenDatabase"
+                />
+              </UFormField>
+            </UForm>
+          </div>
+        </div>
 
-        <UButton
-          hidden
-          type="submit"
-          @click="onOpenDatabase"
-        />
-      </UForm>
+        <div class="flex gap-3 mt-auto pt-6">
+          <UButton
+            color="neutral"
+            variant="outline"
+            block
+            size="xl"
+            @click="open = false"
+          >
+            {{ t('cancel') }}
+          </UButton>
+          <UButton
+            color="primary"
+            block
+            size="xl"
+            @click="onOpenDatabase"
+          >
+            {{ t('open') }}
+          </UButton>
+        </div>
+      </div>
     </template>
-  </UiDialogConfirm>
+  </UiDrawer>
 </template>
 
 <script setup lang="ts">
@@ -156,7 +181,12 @@ const onOpenDatabase = async () => {
     )
   } catch (error) {
     open.value = false
-    if (error?.details?.reason === 'file is not a database') {
+    const errorDetails =
+      error && typeof error === 'object' && 'details' in error
+        ? (error as { details?: { reason?: string } }).details
+        : undefined
+
+    if (errorDetails?.reason === 'file is not a database') {
       add({
         color: 'error',
         title: t('error.password.title'),
@@ -171,25 +201,37 @@ const onOpenDatabase = async () => {
 
 <i18n lang="yaml">
 de:
+  button:
+    label: Vault öffnen
   open: Entsperren
-  title: '{haexvault} entsperren'
-  password: Passwort
-  vault:
-    open: Vault öffnen
+  cancel: Abbrechen
+  title: HaexVault entsperren
+  path:
+    label: Pfad
+  password:
+    label: Passwort
+    placeholder: Passwort eingeben
   description: Öffne eine vorhandene Vault
   error:
+    open: Vault konnte nicht geöffnet werden
     password:
       title: Vault konnte nicht geöffnet werden
-      description: Bitte üperprüfe das Passwort
+      description: Bitte überprüfe das Passwort
 
 en:
+  button:
+    label: Open Vault
   open: Unlock
-  title: Unlock {haexvault}
-  password: Passwort
+  cancel: Cancel
+  title: Unlock HaexVault
+  path:
+    label: Path
+  password:
+    label: Password
+    placeholder: Enter password
   description: Open your existing vault
-  vault:
-    open: Open Vault
   error:
+    open: Vault couldn't be opened
     password:
       title: Vault couldn't be opened
       description: Please check your password

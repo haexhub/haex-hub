@@ -58,6 +58,9 @@
       <slot />
     </main>
 
+    <!-- Page-specific Drawers -->
+    <slot name="drawers" />
+
     <!-- Workspace Drawer -->
     <HaexWorkspaceDrawer />
   </div>

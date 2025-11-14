@@ -1,4 +1,7 @@
 import { breakpointsTailwind } from '@vueuse/core'
+import { invoke } from '@tauri-apps/api/core'
+import { emit } from '@tauri-apps/api/event'
+import { HAEXTENSION_EVENTS } from '@haexhub/sdk'
 import { broadcastContextToAllExtensions } from '~/composables/extensionMessageHandler'
 
 import de from './de.json'
@@ -61,16 +64,31 @@ export const useUiStore = defineStore('uiStore', () => {
     colorMode.preference = currentThemeName.value
   })
 
-  // Broadcast theme and locale changes to extensions
+  // Broadcast theme and locale changes to extensions (including initial state)
   watch([currentThemeName, locale], async () => {
     const deviceStore = useDeviceStore()
     const platformValue = await deviceStore.platform
-    broadcastContextToAllExtensions({
+    const context = {
       theme: currentThemeName.value,
       locale: locale.value,
       platform: platformValue,
-    })
-  })
+    }
+
+    // Broadcast to iframe extensions (existing)
+    broadcastContextToAllExtensions(context)
+
+    // Update Tauri state and emit event for webview extensions
+    try {
+      await invoke('webview_extension_context_set', { context })
+      console.log('[UI Store] Context set in Tauri state:', context)
+      // Emit Tauri event so webview extensions can listen for changes
+      await emit(HAEXTENSION_EVENTS.CONTEXT_CHANGED, { context })
+      console.log('[UI Store] Emitted context change event:', context)
+    } catch (error) {
+      // Ignore error if not running in Tauri (e.g., browser mode)
+      console.debug('[UI Store] Failed to update Tauri context:', error)
+    }
+  }, { immediate: true })
 
   const viewportHeightWithoutHeader = ref(0)
   const headerHeight = ref(0)

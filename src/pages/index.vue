@@ -15,10 +15,10 @@
         </span>
 
         <div class="flex flex-col gap-4 h-24 items-stretch justify-center">
-          <HaexVaultCreate />
+          <HaexDrawerVaultCreate v-model:open="isCreateDrawerOpen" />
 
-          <HaexVaultOpen
-            v-model:open="passwordPromptOpen"
+          <HaexDrawerVaultOpen
+            v-model:open="isOpenDrawerOpen"
             :path="selectedVault?.path"
           />
         </div>
@@ -54,7 +54,7 @@
                 ]"
                 @click="
                   () => {
-                    passwordPromptOpen = true
+                    isOpenDrawerOpen = true
                     selectedVault = vault
                   }
                 "
@@ -111,8 +111,22 @@ definePageMeta({
 
 const { t } = useI18n()
 
-const passwordPromptOpen = ref(false)
+const isCreateDrawerOpen = ref(false)
+const isOpenDrawerOpen = ref(false)
 const selectedVault = ref<VaultInfo>()
+
+// Ensure only one drawer is open at a time
+watch(isCreateDrawerOpen, (isOpen) => {
+  if (isOpen) {
+    isOpenDrawerOpen.value = false
+  }
+})
+
+watch(isOpenDrawerOpen, (isOpen) => {
+  if (isOpen) {
+    isCreateDrawerOpen.value = false
+  }
+})
 
 const showRemoveDialog = ref(false)
 

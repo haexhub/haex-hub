@@ -57,14 +57,14 @@ function interceptConsole(level: 'log' | 'info' | 'warn' | 'error' | 'debug') {
 }
 
 export default defineNuxtPlugin(() => {
-  // TEMPORARILY DISABLED - Console interceptor causes too many logs
-  // interceptConsole('log')
-  // interceptConsole('info')
-  // interceptConsole('warn')
-  // interceptConsole('error')
-  // interceptConsole('debug')
+  // Enable console interceptor
+  interceptConsole('log')
+  interceptConsole('info')
+  interceptConsole('warn')
+  interceptConsole('error')
+  interceptConsole('debug')
 
-  // console.log('[HaexHub] Global console interceptor installed')
+  console.log('[HaexHub] Global console interceptor installed')
 
   return {
     provide: {

@@ -141,6 +141,11 @@ pub async fn extension_sql_execute(
 
     let mut statement = ast_vec.pop().unwrap();
 
+    // If this is a SELECT statement, delegate to extension_sql_select
+    if matches!(statement, Statement::Query(_)) {
+        return extension_sql_select(sql, params, public_key, name, state).await;
+    }
+
     // Check if statement has RETURNING clause
     let has_returning = crate::database::core::statement_has_returning(&statement);
 

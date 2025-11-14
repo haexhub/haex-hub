@@ -1,18 +1,18 @@
-// src-tauri/src/extension/permissions/commands.rs
+// src-tauri/src/extension/permissions/check.rs
 
 use crate::extension::error::ExtensionError;
 use crate::extension::permissions::manager::PermissionManager;
 use crate::AppState;
+use std::path::Path;
 use tauri::State;
 
 #[tauri::command]
 pub async fn check_web_permission(
     extension_id: String,
-    method: String,
     url: String,
     state: State<'_, AppState>,
 ) -> Result<(), ExtensionError> {
-    PermissionManager::check_web_permission(&state, &extension_id, &method, &url).await
+    PermissionManager::check_web_permission(&state, &extension_id, &url).await
 }
 
 #[tauri::command]
@@ -60,5 +60,6 @@ pub async fn check_filesystem_permission(
         }
     };
 
-    PermissionManager::check_filesystem_permission(&state, &extension_id, action, &path).await
+    let file_path = Path::new(&path);
+    PermissionManager::check_filesystem_permission(&state, &extension_id, action, file_path).await
 }

@@ -1,6 +1,7 @@
 import type { IHaexHubExtension } from '~/types/haexhub'
 import type { ExtensionRequest } from './types'
 import { invoke } from '@tauri-apps/api/core'
+import { HAEXTENSION_METHODS } from '@haexhub/sdk'
 
 export async function handleWebMethodAsync(
   request: ExtensionRequest,
@@ -12,11 +13,11 @@ export async function handleWebMethodAsync(
 
   const { method, params } = request
 
-  if (method === 'haextension.web.fetch') {
+  if (method === HAEXTENSION_METHODS.web.fetch) {
     return await handleWebFetchAsync(params, extension)
   }
 
-  if (method === 'haextension.web.open') {
+  if (method === HAEXTENSION_METHODS.application.open) {
     return await handleWebOpenAsync(params, extension)
   }
 

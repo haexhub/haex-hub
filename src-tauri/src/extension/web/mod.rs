@@ -62,11 +62,10 @@ pub async fn extension_web_open(
         });
     }
 
-    // Check web permissions (open uses GET method for permission check)
+    // Check web permissions
     crate::extension::permissions::manager::PermissionManager::check_web_permission(
         &state,
         &extension.id,
-        "GET",
         &url,
     )
     .await?;
@@ -105,7 +104,6 @@ pub async fn extension_web_fetch(
     crate::extension::permissions::manager::PermissionManager::check_web_permission(
         &state,
         &extension.id,
-        method_str,
         &url,
     )
     .await?;

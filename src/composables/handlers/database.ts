@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { HAEXTENSION_METHODS } from '@haexhub/sdk'
 import type { IHaexHubExtension } from '~/types/haexhub'
 import type { ExtensionRequest } from './types'
 
@@ -12,7 +13,7 @@ export async function handleDatabaseMethodAsync(
   }
 
   switch (request.method) {
-    case 'haextension.db.query': {
+    case HAEXTENSION_METHODS.database.query: {
       try {
         const rows = await invoke<unknown[]>('extension_sql_select', {
           sql: params.query || '',
@@ -47,7 +48,7 @@ export async function handleDatabaseMethodAsync(
       }
     }
 
-    case 'haextension.db.execute': {
+    case HAEXTENSION_METHODS.database.execute: {
       const rows = await invoke<unknown[]>('extension_sql_execute', {
         sql: params.query || '',
         params: params.params || [],
@@ -62,7 +63,7 @@ export async function handleDatabaseMethodAsync(
       }
     }
 
-    case 'haextension.db.transaction': {
+    case HAEXTENSION_METHODS.database.transaction: {
       const statements =
         (request.params as { statements?: string[] }).statements || []
 
