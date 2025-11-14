@@ -143,6 +143,8 @@ pub fn run() {
             #[cfg(not(any(target_os = "android", target_os = "ios")))]
             extension::webview::web::webview_extension_web_request,
             #[cfg(not(any(target_os = "android", target_os = "ios")))]
+            extension::webview::web::webview_extension_emit_to_all,
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
             extension::webview::filesystem::webview_extension_fs_save_file,
             #[cfg(not(any(target_os = "android", target_os = "ios")))]
             extension::webview::filesystem::webview_extension_fs_open_file,

@@ -293,6 +293,31 @@ impl ExtensionWebviewManager {
             })
         }
     }
+
+    /// Emits an event to all extension webview windows
+    pub fn emit_to_all_extensions<S: serde::Serialize + Clone>(
+        &self,
+        app_handle: &AppHandle,
+        event: &str,
+        payload: S,
+    ) -> Result<(), ExtensionError> {
+        let windows = self.windows.lock().map_err(|e| ExtensionError::MutexPoisoned {
+            reason: e.to_string(),
+        })?;
+
+        // Iterate over all window IDs
+        for window_id in windows.keys() {
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+            if let Some(window) = app_handle.get_webview_window(window_id) {
+                // Emit event to this specific webview window
+                if let Err(e) = window.emit(event, payload.clone()) {
+                    eprintln!("Failed to emit event {} to window {}: {}", event, window_id, e);
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl Default for ExtensionWebviewManager {

@@ -244,3 +244,23 @@ pub async fn webview_extension_web_request(
         "ok": status >= 200 && status < 300
     }))
 }
+
+/// Broadcasts an event to all extension webview windows
+#[tauri::command]
+pub async fn webview_extension_emit_to_all(
+    app_handle: tauri::AppHandle,
+    state: State<'_, AppState>,
+    event: String,
+    payload: serde_json::Value,
+) -> Result<(), ExtensionError> {
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        state.extension_webview_manager.emit_to_all_extensions(
+            &app_handle,
+            &event,
+            payload,
+        )?;
+    }
+
+    Ok(())
+}

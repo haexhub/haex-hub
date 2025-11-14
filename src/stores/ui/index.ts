@@ -1,6 +1,5 @@
 import { breakpointsTailwind } from '@vueuse/core'
 import { invoke } from '@tauri-apps/api/core'
-import { emit } from '@tauri-apps/api/event'
 import { HAEXTENSION_EVENTS } from '@haexhub/sdk'
 import { broadcastContextToAllExtensions } from '~/composables/extensionMessageHandler'
 
@@ -81,9 +80,12 @@ export const useUiStore = defineStore('uiStore', () => {
     try {
       await invoke('webview_extension_context_set', { context })
       console.log('[UI Store] Context set in Tauri state:', context)
-      // Emit Tauri event so webview extensions can listen for changes
-      await emit(HAEXTENSION_EVENTS.CONTEXT_CHANGED, { context })
-      console.log('[UI Store] Emitted context change event:', context)
+      // Broadcast event to all webview extensions
+      await invoke('webview_extension_emit_to_all', {
+        event: HAEXTENSION_EVENTS.CONTEXT_CHANGED,
+        payload: { context }
+      })
+      console.log('[UI Store] Broadcasted context change event to webview extensions:', context)
     } catch (error) {
       // Ignore error if not running in Tauri (e.g., browser mode)
       console.debug('[UI Store] Failed to update Tauri context:', error)
